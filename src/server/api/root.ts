@@ -1,6 +1,7 @@
 import { router } from "./trpc";
 import { authRouter } from "./routers/auth";
 import { accountRouter } from "./routers/account";
+import { categoryRouter } from "./routers/category";
 
 /**
  * Root application router.
@@ -10,14 +11,14 @@ import { accountRouter } from "./routers/account";
  * - auth (001-auth-family): me, auditEvents (register/login/logout via
  *   Better-Auth direct endpoints at /api/auth/*)
  * - account (002-account): create, list, update, archive, unarchive
+ * - category (003-category): list, get (read-only dictionary)
  *
- * Future features (category, transaction, dashboard) attach here as
- * new sub-routers are implemented. Use `router({ auth, account, ... })`
- * explicit merge — never `mergeRouters` to preserve type inference.
+ * Future features (transaction, dashboard) attach here as new sub-routers.
  */
 export const appRouter = router({
   auth: authRouter,
   account: accountRouter,
+  category: categoryRouter,
 });
 
 export type AppRouter = typeof appRouter;

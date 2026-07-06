@@ -5,8 +5,10 @@
 Family (聚合根,001-auth-family)
 ├── Member
 ├── Account (002-account)
-├── Category (后续 feature)
-└── Transaction (后续 feature)
+├── Transaction (后续 feature,引用 Account + Category)
+└── (Category 是独立聚合,不归 Family,见下)
+
+Category (独立聚合,003-category) — 内置分类字典,所有家庭共享
 
 ## 跨聚合引用
 
@@ -49,8 +51,18 @@ Better-Auth 的 `User` 与业务聚合 `Family` 解耦:
 
 ## 后续聚合 (路线图解锁)
 
-Category
 Asset
 Debt
 Budget
 Investment
+
+## Category (003-category) — 内置分类字典
+
+- id (UUID v5,基于 `"${type}:${name}"` 在 DNS 命名空间)
+- name (中文名 1-30 字符)
+- type (`income` | `expense`,pgEnum)
+- icon (emoji 1-4 UTF-16 code units)
+- sortOrder (整数,默认 100)
+- isBuiltIn (MVP 全 true,V2 自定义分类时区分)
+- 无 family_id (所有家庭共享)
+- 22 条种子通过迁移 SQL 注入,read-only (无 CRUD)

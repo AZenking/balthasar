@@ -13,3 +13,5 @@ export * from "./auth-failure-counters";
 // 002-account
 export * from "./account";
 export * from "./account-events";
+// 003-category
+export * from "./category";

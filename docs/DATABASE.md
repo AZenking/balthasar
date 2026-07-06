@@ -7,7 +7,7 @@
 Family (001)
 Member (001)
 Account (002) — 家庭级账户,招商银行卡 / 现金等
-Category (后续 feature)
+Category (003) — 内置分类字典,22 条种子 (12 支出 + 8 收入),UUID v5 确定性 ID
 Transaction (后续 feature)
 
 ### 认证表 (Better-Auth 自管,001 Phase 2)
@@ -56,6 +56,7 @@ Investment
 
 - `0001_init.sql` —— 001-auth-family 初始 schema (8 张表)
 - `0002_accounts.sql` —— 002-account 追加 accounts + account_events + 索引
+- `0003_categories.sql` —— 003-category 追加 categories 表 + 22 条种子 (UUID v5 + ON CONFLICT 幂等)
 - 通过 `pnpm db:generate` (drizzle-kit) 生成,`pnpm db:migrate` 应用
 - 集成测试自动通过 `drizzle-orm/node-postgres/migrator` 应用最新迁移
 
@@ -66,3 +67,6 @@ Investment
 - `accounts_family_idx` —— 完整索引,支撑 includeArchived=true 查询
 - `account_events_account_time_idx` —— `(account_id, occurred_at)`,
   按账户查变更历史 (V2 暴露查询接口)
+- `categories_type_sort_name_idx` —— `(type, sort_order, name)`,支撑
+  `category.list({ type })` 排序输出 (003 SC-004 P95 < 100ms)
+- `categories_name_type_unique_idx` —— 唯一索引,防 seed 重复插入

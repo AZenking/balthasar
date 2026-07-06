@@ -15,6 +15,13 @@
       "when": 1740000001000,
       "tag": "0002_accounts",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1740000002000,
+      "tag": "0003_categories",
+      "breakpoints": true
     }
   ]
 }
