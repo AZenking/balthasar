@@ -1,0 +1,16 @@
+# pnpm v10+ workspace config (single-project repo; not a real workspace).
+# Per https://pnpm.io/settings — settings moved here from package.json's
+# "pnpm" field which is no longer read.
+#
+# `allowBuilds` is a boolean map controlling which packages may run their
+# postinstall scripts. Defaults to false (supply-chain safety).
+
+allowBuilds:
+  # Needed: Vitest/Vite platform binary
+  esbuild: true
+  # Needed: Next.js production image optimization native bindings
+  sharp: true
+  # Optional: Node CPU feature detection (brotli etc.), not critical for our stack
+  cpu-features: false
+  # Optional: SSH for testcontainers remote hosts; we use local Docker, skip
+  ssh2: false

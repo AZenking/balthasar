@@ -1,0 +1,60 @@
+{
+  "name": "balthasar",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "type-check": "tsc --noEmit",
+    "test": "vitest",
+    "test:unit": "vitest --project unit",
+    "test:procedure": "vitest --project procedure",
+    "test:integration": "vitest --project integration",
+    "test:coverage": "vitest run --coverage",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@t3-oss/env-nextjs": "^0.12.0",
+    "@tanstack/react-query": "^5.62.0",
+    "better-auth": "^1.2.7",
+    "drizzle-orm": "^0.39.0",
+    "next": "^16.0.0",
+    "pg": "^8.13.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "superjson": "^2.2.2",
+    "@trpc/client": "^11.0.0",
+    "@trpc/react-query": "^11.0.0",
+    "@trpc/server": "^11.0.0",
+    "uuidv7": "^1.0.2",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^16.1.0",
+    "@testcontainers/postgresql": "^10.16.0",
+    "@types/node": "^22.10.0",
+    "@types/pg": "^8.11.10",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "drizzle-kit": "^0.30.0",
+    "eslint": "^9.17.0",
+    "eslint-config-next": "^16.0.0",
+    "@eslint/eslintrc": "^3.2.0",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^4.0.0",
+    "@tailwindcss/postcss": "^4.0.0",
+    "testcontainers": "^10.16.0",
+    "typescript": "^5.7.0",
+    "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
