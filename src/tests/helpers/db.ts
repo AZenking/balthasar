@@ -1,7 +1,7 @@
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from "@testcontainers/postgresql";
 import { execSync } from "node:child_process";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
-import { Pool } from "pg";
+import { Pool, type Pool as PgPool } from "pg";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import path from "node:path";
 
@@ -17,11 +17,21 @@ import path from "node:path";
  */
 export interface TestDb {
   db: NodePgDatabase;
+  pool: PgPool;
   container: StartedPostgreSqlContainer;
   connectionString: string;
 }
 
+declare global {
+  // eslint-disable-next-line no-var
+  var __balthasarTestDb: TestDb | undefined;
+}
+
 export async function startTestDb(): Promise<TestDb> {
+  if (globalThis.__balthasarTestDb) {
+    return globalThis.__balthasarTestDb;
+  }
+
   const container = await new PostgreSqlContainer("postgres:16-alpine")
     .withDatabase("balthasar_test")
     .withUsername("test")
@@ -38,10 +48,27 @@ export async function startTestDb(): Promise<TestDb> {
   const migrationsFolder = path.resolve(process.cwd(), "src/server/db/migrations");
   await migrate(db, { migrationsFolder });
 
-  return { db, container, connectionString };
+  const testDb = { db, pool, container, connectionString };
+  globalThis.__balthasarTestDb = testDb;
+  return testDb;
 }
 
 export async function stopTestDb(testDb: TestDb): Promise<void> {
+  if (!globalThis.__balthasarTestDb) {
+    return;
+  }
+
+  if (globalThis.__balthasarTestDb !== testDb) {
+    await testDb.container.stop();
+    return;
+  }
+
+  if (globalThis.__balthasarDbPool) {
+    await globalThis.__balthasarDbPool.end();
+    globalThis.__balthasarDbPool = undefined;
+  }
+  await testDb.pool.end();
+  globalThis.__balthasarTestDb = undefined;
   await testDb.container.stop();
 }
 

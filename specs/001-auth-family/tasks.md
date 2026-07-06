@@ -197,16 +197,16 @@ T3 Stack 单仓:
 
 **Purpose**: 全 story 共享的最终质量门
 
-- [ ] T071 [P] Run all unit + procedure + integration suites green: `pnpm test` with coverage (domain > 90%, procedure > 80%, integration > 70%)
-- [ ] T072 [P] Run [quickstart.md](./quickstart.md) end-to-end manual validation; tick all SC items
-- [ ] T073 Security review: grep `password` / `passwordHash` / `token` across `src/`,响应体,审计 metadata —— must be 0 hits (SC-004)
-- [ ] T074 Performance review: load test with `autocannon` —— verify auth.register & auth.login P95 < 300ms, auth.me P95 < 100ms
-- [ ] T075 Update `docs/DATABASE.md` to include Better-Auth tables + business tables (families/members/auth_events/auth_failure_counters/registration_ip_counters)
-- [ ] T076 Update `docs/DOMAIN.md` —— Family aggregate `ownerUserId` 引用 Better-Auth user.id;不变量"1:1:1" 通过 `idx_families_owner_user_id UNIQUE` 强制
-- [ ] T077 [P] Add `package.json` scripts: `dev`, `build`, `start`, `test`, `test:unit`, `test:procedure`, `test:integration`, `db:migrate`, `db:generate`, `db:studio`
-- [ ] T078 [P] Add `docker-compose.yml` at repo root for one-command Postgres + Next.js dev (MVP exit criterion: "Docker 一键启动")
-- [ ] T079 [P] Add `Dockerfile` for Next.js production build (standalone output)
-- [ ] T080 Final code review against Constitution v2.0.0 —— verify no Principle violations (especially Principle II feature-sliced + Principle IV no-DB-mocks + Principle VI no manual contracts)
+- [X] T071 [P] Run all unit + procedure + integration suites green: `pnpm test` with coverage (domain > 90%, procedure > 80%, integration > 70%)
+- [X] T072 [P] Run [quickstart.md](./quickstart.md) end-to-end manual validation; tick all SC items
+- [X] T073 Security review: grep `password` / `passwordHash` / `token` across `src/`,响应体,审计 metadata —— must be 0 hits (SC-004)
+- [X] T074 Performance review: load test with `autocannon` —— verify auth.register & auth.login P95 < 300ms, auth.me P95 < 100ms
+- [X] T075 Update `docs/DATABASE.md` to include Better-Auth tables + business tables (families/members/auth_events/auth_failure_counters/registration_ip_counters)
+- [X] T076 Update `docs/DOMAIN.md` —— Family aggregate `ownerUserId` 引用 Better-Auth user.id;不变量"1:1:1" 通过 `idx_families_owner_user_id UNIQUE` 强制
+- [X] T077 [P] Add `package.json` scripts: `dev`, `build`, `start`, `test`, `test:unit`, `test:procedure`, `test:integration`, `db:migrate`, `db:generate`, `db:studio`
+- [X] T078 [P] Add `docker-compose.yml` at repo root for one-command Postgres + Next.js dev (MVP exit criterion: "Docker 一键启动")
+- [X] T079 [P] Add `Dockerfile` for Next.js production build (standalone output)
+- [X] T080 Final code review against Constitution v2.0.0 —— verify no Principle violations (especially Principle II feature-sliced + Principle IV no-DB-mocks + Principle VI no manual contracts)
 
 ---
 

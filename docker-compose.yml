@@ -1,0 +1,31 @@
+# docker-compose for BALTHASAR — one-command dev environment (MVP exit criterion).
+#
+# Brings up Postgres 16 only. The Next.js app runs via `pnpm dev` on the host
+# for hot-reload. Production deployment uses the Dockerfile separately.
+#
+# Usage:
+#   docker compose up -d postgres   # start DB
+#   pnpm db:migrate                 # apply migrations
+#   pnpm dev                        # http://localhost:3000
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: balthasar-pg
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: balthasar
+      POSTGRES_PASSWORD: balthasar
+      POSTGRES_DB: balthasar
+    ports:
+      - "5432:5432"
+    volumes:
+      - balthasar_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U balthasar"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  balthasar_pg_data:

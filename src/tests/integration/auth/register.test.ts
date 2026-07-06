@@ -76,8 +76,7 @@ describe("[T035] concurrent same-email registration (SC-006)", () => {
     const rejected = results.filter(
       (r) =>
         r.status === "rejected" &&
-        // @ts-expect-error - shape from tRPC error
-        r.value?.data?.code === "CONFLICT"
+        (r.reason as { code?: string; data?: { code?: string } }).code === "CONFLICT"
     ).length;
 
     expect(fulfilled).toBe(1);

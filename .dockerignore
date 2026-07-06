@@ -1,0 +1,38 @@
+# Docker build context filter (avoids sending large/irrelevant paths).
+
+node_modules/
+.next/
+.git/
+.gitignore
+
+# Tests (not needed in production image)
+src/tests/
+coverage/
+.testcontainers/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+*.swp
+
+# Env (provided via runtime env, not baked into image)
+.env
+.env.*
+!.env.example
+
+# Docs (not needed in image)
+docs/
+specs/
+README.md
+
+# Other build artifacts
+dist/
+build/
+out/
+*.log
+
+# Claude Code skill tooling
+.claude/
+.agents/
+.codegraph/

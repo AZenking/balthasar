@@ -1,22 +1,19 @@
 /**
- * Integration-test setup: ensures every integration test file shares a
- * Postgres container pattern. Per `tasks.md` T005: container is started by
- * testcontainers and `drizzle-kit migrate` is applied automatically.
+ * Integration-test setup. The DB container must start before test modules are
+ * imported because integration suites import the app-level Drizzle singleton at
+ * module scope.
  */
-import { execSync } from "node:child_process";
-import { afterAll, beforeAll } from "vitest";
+import { afterAll } from "vitest";
+import { startTestDb, stopTestDb } from "@/tests/helpers/db";
 
-// Reserved for future global fixtures (e.g., shared container across files).
-// Currently each test file calls `getTestDb()` for isolation.
-export const mochaGlobalSetup = async () => {
-  // Placeholder: verify drizzle-kit is invocable for migrations
-  try {
-    execSync("drizzle-kit --version", { stdio: "ignore" });
-  } catch {
-    // Will be caught at runtime per-test
-  }
-};
+Object.assign(process.env, {
+  BETTER_AUTH_SECRET: "test-secret-at-least-16-bytes",
+  BETTER_AUTH_URL: "http://localhost:3000",
+  NODE_ENV: "test",
+});
 
-// Ensure afterAll hook is referenced for type completeness
-beforeAll(() => undefined);
-afterAll(() => undefined);
+const testDb = await startTestDb();
+
+afterAll(async () => {
+  await stopTestDb(testDb);
+});

@@ -8,7 +8,7 @@
  * The actual container lifecycle is managed per-test-file via
  * `getTestDb()` (see db.ts). This file only sets up common env.
  */
-process.env.NODE_ENV = "test";
+Object.assign(process.env, { NODE_ENV: "test" });
 
 // Ensure tests don't accidentally hit the production DB.
 // Testcontainers assigns a random port; production DATABASE_URL is irrelevant
