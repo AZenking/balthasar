@@ -1,5 +1,4 @@
 import "server-only";
-import { createCallerFactory } from "@trpc/server";
 import { appRouter, type AppRouter } from "@/server/api/root";
 import { createContext, type CreateContext } from "@/server/api/trpc";
 
@@ -15,15 +14,16 @@ import { createContext, type CreateContext } from "@/server/api/trpc";
  * Type inference flows from AppRouter (T024) — end-to-end type safety,
  * no manual contracts (Constitution v2.0.0 Principle VI YAGNI).
  */
-const createCallerInner = createCallerFactory<AppRouter>();
-
 /**
  * Build a caller with the given (or default) context.
  */
-export async function createCaller(ctxOverride?: Partial<CreateContext>) {
-  const baseCtx = await createContext();
-  const ctx: CreateContext = { ...baseCtx, ...ctxOverride };
-  return createCallerInner(appRouter)(ctx);
+export function createCaller(ctxOverride?: Partial<CreateContext>) {
+  if (ctxOverride) {
+    const ctx: CreateContext = { session: null, ...ctxOverride };
+    return appRouter.createCaller(ctx);
+  }
+
+  return appRouter.createCaller(createContext);
 }
 
 export type { AppRouter };

@@ -1,9 +1,9 @@
 import { initTRPC, TRPCError } from "@trpc/server";
+import type { FetchCreateContextFnOptions } from "@trpc/server/adapters/fetch";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import superjson from "superjson";
 import { auth } from "@/server/auth/config";
 import { headers } from "next/headers";
-import type { NextRequest } from "next/server";
 import type { Session, User } from "@/server/db/schema";
 import type { AppRouter } from "./root";
 
@@ -26,15 +26,14 @@ export interface CreateContext {
   session: SessionContext | null;
 }
 
-export async function createContext(opts?: {
-  req?: NextRequest;
+export async function createContext(opts?: Partial<FetchCreateContextFnOptions> & {
   // Allow tests / RSC caller to pass pre-built headers (Next 16 async
   // headers() doesn't work outside Request scope).
   heads?: Headers;
 }): Promise<CreateContext> {
   // Better-Auth expects Headers (works for both RSC and HTTP).
   // Next 16: headers() is async; tests pass `heads` directly to bypass.
-  const heads = opts?.heads ?? opts?.req?.headers ?? (await headers());
+  const heads = opts?.heads ?? opts?.req?.headers ?? new Headers(await headers());
 
   const result = await auth.api.getSession({ headers: heads });
 
@@ -44,8 +43,15 @@ export async function createContext(opts?: {
 
   return {
     session: {
-      user: result.user,
-      session: result.session,
+      user: {
+        ...result.user,
+        image: result.user.image ?? null,
+      },
+      session: {
+        ...result.session,
+        ipAddress: result.session.ipAddress ?? null,
+        userAgent: result.session.userAgent ?? null,
+      },
     },
   };
 }

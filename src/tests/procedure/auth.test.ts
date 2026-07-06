@@ -73,7 +73,14 @@ import { checkLockoutByEmail } from "@/server/auth/hooks/lockout";
 
 const mockedCheckLockout = vi.mocked(checkLockoutByEmail);
 
-const mockedAuth = vi.mocked(auth);
+type MockFn = ReturnType<typeof vi.fn>;
+
+const mockedAuthApi = auth.api as unknown as {
+  signUpEmail: MockFn;
+  signInEmail: MockFn;
+  signOut: MockFn;
+  getSession: MockFn;
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -126,9 +133,9 @@ function authedCaller(overrides: Partial<{
 
 describe("[T028-T031] auth.register procedure", () => {
   it("T028: returns user/family/member shape on happy path", async () => {
-    mockedAuth.api.signUpEmail.mockResolvedValueOnce({
+    mockedAuthApi.signUpEmail.mockResolvedValueOnce({
       user: { id: "u1", email: "alice@example.com" },
-    } as never);
+    });
 
     const caller = publicCaller();
     const result = await caller.auth.register({
@@ -151,9 +158,9 @@ describe("[T028-T031] auth.register procedure", () => {
         password: "long-enough-1234",
       })
     ).rejects.toMatchObject({
-      data: { code: "BAD_REQUEST" },
+      code: "BAD_REQUEST",
     });
-    expect(mockedAuth.api.signUpEmail).not.toHaveBeenCalled();
+    expect(mockedAuthApi.signUpEmail).not.toHaveBeenCalled();
   });
 
   it("T029: rejects short password with VALIDATION_FAILED", async () => {
@@ -164,12 +171,12 @@ describe("[T028-T031] auth.register procedure", () => {
         password: "short",
       })
     ).rejects.toMatchObject({
-      data: { code: "BAD_REQUEST" },
+      code: "BAD_REQUEST",
     });
   });
 
   it("T030: maps Better-Auth duplicate-email error to CONFLICT (409)", async () => {
-    mockedAuth.api.signUpEmail.mockRejectedValueOnce(
+    mockedAuthApi.signUpEmail.mockRejectedValueOnce(
       Object.assign(new Error("User already exists"), { code: "CONFLICT" })
     );
 
@@ -180,12 +187,12 @@ describe("[T028-T031] auth.register procedure", () => {
         password: "valid-pass-1234",
       })
     ).rejects.toMatchObject({
-      data: { code: "CONFLICT" },
+      code: "CONFLICT",
     });
   });
 
   it("T031: maps Better-Auth rate-limit error to TOO_MANY_REQUESTS (429)", async () => {
-    mockedAuth.api.signUpEmail.mockRejectedValueOnce(
+    mockedAuthApi.signUpEmail.mockRejectedValueOnce(
       Object.assign(new Error("Rate limited"), { code: "TOO_MANY_REQUESTS" })
     );
 
@@ -196,7 +203,7 @@ describe("[T028-T031] auth.register procedure", () => {
         password: "valid-pass-1234",
       })
     ).rejects.toMatchObject({
-      data: { code: "TOO_MANY_REQUESTS" },
+      code: "TOO_MANY_REQUESTS",
     });
   });
 });
@@ -207,9 +214,9 @@ describe("[T028-T031] auth.register procedure", () => {
 
 describe("[T043-T045] auth.login procedure", () => {
   it("T043: returns user/family/member shape on happy path", async () => {
-    mockedAuth.api.signInEmail.mockResolvedValueOnce({
+    mockedAuthApi.signInEmail.mockResolvedValueOnce({
       user: { id: "u1", email: "alice@example.com" },
-    } as never);
+    });
 
     const caller = publicCaller();
     const result = await caller.auth.login({
@@ -221,15 +228,15 @@ describe("[T043-T045] auth.login procedure", () => {
   });
 
   it("T044: maps credential error to UNAUTHORIZED (generic)", async () => {
-    mockedAuth.api.signInEmail.mockRejectedValueOnce(
+    mockedAuthApi.signInEmail.mockRejectedValueOnce(
       Object.assign(new Error("Invalid credentials"), { code: "INVALID_PASSWORD" })
     );
 
     const caller = publicCaller();
     await expect(
-      caller.auth.login({ email: "alice@example.com", password: "wrong" })
+      caller.auth.login({ email: "alice@example.com", password: "wrong-pass-1234" })
     ).rejects.toMatchObject({
-      data: { code: "UNAUTHORIZED" },
+      code: "UNAUTHORIZED",
     });
   });
 
@@ -243,7 +250,8 @@ describe("[T043-T045] auth.login procedure", () => {
     await expect(
       caller.auth.login({ email: "alice@example.com", password: "valid-pass-1234" })
     ).rejects.toMatchObject({
-      data: { code: "CONFLICT", retryAfterSeconds: 240 },
+      code: "CONFLICT",
+      cause: { retryAfterSeconds: 240 },
     });
   });
 });
@@ -254,14 +262,14 @@ describe("[T043-T045] auth.login procedure", () => {
 
 describe("[T055-T056] auth.logout procedure", () => {
   it("T055: returns success on happy path (authed)", async () => {
-    mockedAuth.api.signOut.mockResolvedValueOnce({ success: true } as never);
+    mockedAuthApi.signOut.mockResolvedValueOnce({ success: true });
     const caller = authedCaller();
     const result = await caller.auth.logout();
     expect(result.success).toBe(true);
   });
 
   it("T056: is idempotent when called without session", async () => {
-    mockedAuth.api.signOut.mockResolvedValueOnce({ success: true } as never);
+    mockedAuthApi.signOut.mockResolvedValueOnce({ success: true });
     const caller = publicCaller();
     const result = await caller.auth.logout();
     expect(result.success).toBe(true);
@@ -282,7 +290,7 @@ describe("[T060-T062] auth.me + auth.auditEvents", () => {
   it("T061: auditEvents requires session (protectedProcedure)", async () => {
     const caller = publicCaller();
     await expect(caller.auth.auditEvents()).rejects.toMatchObject({
-      data: { code: "UNAUTHORIZED" },
+      code: "UNAUTHORIZED",
     });
   });
 
