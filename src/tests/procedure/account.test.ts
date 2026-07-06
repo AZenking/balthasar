@@ -141,3 +141,51 @@ describe("[T008-T009] account.create procedure", () => {
     ).rejects.toMatchObject({ data: { code: "UNAUTHORIZED" } });
   });
 });
+
+// ============================================================================
+// T018-T020: account.list contract tests (US2)
+// ============================================================================
+
+/**
+ * list procedure uses real Drizzle queries. Contract tests verify the
+ * procedure accepts input and returns shape — actual filtering/sorting
+ * is validated in integration tests (T021/T022).
+ */
+describe("[T018-T020] account.list procedure", () => {
+  it("T018: accepts no input (default excludeArchived)", async () => {
+    const caller = authedCaller();
+    // Without DB the call may fail at query time, but we can verify
+    // input validation passes (no zod error) by checking the error is
+    // NOT a BAD_REQUEST.
+    try {
+      await caller.account.list();
+    } catch (e: any) {
+      // Acceptable: query failure due to no DB. NOT acceptable: BAD_REQUEST.
+      expect(e?.data?.code).not.toBe("BAD_REQUEST");
+    }
+  });
+
+  it("T019: accepts { includeArchived: true } input", async () => {
+    const caller = authedCaller();
+    try {
+      await caller.account.list({ includeArchived: true });
+    } catch (e: any) {
+      expect(e?.data?.code).not.toBe("BAD_REQUEST");
+    }
+  });
+
+  it("T019: rejects unknown input keys (zod strict)", async () => {
+    const caller = authedCaller();
+    await expect(
+      caller.account.list({ unexpectedField: true } as any)
+    ).rejects.toMatchObject({ data: { code: "BAD_REQUEST" } });
+  });
+
+  it("requires authed session (protectedProcedure)", async () => {
+    const caller = publicCaller();
+    await expect(caller.account.list()).rejects.toMatchObject({
+      data: { code: "UNAUTHORIZED" },
+    });
+  });
+});
+

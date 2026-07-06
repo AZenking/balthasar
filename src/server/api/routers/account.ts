@@ -4,7 +4,7 @@ import { and, desc, eq, isNull } from "drizzle-orm";
 import { router, protectedProcedure } from "@/server/api/trpc";
 import { db, withTransaction, type TxClient } from "@/server/db/client";
 import { account } from "@/server/db/schema";
-import { loadFamilyAndMemberIdsByUserId } from "@/server/db/queries/account";
+import { loadFamilyAndMemberIdsByUserId, loadFamilyIdByUserId } from "@/server/db/queries/account";
 import { writeAccountEvent } from "@/server/db/queries/account-events";
 import {
   SUPPORTED_CURRENCIES,
@@ -121,6 +121,35 @@ export const accountRouter = router({
       });
 
       return serializeAccount(created);
+    }),
+
+  /**
+   * US2: List accounts.
+   *
+   * Default excludes archived (uses partial index `accounts_family_active_idx`).
+   * Pass `{ includeArchived: true }` to include all (uses `accounts_family_idx`).
+   * Always scoped to current family via WHERE family_id = $currentFamilyId
+   * (SC-003 cross-family isolation).
+   * Sort: createdAt DESC (newest first).
+   */
+  list: protectedProcedure
+    .input(z.object({ includeArchived: z.boolean().optional() }).strict())
+    .query(async ({ input, ctx }) => {
+      const familyId = await loadFamilyIdByUserId(ctx.session.user.id);
+
+      const conditions = [eq(account.familyId, familyId)];
+      if (!input?.includeArchived) {
+        // Default: filter out archived. PG partial index makes this fast.
+        conditions.push(isNull(account.archivedAt));
+      }
+
+      const rows = await db
+        .select()
+        .from(account)
+        .where(and(...conditions))
+        .orderBy(desc(account.createdAt));
+
+      return rows.map(serializeAccount);
     }),
 });
 
