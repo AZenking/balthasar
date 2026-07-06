@@ -1,12 +1,5 @@
-import {
-  pgTable,
-  uuid,
-  text,
-  bigint,
-  timestamp,
-  index,
-  sql,
-} from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, bigint, timestamp, index } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { family } from "./family";
 import { uuidv7 } from "uuidv7";
 

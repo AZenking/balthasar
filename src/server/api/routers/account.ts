@@ -133,7 +133,7 @@ export const accountRouter = router({
    * Sort: createdAt DESC (newest first).
    */
   list: protectedProcedure
-    .input(z.object({ includeArchived: z.boolean().optional() }).strict())
+    .input(z.object({ includeArchived: z.boolean().optional() }).strict().optional())
     .query(async ({ input, ctx }) => {
       const familyId = await loadFamilyIdByUserId(ctx.session.user.id);
 
