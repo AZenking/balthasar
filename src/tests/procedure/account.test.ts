@@ -189,3 +189,85 @@ describe("[T018-T020] account.list procedure", () => {
   });
 });
 
+// ============================================================================
+// T024-T025: account.update contract tests (US3)
+// ============================================================================
+
+describe("[T024-T025] account.update procedure", () => {
+  it("T024: accepts { id, name?, currency? } input (no DB assertion in contract)", async () => {
+    const caller = authedCaller();
+    try {
+      await caller.account.update({
+        id: "00000000-0000-7000-8000-000000000001",
+        name: "新名称",
+      });
+    } catch (e: any) {
+      // Acceptable: NOT_FOUND due to nonexistent account. NOT acceptable: BAD_REQUEST.
+      expect(e?.data?.code).not.toBe("BAD_REQUEST");
+    }
+  });
+
+  it("T024: accepts currency change only", async () => {
+    const caller = authedCaller();
+    try {
+      await caller.account.update({
+        id: "00000000-0000-7000-8000-000000000002",
+        currency: "USD",
+      });
+    } catch (e: any) {
+      expect(e?.data?.code).not.toBe("BAD_REQUEST");
+    }
+  });
+
+  it("T025: rejects initialBalance in input (SC-007 — zod strict)", async () => {
+    const caller = authedCaller();
+    await expect(
+      caller.account.update({
+        id: "00000000-0000-7000-8000-000000000003",
+        initialBalance: 999999,
+      } as any)
+    ).rejects.toMatchObject({ data: { code: "BAD_REQUEST" } });
+  });
+
+  it("T025: rejects name > 50 chars", async () => {
+    const caller = authedCaller();
+    await expect(
+      caller.account.update({
+        id: "00000000-0000-7000-8000-000000000004",
+        name: "a".repeat(51),
+      })
+    ).rejects.toMatchObject({ data: { code: "BAD_REQUEST" } });
+  });
+
+  it("T025: rejects empty name", async () => {
+    const caller = authedCaller();
+    await expect(
+      caller.account.update({
+        id: "00000000-0000-7000-8000-000000000005",
+        name: "",
+      })
+    ).rejects.toMatchObject({ data: { code: "BAD_REQUEST" } });
+  });
+
+  it("T025: rejects currency not in whitelist", async () => {
+    const caller = authedCaller();
+    await expect(
+      caller.account.update({
+        id: "00000000-0000-7000-8000-000000000006",
+        currency: "RMB",
+      } as any)
+    ).rejects.toMatchObject({ data: { code: "BAD_REQUEST" } });
+  });
+
+  it("requires authed session (protectedProcedure)", async () => {
+    const caller = publicCaller();
+    await expect(
+      caller.account.update({
+        id: "00000000-0000-7000-8000-000000000007",
+        name: "test",
+      })
+    ).rejects.toMatchObject({ data: { code: "UNAUTHORIZED" } });
+  });
+});
+
+

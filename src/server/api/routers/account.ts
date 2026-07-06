@@ -151,6 +151,108 @@ export const accountRouter = router({
 
       return rows.map(serializeAccount);
     }),
+
+  /**
+   * US3: Update account.
+   *
+   * Edits name and/or currency (FR-009). initialBalance MUST NOT be editable
+   * (SC-007) — zod input schema intentionally excludes that field.
+   *
+   * Cross-family access returns NOT_FOUND (FR-012, SC-003) via single
+   * WHERE id AND family_id query.
+   *
+   * Archived accounts cannot be edited (FR-011) — checked after fetch.
+   *
+   * Audit `account_edited` written in same tx as update, with before/after
+   * snapshots of only mutable fields (name, currency).
+   */
+  update: protectedProcedure
+    .input(
+      z
+        .object({
+          id: z.string().uuid(),
+          name: z
+            .string()
+            .min(ACCOUNT_NAME_MIN_LENGTH)
+            .max(ACCOUNT_NAME_MAX_LENGTH)
+            .optional(),
+          currency: currencySchema.optional(),
+        })
+        .strict()
+        // Require at least one mutable field
+        .refine((v) => v.name !== undefined || v.currency !== undefined, {
+          message: "至少需要修改一个字段 (name 或 currency)",
+        })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const { familyId, memberId } = await loadFamilyAndMemberIdsByUserId(
+        ctx.session.user.id
+      );
+
+      const updated = await withTransaction(async (tx) => {
+        // Single query: WHERE id AND family_id (SC-003 cross-family isolation
+        // via single WHERE clause — non-existent + cross-family both → 0 rows
+        // → NOT_FOUND, no information leak about existence).
+        const existing = await tx
+          .select()
+          .from(account)
+          .where(and(eq(account.id, input.id), eq(account.familyId, familyId)))
+          .limit(1);
+
+        const row = existing[0];
+        if (!row) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "账户不存在",
+          });
+        }
+
+        // FR-011: archived account cannot be edited
+        if (row.archivedAt !== null) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "已归档账户不可编辑,请先取消归档",
+          });
+        }
+
+        const before = {
+          name: row.name,
+          currency: row.currency,
+        };
+        const after = {
+          name: input.name ?? row.name,
+          currency: input.currency ?? row.currency,
+        };
+
+        const [updatedRow] = await tx
+          .update(account)
+          .set({
+            name: after.name,
+            currency: after.currency,
+          })
+          .where(eq(account.id, input.id))
+          .returning();
+
+        if (!updatedRow) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "账户更新失败",
+          });
+        }
+
+        await writeAccountEvent(tx, {
+          eventType: "account_edited",
+          accountId: updatedRow.id,
+          actorMemberId: memberId,
+          before,
+          after,
+        });
+
+        return updatedRow;
+      });
+
+      return serializeAccount(updated);
+    }),
 });
 
 export type AccountRouter = typeof accountRouter;
