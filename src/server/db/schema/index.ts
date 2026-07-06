@@ -10,3 +10,6 @@ export * from "./family";
 export * from "./member";
 export * from "./auth-events";
 export * from "./auth-failure-counters";
+// 002-account
+export * from "./account";
+export * from "./account-events";
