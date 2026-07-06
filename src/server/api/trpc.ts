@@ -52,6 +52,18 @@ export async function createContext(opts?: {
 
 const t = initTRPC.context<CreateContext>().create({
   transformer: superjson,
+  errorFormatter: ({ shape, error }) => {
+    // Surface `retryAfterSeconds` from TRPCError.cause (set by login lockout
+    // path) so clients can render remaining lockout time (FR-009, SC-007).
+    const cause = error.cause as { retryAfterSeconds?: number } | undefined;
+    return {
+      ...shape,
+      data: {
+        ...shape.data,
+        retryAfterSeconds: cause?.retryAfterSeconds,
+      },
+    };
+  },
 });
 
 /**

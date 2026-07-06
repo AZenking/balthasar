@@ -125,21 +125,21 @@ T3 Stack 单仓:
 
 ### Tests for User Story 2 ⚠️ TDD
 
-- [ ] T043 [P] [US2] Procedure 契约测试 `auth.login` 200 happy path 在 `src/tests/procedure/auth.test.ts`
-- [ ] T044 [P] [US2] Procedure 契约测试 `auth.login` 401 (不存在邮箱 / 错误密码 —— 响应一致 per FR-007) 在 `src/tests/procedure/auth.test.ts`
-- [ ] T045 [P] [US2] Procedure 契约测试 `auth.login` 锁定场景 (custom data 含 retryAfterSeconds) per FR-009 + Clarification Q4 在 `src/tests/procedure/auth.test.ts`
-- [ ] T046 [P] [US2] 单元测试 lockout-policy.ts (5 阈值、locked_until 计算、window 过期决策) 在 `src/tests/unit/server/domain/auth/lockout-policy.test.ts`
-- [ ] T047 [P] [US2] 集成测试: 5 次失败 → 第 6 次正确密码仍失败 (SC-007) 用 fake timer 在 `src/tests/integration/auth/login-lockout.test.ts`
-- [ ] T048 [P] [US2] 集成测试: 锁定窗口过期后第 7 次正确密码 → 200 + counter 清空 在 `src/tests/integration/auth/login-lockout.test.ts`
-- [ ] T049 [P] [US2] 集成测试: 时序攻击防御 —— "用户不存在" vs "密码错"响应时间偏差 < 50ms (Better-Auth 默认 constant-time,验证其生效) 在 `src/tests/integration/auth/login-lockout.test.ts`
+- [X] T043 [P] [US2] Procedure 契约测试 `auth.login` 200 happy path 在 `src/tests/procedure/auth.test.ts`
+- [X] T044 [P] [US2] Procedure 契约测试 `auth.login` 401 (不存在邮箱 / 错误密码 —— 响应一致 per FR-007) 在 `src/tests/procedure/auth.test.ts`
+- [X] T045 [P] [US2] Procedure 契约测试 `auth.login` 锁定场景 (custom data 含 retryAfterSeconds) per FR-009 + Clarification Q4 在 `src/tests/procedure/auth.test.ts`
+- [X] T046 [P] [US2] 单元测试 lockout-policy.ts (5 阈值、locked_until 计算、window 过期决策) 在 `src/tests/unit/server/domain/auth/lockout-policy.test.ts`
+- [X] T047 [P] [US2] 集成测试: 5 次失败 → 第 6 次正确密码仍失败 (SC-007) 用 fake timer 在 `src/tests/integration/auth/login-lockout.test.ts`
+- [X] T048 [P] [US2] 集成测试: 锁定窗口过期后第 7 次正确密码 → 200 + counter 清空 在 `src/tests/integration/auth/login-lockout.test.ts`
+- [X] T049 [P] [US2] 集成测试: 时序攻击防御 —— "用户不存在" vs "密码错"响应时间偏差 < 50ms (Better-Auth 默认 constant-time,验证其生效) 在 `src/tests/integration/auth/login-lockout.test.ts`
 
 ### Implementation for User Story 2
 
-- [ ] T050 [P] [US2] Create lockout.hook.ts in `src/server/auth/hooks/lockout.hook.ts` —— Better-Auth `signIn.before` 钩子,查 auth_failure_counters,锁定窗口内抛带 `retryAfterSeconds` 的 TRPCError
-- [ ] T051 [P] [US2] Create lockout-failure.hook.ts in `src/server/auth/hooks/lockout-failure.hook.ts` —— Better-Auth `signIn.after` 错误钩子,increment counter,达 5 设 locked_until + 写 lockout_triggered 审计
-- [ ] T052 [P] [US2] Create lockout-success.hook.ts in `src/server/auth/hooks/lockout-success.hook.ts` —— 登录成功删除 counter 行
-- [ ] T053 [US2] Wire 三个 lockout hooks into Better-Auth config
-- [ ] T054 [US2] Add `login` procedure in `src/server/api/routers/auth.ts` —— 调用 Better-Auth `auth.api.signInEmail`,抛错转 TRPCError 时携带 retryAfterSeconds
+- [X] T050 [P] [US2] Create lockout.hook.ts in `src/server/auth/hooks/lockout.hook.ts` —— Better-Auth `signIn.before` 钩子,查 auth_failure_counters,锁定窗口内抛带 `retryAfterSeconds` 的 TRPCError
+- [X] T051 [P] [US2] Create lockout-failure.hook.ts in `src/server/auth/hooks/lockout-failure.hook.ts` —— Better-Auth `signIn.after` 错误钩子,increment counter,达 5 设 locked_until + 写 lockout_triggered 审计
+- [X] T052 [P] [US2] Create lockout-success.hook.ts in `src/server/auth/hooks/lockout-success.hook.ts` —— 登录成功删除 counter 行
+- [X] T053 [US2] Wire 三个 lockout hooks into Better-Auth config
+- [X] T054 [US2] Add `login` procedure in `src/server/api/routers/auth.ts` —— 调用 Better-Auth `auth.api.signInEmail`,抛错转 TRPCError 时携带 retryAfterSeconds
 
 **Checkpoint**: US2 独立可测。锁定语义、计时防御、审计事件齐全。
 

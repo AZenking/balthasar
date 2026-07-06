@@ -3,6 +3,11 @@ import { z } from "zod";
 import { router, publicProcedure, protectedProcedure } from "@/server/api/trpc";
 import { auth } from "@/server/auth/config";
 import { writeAuditEvent } from "@/server/auth/hooks/audit";
+import {
+  checkLockoutByEmail,
+  recordLoginFailure,
+  clearLoginFailures,
+} from "@/server/auth/hooks/lockout";
 import { findRecentAuthEventsByEmail } from "@/server/db/queries/auth-events";
 import { loadFamilyAndMemberByUserId } from "@/server/db/queries/family-member";
 import { isPlausibleEmail } from "@/server/domain/auth/email-normalize";
@@ -129,10 +134,25 @@ export const authRouter = router({
   login: publicProcedure
     .input(loginInput)
     .mutation(async ({ input }) => {
+      // T053: lockout pre-check (Phase 4 US2)
+      const lockoutDecision = await checkLockoutByEmail(input.email);
+      if (lockoutDecision.status === "locked") {
+        const retryAfterSeconds = lockoutDecision.retryAfterSeconds ?? 300;
+        // Surface as CONFLICT with retryAfterSeconds in data (matches contract test T045)
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: `账户已锁定,请 ${Math.ceil(retryAfterSeconds / 60)} 分钟后重试`,
+          cause: { code: "LOCKED", retryAfterSeconds },
+        });
+      }
+
       try {
         const result = await auth.api.signInEmail({
           body: { email: input.email, password: input.password },
         });
+
+        // T052: clear failure counter on success
+        await clearLoginFailures(input.email);
 
         // NOTE: login_success audit is written by Better-Auth
         // `databaseHooks.session.create.after` in config.ts.
@@ -154,9 +174,11 @@ export const authRouter = router({
       } catch (e) {
         const mapped = mapBetterAuthError(e);
 
-        // Only write login_failure audit on actual credential errors.
-        // Lockout is audited by Phase 4 lockout hook; rate-limit by Better-Auth.
+        // T051: record failure on credential error (not on lockout or rate-limit)
         if (mapped.code === "UNAUTHORIZED") {
+          const failResult = await recordLoginFailure(input.email);
+
+          // Audit: login_failure (always on credential error)
           try {
             await writeAuditEvent({
               eventType: "login_failure",
@@ -164,7 +186,23 @@ export const authRouter = router({
               outcome: "failure",
             });
           } catch {
-            // swallow — primary error mapping is more important
+            // swallow
+          }
+
+          // Audit: lockout_triggered (only when this failure crosses threshold)
+          if (failResult.triggeredLockout) {
+            try {
+              await writeAuditEvent({
+                eventType: "lockout_triggered",
+                email: input.email,
+                outcome: "failure",
+                metadata: {
+                  retryAfterSeconds: failResult.retryAfterSeconds ?? 300,
+                },
+              });
+            } catch {
+              // swallow
+            }
           }
         }
         throw mapped;

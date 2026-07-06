@@ -55,8 +55,23 @@ vi.mock("@/server/auth/hooks/audit", () => ({
   writeAuditEvent: vi.fn().mockResolvedValue(undefined),
 }));
 
+/**
+ * Mock lockout hooks so contract tests don't need DB.
+ * Default: allow all logins. Per-test override via mockRejectedValueOnce.
+ */
+vi.mock("@/server/auth/hooks/lockout", () => ({
+  checkLockoutByEmail: vi.fn().mockResolvedValue({ status: "allowed" }),
+  recordLoginFailure: vi
+    .fn()
+    .mockResolvedValue({ triggeredLockout: false }),
+  clearLoginFailures: vi.fn().mockResolvedValue(undefined),
+}));
+
 import { auth } from "@/server/auth/config";
 import { createCaller } from "@/lib/trpc/server";
+import { checkLockoutByEmail } from "@/server/auth/hooks/lockout";
+
+const mockedCheckLockout = vi.mocked(checkLockoutByEmail);
 
 const mockedAuth = vi.mocked(auth);
 
@@ -219,12 +234,10 @@ describe("[T043-T045] auth.login procedure", () => {
   });
 
   it("T045: maps lockout to CONFLICT + retryAfterSeconds (423 semantics)", async () => {
-    mockedAuth.api.signInEmail.mockRejectedValueOnce(
-      Object.assign(new Error("Locked"), {
-        code: "LOCKED",
-        retryAfterSeconds: 240,
-      })
-    );
+    mockedCheckLockout.mockResolvedValueOnce({
+      status: "locked",
+      retryAfterSeconds: 240,
+    });
 
     const caller = publicCaller();
     await expect(
