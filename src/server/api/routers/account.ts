@@ -253,6 +253,131 @@ export const accountRouter = router({
 
       return serializeAccount(updated);
     }),
+
+  /**
+   * US4: Archive account (soft-delete).
+   *
+   * Sets archivedAt = now(). Idempotent: re-archiving already-archived
+   * account returns 200 with unchanged archivedAt (SC-004).
+   *
+   * Cross-family access → NOT_FOUND (FR-012, SC-003).
+   * Audit `account_archived` written on first archive only (idempotent skip).
+   */
+  archive: protectedProcedure
+    .input(z.object({ id: z.string().uuid() }).strict())
+    .mutation(async ({ input, ctx }) => {
+      const { familyId, memberId } = await loadFamilyAndMemberIdsByUserId(
+        ctx.session.user.id
+      );
+
+      return withTransaction(async (tx) => {
+        // Single WHERE id AND family_id (SC-003 cross-family isolation)
+        const existing = await tx
+          .select()
+          .from(account)
+          .where(and(eq(account.id, input.id), eq(account.familyId, familyId)))
+          .limit(1);
+
+        const row = existing[0];
+        if (!row) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "账户不存在",
+          });
+        }
+
+        // Idempotent: already archived → return as-is, no audit
+        if (row.archivedAt !== null) {
+          return serializeAccount(row);
+        }
+
+        const now = new Date();
+        const [updatedRow] = await tx
+          .update(account)
+          .set({ archivedAt: now })
+          .where(eq(account.id, input.id))
+          .returning();
+
+        if (!updatedRow) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "归档失败",
+          });
+        }
+
+        await writeAccountEvent(tx, {
+          eventType: "account_archived",
+          accountId: updatedRow.id,
+          actorMemberId: memberId,
+          // archive/unarchive events carry no payload (state transition only)
+          before: null,
+          after: null,
+        });
+
+        return serializeAccount(updatedRow);
+      });
+    }),
+
+  /**
+   * US4: Unarchive account (restore).
+   *
+   * Sets archivedAt = NULL. Idempotent: unarchiving non-archived account
+   * returns 200 (SC-004).
+   *
+   * Cross-family access → NOT_FOUND (FR-012, SC-003).
+   * Audit `account_unarchived` written on actual state transition only.
+   */
+  unarchive: protectedProcedure
+    .input(z.object({ id: z.string().uuid() }).strict())
+    .mutation(async ({ input, ctx }) => {
+      const { familyId, memberId } = await loadFamilyAndMemberIdsByUserId(
+        ctx.session.user.id
+      );
+
+      return withTransaction(async (tx) => {
+        const existing = await tx
+          .select()
+          .from(account)
+          .where(and(eq(account.id, input.id), eq(account.familyId, familyId)))
+          .limit(1);
+
+        const row = existing[0];
+        if (!row) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "账户不存在",
+          });
+        }
+
+        // Idempotent: not archived → return as-is, no audit
+        if (row.archivedAt === null) {
+          return serializeAccount(row);
+        }
+
+        const [updatedRow] = await tx
+          .update(account)
+          .set({ archivedAt: null })
+          .where(eq(account.id, input.id))
+          .returning();
+
+        if (!updatedRow) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "取消归档失败",
+          });
+        }
+
+        await writeAccountEvent(tx, {
+          eventType: "account_unarchived",
+          accountId: updatedRow.id,
+          actorMemberId: memberId,
+          before: null,
+          after: null,
+        });
+
+        return serializeAccount(updatedRow);
+      });
+    }),
 });
 
 export type AccountRouter = typeof accountRouter;

@@ -270,4 +270,61 @@ describe("[T024-T025] account.update procedure", () => {
   });
 });
 
+// ============================================================================
+// T030-T031: account.archive / account.unarchive contract tests (US4)
+// ============================================================================
+
+describe("[T030-T031] account.archive / account.unarchive procedure", () => {
+  it("T030: archive accepts { id } input", async () => {
+    const caller = authedCaller();
+    try {
+      await caller.account.archive({
+        id: "00000000-0000-7000-8000-000000000010",
+      });
+    } catch (e: any) {
+      expect(e?.data?.code).not.toBe("BAD_REQUEST");
+    }
+  });
+
+  it("T031: unarchive accepts { id } input", async () => {
+    const caller = authedCaller();
+    try {
+      await caller.account.unarchive({
+        id: "00000000-0000-7000-8000-000000000011",
+      });
+    } catch (e: any) {
+      expect(e?.data?.code).not.toBe("BAD_REQUEST");
+    }
+  });
+
+  it("archive rejects unknown input keys (zod strict)", async () => {
+    const caller = authedCaller();
+    await expect(
+      caller.account.archive({ unexpected: true } as any)
+    ).rejects.toMatchObject({ data: { code: "BAD_REQUEST" } });
+  });
+
+  it("archive rejects non-UUID id", async () => {
+    const caller = authedCaller();
+    await expect(
+      caller.account.archive({ id: "not-a-uuid" })
+    ).rejects.toMatchObject({ data: { code: "BAD_REQUEST" } });
+  });
+
+  it("archive requires authed session (protectedProcedure)", async () => {
+    const caller = publicCaller();
+    await expect(
+      caller.account.archive({ id: "00000000-0000-7000-8000-000000000012" })
+    ).rejects.toMatchObject({ data: { code: "UNAUTHORIZED" } });
+  });
+
+  it("unarchive requires authed session (protectedProcedure)", async () => {
+    const caller = publicCaller();
+    await expect(
+      caller.account.unarchive({ id: "00000000-0000-7000-8000-000000000013" })
+    ).rejects.toMatchObject({ data: { code: "UNAUTHORIZED" } });
+  });
+});
+
+
 
