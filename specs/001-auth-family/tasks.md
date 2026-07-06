@@ -153,14 +153,14 @@ T3 Stack 单仓:
 
 ### Tests for User Story 3 ⚠️ TDD
 
-- [ ] T055 [P] [US3] Procedure 契约测试 `auth.logout` 200/204 happy path 在 `src/tests/procedure/auth.test.ts`
-- [ ] T056 [P] [US3] Procedure 契约测试 `auth.logout` 幂等 (无 cookie / 已登出) 在 `src/tests/procedure/auth.test.ts`
-- [ ] T057 [P] [US3] 集成测试: 登出后旧 cookie → auth.me 401 (SC-008) 在 `src/tests/integration/auth/logout.test.ts`
-- [ ] T058 [P] [US3] 集成测试: 双重登出只写一条 `logout` 审计 在 `src/tests/integration/auth/logout.test.ts`
+- [X] T055 [P] [US3] Procedure 契约测试 `auth.logout` 200/204 happy path 在 `src/tests/procedure/auth.test.ts`
+- [X] T056 [P] [US3] Procedure 契约测试 `auth.logout` 幂等 (无 cookie / 已登出) 在 `src/tests/procedure/auth.test.ts`
+- [X] T057 [P] [US3] 集成测试: 登出后旧 cookie → auth.me 401 (SC-008) 在 `src/tests/integration/auth/logout.test.ts`
+- [X] T058 [P] [US3] 集成测试: 双重登出只写一条 `logout` 审计 在 `src/tests/integration/auth/logout.test.ts`
 
 ### Implementation for User Story 3
 
-- [ ] T059 [US3] Add `logout` procedure in `src/server/api/routers/auth.ts` —— 包装 Better-Auth `auth.api.signOut`,内部捕获 session-not-found 不抛错 (幂等)
+- [X] T059 [US3] Add `logout` procedure in `src/server/api/routers/auth.ts` —— 包装 Better-Auth `auth.api.signOut`,内部捕获 session-not-found 不抛错 (幂等)
 
 **Checkpoint**: US3 独立可测。SC-008 通过。
 
@@ -174,20 +174,20 @@ T3 Stack 单仓:
 
 ### Tests for User Story 4 ⚠️ TDD
 
-- [ ] T060 [P] [US4] Procedure 契约测试 `auth.me` 200 (返回 user/family/member) 在 `src/tests/procedure/auth.test.ts`
-- [ ] T061 [P] [US4] Procedure 契约测试 `auth.me` 401 (无 cookie / 过期) 在 `src/tests/procedure/auth.test.ts`
-- [ ] T062 [P] [US4] Procedure 契约测试 `auth.auditEvents` 200 (事件 DESC,无 password/token) 在 `src/tests/procedure/auth.test.ts`
-- [ ] T063 [P] [US4] 集成测试: 滑动续期 —— Better-Auth updateAge=1d,首次请求触发 expires_at 顺延,24h 内重复请求不写 DB (SC-009) 用 fake timer 在 `src/tests/integration/auth/session-expiry.test.ts`
-- [ ] T064 [P] [US4] 集成测试: 过期 session 调 auth.me → 401 + session 行被惰性删除 在 `src/tests/integration/auth/session-expiry.test.ts`
-- [ ] T065 [P] [US4] 集成测试: 全流程 (register→login_fail→lockout→login→logout) 产生 5 类审计事件,auth.auditEvents 可查 在 `src/tests/integration/auth/audit-events.test.ts`
-- [ ] T066 [P] [US4] 集成测试: 跨用户隔离 —— A 的 cookie 查不到 B 的事件 在 `src/tests/integration/auth/audit-events.test.ts`
-- [ ] T067 [P] [US4] 性能测试: 1000 行 auth_events → auth.auditEvents P95 < 5s (SC-010) 在 `src/tests/integration/auth/audit-events.test.ts`
+- [X] T060 [P] [US4] Procedure 契约测试 `auth.me` 200 (返回 user/family/member) 在 `src/tests/procedure/auth.test.ts`
+- [X] T061 [P] [US4] Procedure 契约测试 `auth.me` 401 (无 cookie / 过期) 在 `src/tests/procedure/auth.test.ts`
+- [X] T062 [P] [US4] Procedure 契约测试 `auth.auditEvents` 200 (事件 DESC,无 password/token) 在 `src/tests/procedure/auth.test.ts`
+- [X] T063 [P] [US4] 集成测试: 滑动续期 —— Better-Auth updateAge=1d,首次请求触发 expires_at 顺延,24h 内重复请求不写 DB (SC-009) 用 fake timer 在 `src/tests/integration/auth/session-expiry.test.ts`
+- [X] T064 [P] [US4] 集成测试: 过期 session 调 auth.me → 401 + session 行被惰性删除 在 `src/tests/integration/auth/session-expiry.test.ts`
+- [X] T065 [P] [US4] 集成测试: 全流程 (register→login_fail→lockout→login→logout) 产生 5 类审计事件,auth.auditEvents 可查 在 `src/tests/integration/auth/audit-events.test.ts`
+- [X] T066 [P] [US4] 集成测试: 跨用户隔离 —— A 的 cookie 查不到 B 的事件 在 `src/tests/integration/auth/audit-events.test.ts`
+- [X] T067 [P] [US4] 性能测试: 1000 行 auth_events → auth.auditEvents P95 < 5s (SC-010) 在 `src/tests/integration/auth/audit-events.test.ts`
 
 ### Implementation for User Story 4
 
-- [ ] T068 [P] [US4] Create `src/server/db/queries/auth-events.ts` —— 独立读路径 query module,导出 `findRecentAuthEventsByEmail(email, days=30)` 纯 Drizzle 查询函数。**与 audit.hook.ts 解耦** (hook 是 Better-Auth events 写端处理器,read 路径不应混入,见宪章二 Feature-Sliced)
-- [ ] T069 [US4] Add `me` query in `src/server/api/routers/auth.ts` —— Better-Auth `auth.api.getSession`,查 family + member,过期则返回 null
-- [ ] T070 [US4] Add `auditEvents` query in `src/server/api/routers/auth.ts` —— protectedProcedure,锁定为当前 session 的 email,调用 T068 的 `findRecentAuthEventsByEmail` 读函数,排除敏感字段
+- [X] T068 [P] [US4] Create `src/server/db/queries/auth-events.ts` —— 独立读路径 query module,导出 `findRecentAuthEventsByEmail(email, days=30)` 纯 Drizzle 查询函数。**与 audit.hook.ts 解耦** (hook 是 Better-Auth events 写端处理器,read 路径不应混入,见宪章二 Feature-Sliced)
+- [X] T069 [US4] Add `me` query in `src/server/api/routers/auth.ts` —— Better-Auth `auth.api.getSession`,查 family + member,过期则返回 null
+- [X] T070 [US4] Add `auditEvents` query in `src/server/api/routers/auth.ts` —— protectedProcedure,锁定为当前 session 的 email,调用 T068 的 `findRecentAuthEventsByEmail` 读函数,排除敏感字段
 
 **Checkpoint**: US4 独立可测。SC-009 / SC-010 通过。
 
