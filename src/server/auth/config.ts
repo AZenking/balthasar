@@ -3,7 +3,6 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "@/server/db";
 import * as schema from "@/server/db/schema";
 import { env } from "@/lib/env";
-import { checkPasswordPolicy } from "@/server/domain/auth/password-policy";
 import { onUserCreated } from "@/server/auth/hooks/family-init";
 import { writeAuditEvent } from "@/server/auth/hooks/audit";
 
@@ -21,12 +20,11 @@ import { writeAuditEvent } from "@/server/auth/hooks/audit";
  * base config is live.
  */
 export const auth = betterAuth({
-  database: {
-    adapter: drizzleAdapter(db, {
-      provider: "pg",
-      schema,
-    }),
-  },
+  database: drizzleAdapter(db, {
+    provider: "pg",
+    schema,
+    transaction: true,
+  }),
   baseURL: env.BETTER_AUTH_URL,
   secret: env.BETTER_AUTH_SECRET,
   emailAndPassword: {
@@ -34,47 +32,34 @@ export const auth = betterAuth({
     autoSignIn: true,
     minPasswordLength: 8,
     maxPasswordLength: 128,
-    /**
-     * NIST 800-63B password policy (FR-003, Clarification Q2).
-     * Better-Auth calls this on every password set (sign-up + change).
-     */
-    password: {
-      policy: {
-        async validate(password: string) {
-          const result = checkPasswordPolicy(password);
-          if (!result.ok) {
-            throw new Error(
-              result.reason === "too_short"
-                ? `密码至少 ${result.minLength} 位`
-                : "密码过于常见,请使用更强的密码"
-            );
-          }
-        },
-      },
-    },
   },
   session: {
     /**
      * 30-day sliding window (FR-008, SC-009).
      * `updateAge: 1d` means we update `expires_at` at most once per day,
      * avoiding a DB write on every request.
+     *
+     * cookieCache DISABLED — Better-Auth's cookie cache causes sign-out to
+     * only clear browser cookie without revoking the DB row, breaking SC-008.
+     * Re-enable in V2 if RSC session-read latency becomes a concern (and
+     * pair with explicit revoke-on-signout logic).
      */
     expiresIn: 60 * 60 * 24 * 30, // 30 days
     updateAge: 60 * 60 * 24, // 1 day
-    cookieCache: {
-      enabled: true,
-      maxAge: 5 * 60, // cache session in cookie 5 min for fast RSC reads
-    },
   },
   rateLimit: {
+    enabled: true,
     window: 60,
     max: 100,
-    rules: {
-      "sign-up-email": {
+    // storage omitted — defaults to "memory". Counters reset on restart,
+    // acceptable for MVP per research.md Q3. Switch to "database" in V2
+    // (requires adding `rateLimit` model to schema).
+    customRules: {
+      "/sign-up/email": {
         window: 3600,
         max: 10,
       },
-      "sign-in-email": {
+      "/sign-in/email": {
         window: 60,
         max: 20,
       },
