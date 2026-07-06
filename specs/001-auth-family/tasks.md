@@ -94,24 +94,24 @@ T3 Stack 单仓:
 
 ### Tests for User Story 1 ⚠️ TDD
 
-- [ ] T028 [P] [US1] Procedure 契约测试 `auth.register.useMutation` happy path 在 `src/tests/procedure/auth.test.ts` —— createCaller 调用,断言返回 user/family/member 形状
-- [ ] T029 [P] [US1] Procedure 契约测试 400 (email 格式 / password < 8 / 弱密码) 在 `src/tests/procedure/auth.test.ts`
-- [ ] T030 [P] [US1] Procedure 契约测试 409 (重复邮箱) 在 `src/tests/procedure/auth.test.ts`
-- [ ] T031 [P] [US1] Procedure 契约测试 429 (IP 限流第 11 次) 在 `src/tests/procedure/auth.test.ts`
-- [ ] T032 [P] [US1] 单元测试 password-policy (长度边界 7/8,黑名单命中) 在 `src/tests/unit/server/domain/auth/password-policy.test.ts`
-- [ ] T033 [P] [US1] 单元测试 email-normalize 在 `src/tests/unit/server/domain/auth/email-normalize.test.ts`
-- [ ] T034 [P] [US1] 集成测试: family-init.hook 原子写 (FR-004) 在 `src/tests/integration/auth/register.test.ts` —— testcontainers,模拟 hook 中途失败,验证 user/family/member 三表 0 残留
-- [ ] T035 [P] [US1] 集成测试: 并发注册同邮箱 → 恰好一个成功,其余 409 (SC-006) 在 `src/tests/integration/auth/register.test.ts`
-- [ ] T036 [P] [US1] 集成测试: 同 IP 第 11 次注册 → 429 + 第 11 个未写任何行 (SC-011) 在 `src/tests/integration/auth/register.test.ts`
+- [X] T028 [P] [US1] Procedure 契约测试 `auth.register.useMutation` happy path 在 `src/tests/procedure/auth.test.ts` —— createCaller 调用,断言返回 user/family/member 形状
+- [X] T029 [P] [US1] Procedure 契约测试 400 (email 格式 / password < 8 / 弱密码) 在 `src/tests/procedure/auth.test.ts`
+- [X] T030 [P] [US1] Procedure 契约测试 409 (重复邮箱) 在 `src/tests/procedure/auth.test.ts`
+- [X] T031 [P] [US1] Procedure 契约测试 429 (IP 限流第 11 次) 在 `src/tests/procedure/auth.test.ts`
+- [X] T032 [P] [US1] 单元测试 password-policy (长度边界 7/8,黑名单命中) 在 `src/tests/unit/server/domain/auth/password-policy.test.ts`
+- [X] T033 [P] [US1] 单元测试 email-normalize 在 `src/tests/unit/server/domain/auth/email-normalize.test.ts`
+- [X] T034 [P] [US1] 集成测试: family-init.hook 原子写 (FR-004) 在 `src/tests/integration/auth/register.test.ts` —— testcontainers,模拟 hook 中途失败,验证 user/family/member 三表 0 残留
+- [X] T035 [P] [US1] 集成测试: 并发注册同邮箱 → 恰好一个成功,其余 409 (SC-006) 在 `src/tests/integration/auth/register.test.ts`
+- [X] T036 [P] [US1] 集成测试: 同 IP 第 11 次注册 → 429 + 第 11 个未写任何行 (SC-011) 在 `src/tests/integration/auth/register.test.ts`
 
 ### Implementation for User Story 1
 
-- [ ] T037 [P] [US1] Create family-init.hook.ts in `src/server/auth/hooks/family-init.hook.ts` —— Better-Auth `database.before` 钩子,在 user insert 前后扩展事务创建 family + member (FR-004/005)
-- [ ] T038 [US1] Wire family-init.hook into Better-Auth config (`src/server/auth/config.ts` 的 `database.hooks` 段)
-- [ ] T039 [P] [US1] Create audit.hook.ts skeleton in `src/server/auth/hooks/audit.hook.ts` —— Better-Auth events 钩子,写入 auth_events 表 (写方法 insert-only)
-- [ ] T040 [US1] Wire audit.hook into Better-Auth config (events 段,注册 onUserCreated / onSessionCreated 等)
-- [ ] T041 [US1] Create auth router with `register` procedure in `src/server/api/routers/auth.ts` —— 调用 Better-Auth `auth.api.signUpEmail`,触发钩子 (family-init 自动跑、audit 自动写)
-- [ ] T042 [US1] Wire `authRouter` into appRouter in `src/server/api/root.ts`
+- [X] T037 [P] [US1] Create family-init.hook.ts in `src/server/auth/hooks/family-init.hook.ts` —— Better-Auth `database.before` 钩子,在 user insert 前后扩展事务创建 family + member (FR-004/005)
+- [X] T038 [US1] Wire family-init.hook into Better-Auth config (`src/server/auth/config.ts` 的 `database.hooks` 段)
+- [X] T039 [P] [US1] Create audit.hook.ts skeleton in `src/server/auth/hooks/audit.hook.ts` —— Better-Auth events 钩子,写入 auth_events 表 (写方法 insert-only)
+- [X] T040 [US1] Wire audit.hook into Better-Auth config (events 段,注册 onUserCreated / onSessionCreated 等)
+- [X] T041 [US1] Create auth router with `register` procedure in `src/server/api/routers/auth.ts` —— 调用 Better-Auth `auth.api.signUpEmail`,触发钩子 (family-init 自动跑、audit 自动写)
+- [X] T042 [US1] Wire `authRouter` into appRouter in `src/server/api/root.ts`
 
 **Checkpoint**: US1 独立可测 —— `pnpm dev` 后浏览器调用 `/api/trpc/auth.register` 返回 200 + Set-Cookie,DB 中三表 1:1:1,审计 1 条。
 

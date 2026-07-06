@@ -4,6 +4,8 @@ import { db } from "@/server/db";
 import * as schema from "@/server/db/schema";
 import { env } from "@/lib/env";
 import { checkPasswordPolicy } from "@/server/domain/auth/password-policy";
+import { onUserCreated } from "@/server/auth/hooks/family-init";
+import { writeAuditEvent } from "@/server/auth/hooks/audit";
 
 /**
  * Better-Auth server configuration.
@@ -79,11 +81,66 @@ export const auth = betterAuth({
     },
   },
   /**
-   * Hooks go here in later phases:
-   *   databaseHooks.user.create.after → family-init.hook (Phase 3)
-   *   databaseHooks.session.create.after → audit.hook (Phase 3)
-   *   signIn.before / signIn.after      → lockout hooks (Phase 4)
+   * Lifecycle hooks (T038 family-init + T040 audit).
+   *
+   * Phase 3 wires:
+   * - `user.create.after` → onUserCreated (creates default Family + Member)
+   * - `user.create.after` → audit writeAuditEvent("register_success")
+   * - `session.create.after` → audit writeAuditEvent("login_success")
+   * - `session.delete.after` → audit writeAuditEvent("logout")
+   *
+   * Phase 4 will add (in lockout.hook.ts):
+   * - signIn.before → lockout check (FR-009)
+   * - signIn.after error → counter increment + lockout_triggered audit
+   *
+   * Note: Better-Auth databaseHooks share the adapter's transaction;
+   * if `after` throws, the user insert rolls back (atomic per FR-004).
    */
+  databaseHooks: {
+    user: {
+      create: {
+        after: async (createdUser) => {
+          await onUserCreated(createdUser);
+          await writeAuditEvent({
+            eventType: "register_success",
+            email: createdUser.email,
+            outcome: "success",
+          });
+        },
+      },
+    },
+    session: {
+      create: {
+        after: async (createdSession) => {
+          // Resolve email from user for audit (session only has userId)
+          const userRow = await db.query.user.findFirst({
+            where: (u, { eq }) => eq(u.id, createdSession.userId),
+          });
+          if (userRow) {
+            await writeAuditEvent({
+              eventType: "login_success",
+              email: userRow.email,
+              outcome: "success",
+            });
+          }
+        },
+      },
+      delete: {
+        after: async (deletedSession) => {
+          const userRow = await db.query.user.findFirst({
+            where: (u, { eq }) => eq(u.id, deletedSession.userId),
+          });
+          if (userRow) {
+            await writeAuditEvent({
+              eventType: "logout",
+              email: userRow.email,
+              outcome: "success",
+            });
+          }
+        },
+      },
+    },
+  },
   advanced: {
     cookies: {
       sessionToken: {

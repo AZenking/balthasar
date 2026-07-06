@@ -37,3 +37,6 @@ drizzle-studio/
 
 # Next.js
 next-env.d.ts
+
+# Claude Code skill tooling (developer-local, not project artifacts)
+.claude/
