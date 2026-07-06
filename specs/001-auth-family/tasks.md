@@ -34,12 +34,12 @@ T3 Stack 单仓:
 
 **Purpose**: T3 Stack 工程骨架 + Better-Auth + tRPC + Drizzle 装配
 
-- [ ] T001 用 `create-t3-app` 初始化项目 (App Router + tRPC + Drizzle + Tailwind,不选 NextAuth,选"我自己实现 auth"),保留默认 `src/` 结构 — 改为手动搭建等价骨架 (避免 CLI 交互)
-- [ ] T002 安装额外依赖: `better-auth`、`@better-auth/cli`、`bcrypt` (fallback)、`uuidv7`、`testcontainers`、`@testing-library/react` — 写入 `package.json`
-- [ ] T003 [P] 配置 `tsconfig.json` 路径别名 (`@/server/*`、`@/lib/*`、`@/app/*`、`@/components/*`) — `tsconfig.json`
-- [ ] T004 [P] 配置 Vitest with projects: `vitest.config.ts` (unit / procedure / integration 三 project)
-- [ ] T005 [P] 配置 testcontainers Postgres pool + 启动后自动 `drizzle-kit migrate` 作为 init,在 `src/tests/helpers/db.ts`
-- [ ] T006 [P] 实现 zod 校验 env loader `src/lib/env.ts` (DATABASE_URL、BETTER_AUTH_SECRET、BETTER_AUTH_URL、NODE_ENV,分 server/client 段)
+- [X] T001 用 `create-t3-app` 初始化项目 (App Router + tRPC + Drizzle + Tailwind,不选 NextAuth,选"我自己实现 auth"),保留默认 `src/` 结构 — 改为手动搭建等价骨架 (避免 CLI 交互)
+- [X] T002 安装额外依赖: `better-auth`、`@better-auth/cli`、`bcrypt` (fallback)、`uuidv7`、`testcontainers`、`@testing-library/react` — 写入 `package.json`
+- [X] T003 [P] 配置 `tsconfig.json` 路径别名 (`@/server/*`、`@/lib/*`、`@/app/*`、`@/components/*`) — `tsconfig.json`
+- [X] T004 [P] 配置 Vitest with projects: `vitest.config.ts` (unit / procedure / integration 三 project)
+- [X] T005 [P] 配置 testcontainers Postgres pool + 启动后自动 `drizzle-kit migrate` 作为 init,在 `src/tests/helpers/db.ts`
+- [X] T006 [P] 实现 zod 校验 env loader `src/lib/env.ts` (DATABASE_URL、BETTER_AUTH_SECRET、BETTER_AUTH_URL、NODE_ENV,分 server/client 段)
 
 ---
 
@@ -51,36 +51,36 @@ T3 Stack 单仓:
 
 ### 数据层 (Drizzle schema + 初始迁移)
 
-- [ ] T007 用 `npx @better-auth/cli@latest generate` 生成 Better-Auth 必需表 schema (user / session / verification / account) 至 `src/server/db/schema/auth.ts`
-- [ ] T008 [P] Create families Drizzle schema in `src/server/db/schema/family.ts` per [data-model.md](./data-model.md) §`families` —— `owner_user_id` FK 指向 Better-Auth `users.id` (text cuid2);`updated_at` 用 Drizzle 应用层 `.$onUpdate(() => new Date())` 维护
-- [ ] T009 [P] Create members Drizzle schema in `src/server/db/schema/member.ts` per data-model.md
-- [ ] T010 [P] Create auth_events Drizzle schema in `src/server/db/schema/auth-events.ts` per data-model.md
-- [ ] T011 [P] Create auth_failure_counters Drizzle schema in `src/server/db/schema/auth-failure-counters.ts` per data-model.md
-- [ ] T012 Generate initial Drizzle migration `src/server/db/migrations/0001_init.sql` via `drizzle-kit generate` (覆盖 Better-Auth 表 + 业务 4 表)
-- [ ] T013 Create Drizzle client singleton in `src/server/db/client.ts`
-- [ ] T014 [P] Create `src/server/db/index.ts` re-export 所有 schema (供 Better-Auth adapter 与业务代码统一导入)
+- [X] T007 用 `npx @better-auth/cli@latest generate` 生成 Better-Auth 必需表 schema (user / session / verification / account) 至 `src/server/db/schema/auth.ts`
+- [X] T008 [P] Create families Drizzle schema in `src/server/db/schema/family.ts` per [data-model.md](./data-model.md) §`families` —— `owner_user_id` FK 指向 Better-Auth `users.id` (text cuid2);`updated_at` 用 Drizzle 应用层 `.$onUpdate(() => new Date())` 维护
+- [X] T009 [P] Create members Drizzle schema in `src/server/db/schema/member.ts` per data-model.md
+- [X] T010 [P] Create auth_events Drizzle schema in `src/server/db/schema/auth-events.ts` per data-model.md
+- [X] T011 [P] Create auth_failure_counters Drizzle schema in `src/server/db/schema/auth-failure-counters.ts` per data-model.md
+- [X] T012 Generate initial Drizzle migration `src/server/db/migrations/0001_init.sql` via `drizzle-kit generate` (覆盖 Better-Auth 表 + 业务 4 表)
+- [X] T013 Create Drizzle client singleton in `src/server/db/client.ts`
+- [X] T014 [P] Create `src/server/db/index.ts` re-export 所有 schema (供 Better-Auth adapter 与业务代码统一导入)
 
 ### 共享工具
 
-- [ ] T015 [P] Create `src/lib/uuid.ts` — UUID v7 生成器封装
-- [ ] T016 [P] Create `src/server/domain/auth/email-normalize.ts` — trim + lower per FR-015
-- [ ] T017 [P] Create `src/server/domain/auth/password-policy.ts` — NIST 800-63B 长度 ≥ 8 + OWASP top-1000 黑名单,FR-003
-- [ ] T018 [P] Create `src/server/domain/auth/lockout-policy.ts` — 5/5min 决策函数,纯函数 (输入 counter + now,返回 decision)
+- [X] T015 [P] Create `src/lib/uuid.ts` — UUID v7 生成器封装
+- [X] T016 [P] Create `src/server/domain/auth/email-normalize.ts` — trim + lower per FR-015
+- [X] T017 [P] Create `src/server/domain/auth/password-policy.ts` — NIST 800-63B 长度 ≥ 8 + OWASP top-1000 黑名单,FR-003
+- [X] T018 [P] Create `src/server/domain/auth/lockout-policy.ts` — 5/5min 决策函数,纯函数 (输入 counter + now,返回 decision)
 
 ### Better-Auth 配置
 
-- [ ] T019 Create Better-Auth server config in `src/server/auth/config.ts` —— 启用 `emailAndPassword` 插件 + `rateLimit` (sign-up-email: 1h/10) + `session` (expiresIn: 30d, updateAge: 1d);密码 policy 注入 T017
-- [ ] T020 [P] Create Better-Auth client config in `src/server/auth/client.ts` —— `createAuthClient` for browser
-- [ ] T021 Mount Better-Auth handler at `src/app/api/auth/[...all]/route.ts` —— toNextJsHandler(auth)
+- [X] T019 Create Better-Auth server config in `src/server/auth/config.ts` —— 启用 `emailAndPassword` 插件 + `rateLimit` (sign-up-email: 1h/10) + `session` (expiresIn: 30d, updateAge: 1d);密码 policy 注入 T017
+- [X] T020 [P] Create Better-Auth client config in `src/server/auth/client.ts` —— `createAuthClient` for browser
+- [X] T021 Mount Better-Auth handler at `src/app/api/auth/[...all]/route.ts` —— toNextJsHandler(auth)
 
 ### tRPC 基础设施
 
-- [ ] T022 Create tRPC context `src/server/api/trpc.ts` —— `createContext` 从 Next.js request 取 Better-Auth session,注入 `ctx.session` (无则 null)
-- [ ] T023 [P] Create `protectedProcedure` 中间件 —— `publicProcedure.use` 链,session 为 null 抛 `UNAUTHORIZED`
-- [ ] T024 Create empty root router `src/server/api/root.ts` —— `appRouter = router({})` 占位,后续 Phase 在此挂子 router;**先于此 Phase 后续 tRPC 客户端/服务端文件创建**,因为 T025/T026 依赖其 `RootRouter` 类型
-- [ ] T025 [P] Create tRPC client `src/lib/trpc/client.ts` —— `createTRPCReact<RootRouter>` + links (httpBatchLink + httpSubscriptionLink);依赖 T024 的 RootRouter 类型
-- [ ] T026 [P] Create tRPC server caller `src/lib/trpc/server.ts` —— `caller<RootRouter>()` 用于 RSC 内调用;依赖 T024 的 RootRouter 类型
-- [ ] T027 Mount tRPC API at `src/app/api/trpc/[trpc]/route.ts` —— `fetchRequestHandler({ router: appRouter, createContext })`,依赖 T024 router + T022 context
+- [X] T022 Create tRPC context `src/server/api/trpc.ts` —— `createContext` 从 Next.js request 取 Better-Auth session,注入 `ctx.session` (无则 null)
+- [X] T023 [P] Create `protectedProcedure` 中间件 —— `publicProcedure.use` 链,session 为 null 抛 `UNAUTHORIZED`
+- [X] T024 Create empty root router `src/server/api/root.ts` —— `appRouter = router({})` 占位,后续 Phase 在此挂子 router;**先于此 Phase 后续 tRPC 客户端/服务端文件创建**,因为 T025/T026 依赖其 `RootRouter` 类型
+- [X] T025 [P] Create tRPC client `src/lib/trpc/client.ts` —— `createTRPCReact<RootRouter>` + links (httpBatchLink + httpSubscriptionLink);依赖 T024 的 RootRouter 类型
+- [X] T026 [P] Create tRPC server caller `src/lib/trpc/server.ts` —— `caller<RootRouter>()` 用于 RSC 内调用;依赖 T024 的 RootRouter 类型
+- [X] T027 Mount tRPC API at `src/app/api/trpc/[trpc]/route.ts` —— `fetchRequestHandler({ router: appRouter, createContext })`,依赖 T024 router + T022 context
 
 **Checkpoint**: Better-Auth 跑通 `/api/auth/*`、tRPC 跑通空 router,可进入 US 实现。
 
