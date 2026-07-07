@@ -70,7 +70,8 @@ export async function POST(req: Request) {
   // Resolve family
   const { familyId, memberId } = await loadFamilyAndMemberIdsByUserId(auth.userId);
 
-  const signedAmount = applySign(type, parseInt(yuanToCents ? yuanToCents(amountStr).toString() : "0") || applySign(type, Math.round(parseFloat(amountStr) * 100)));
+  const cents = Math.round(parseFloat(amountStr) * 100);
+  const signedAmount = applySign(type, cents);
 
   try {
     const created = await withTransaction(async (tx) => {
