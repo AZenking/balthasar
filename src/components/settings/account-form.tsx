@@ -1,0 +1,112 @@
+"use client";
+
+import { useState } from "react";
+import { SUPPORTED_CURRENCIES, CURRENCY_MINOR_UNITS } from "@/server/domain/account/currency";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
+export interface AccountFormValues {
+  name: string;
+  currency: string;
+  initialBalanceCents?: number;
+}
+
+export function AccountForm({
+  mode,
+  defaultValues,
+  onSubmit,
+  onCancel,
+}: {
+  mode: "create" | "edit";
+  defaultValues?: { name: string; currency: string };
+  onSubmit: (values: AccountFormValues) => void;
+  onCancel: () => void;
+}) {
+  const [name, setName] = useState(defaultValues?.name ?? "");
+  const [currency, setCurrency] = useState(defaultValues?.currency ?? "CNY");
+  const [initialBalance, setInitialBalance] = useState("0");
+  const [error, setError] = useState("");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    if (!name.trim()) {
+      setError("账户名称不能为空");
+      return;
+    }
+    if (name.length > 50) {
+      setError("账户名称不能超过 50 字");
+      return;
+    }
+
+    const values: AccountFormValues = { name: name.trim(), currency };
+
+    if (mode === "create") {
+      const balanceNum = parseFloat(initialBalance);
+      if (isNaN(balanceNum) || balanceNum < 0) {
+        setError("初始余额无效");
+        return;
+      }
+      const minorUnits = CURRENCY_MINOR_UNITS[currency as keyof typeof CURRENCY_MINOR_UNITS] ?? 2;
+      values.initialBalanceCents = Math.round(balanceNum * Math.pow(10, minorUnits));
+    }
+
+    onSubmit(values);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-3 rounded-lg border bg-muted/30 p-4">
+      <div className="space-y-1">
+        <Label htmlFor={`name-${mode}`}>账户名称</Label>
+        <Input
+          id={`name-${mode}`}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="如:招商银行卡"
+          maxLength={50}
+        />
+      </div>
+
+      <div className="space-y-1">
+        <Label htmlFor={`currency-${mode}`}>币种</Label>
+        <select
+          id={`currency-${mode}`}
+          value={currency}
+          onChange={(e) => setCurrency(e.target.value)}
+          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+        >
+          {SUPPORTED_CURRENCIES.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
+      </div>
+
+      {mode === "create" && (
+        <div className="space-y-1">
+          <Label htmlFor={`balance-${mode}`}>初始余额 (元)</Label>
+          <Input
+            id={`balance-${mode}`}
+            type="text"
+            inputMode="decimal"
+            value={initialBalance}
+            onChange={(e) => setInitialBalance(e.target.value)}
+            placeholder="0.00"
+          />
+        </div>
+      )}
+
+      {error && <p className="text-xs text-destructive">{error}</p>}
+
+      <div className="flex gap-2">
+        <Button type="submit" size="sm">
+          {mode === "create" ? "创建" : "保存"}
+        </Button>
+        <Button type="button" variant="outline" size="sm" onClick={onCancel}>
+          取消
+        </Button>
+      </div>
+    </form>
+  );
+}
