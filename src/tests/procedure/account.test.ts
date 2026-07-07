@@ -99,28 +99,28 @@ describe("[T008-T009] account.create procedure", () => {
     const caller = authedCaller();
     await expect(
       caller.account.create({ name: "", currency: "CNY", initialBalance: 0 })
-    ).rejects.toMatchObject({ data: { code: "BAD_REQUEST" } });
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
   it("T009: rejects name > 50 chars with BAD_REQUEST", async () => {
     const caller = authedCaller();
     await expect(
       caller.account.create({ name: "a".repeat(51), currency: "CNY", initialBalance: 0 })
-    ).rejects.toMatchObject({ data: { code: "BAD_REQUEST" } });
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
   it("T009: rejects currency not in whitelist (RMB)", async () => {
     const caller = authedCaller();
     await expect(
       caller.account.create({ name: "test", currency: "RMB", initialBalance: 0 })
-    ).rejects.toMatchObject({ data: { code: "BAD_REQUEST" } });
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
   it("T009: rejects non-integer initialBalance (100.5)", async () => {
     const caller = authedCaller();
     await expect(
       caller.account.create({ name: "test", currency: "CNY", initialBalance: 100.5 })
-    ).rejects.toMatchObject({ data: { code: "BAD_REQUEST" } });
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
   it("T009: rejects initialBalance beyond safe range", async () => {
@@ -131,14 +131,14 @@ describe("[T008-T009] account.create procedure", () => {
         currency: "CNY",
         initialBalance: Number.MAX_SAFE_INTEGER + 1,
       })
-    ).rejects.toMatchObject({ data: { code: "BAD_REQUEST" } });
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
   it("requires authed session (protectedProcedure)", async () => {
     const caller = publicCaller();
     await expect(
       caller.account.create({ name: "test", currency: "CNY", initialBalance: 0 })
-    ).rejects.toMatchObject({ data: { code: "UNAUTHORIZED" } });
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
   });
 });
 
@@ -178,14 +178,13 @@ describe("[T018-T020] account.list procedure", () => {
     const caller = authedCaller();
     await expect(
       caller.account.list({ unexpectedField: true } as any)
-    ).rejects.toMatchObject({ data: { code: "BAD_REQUEST" } });
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
   it("requires authed session (protectedProcedure)", async () => {
     const caller = publicCaller();
     await expect(caller.account.list()).rejects.toMatchObject({
-      data: { code: "UNAUTHORIZED" },
-    });
+      code: "UNAUTHORIZED",    });
   });
 });
 
@@ -226,7 +225,7 @@ describe("[T024-T025] account.update procedure", () => {
         id: "00000000-0000-7000-8000-000000000003",
         initialBalance: 999999,
       } as any)
-    ).rejects.toMatchObject({ data: { code: "BAD_REQUEST" } });
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
   it("T025: rejects name > 50 chars", async () => {
@@ -236,7 +235,7 @@ describe("[T024-T025] account.update procedure", () => {
         id: "00000000-0000-7000-8000-000000000004",
         name: "a".repeat(51),
       })
-    ).rejects.toMatchObject({ data: { code: "BAD_REQUEST" } });
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
   it("T025: rejects empty name", async () => {
@@ -246,7 +245,7 @@ describe("[T024-T025] account.update procedure", () => {
         id: "00000000-0000-7000-8000-000000000005",
         name: "",
       })
-    ).rejects.toMatchObject({ data: { code: "BAD_REQUEST" } });
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
   it("T025: rejects currency not in whitelist", async () => {
@@ -256,7 +255,7 @@ describe("[T024-T025] account.update procedure", () => {
         id: "00000000-0000-7000-8000-000000000006",
         currency: "RMB",
       } as any)
-    ).rejects.toMatchObject({ data: { code: "BAD_REQUEST" } });
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
   it("requires authed session (protectedProcedure)", async () => {
@@ -266,7 +265,7 @@ describe("[T024-T025] account.update procedure", () => {
         id: "00000000-0000-7000-8000-000000000007",
         name: "test",
       })
-    ).rejects.toMatchObject({ data: { code: "UNAUTHORIZED" } });
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
   });
 });
 
@@ -301,28 +300,28 @@ describe("[T030-T031] account.archive / account.unarchive procedure", () => {
     const caller = authedCaller();
     await expect(
       caller.account.archive({ unexpected: true } as any)
-    ).rejects.toMatchObject({ data: { code: "BAD_REQUEST" } });
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
   it("archive rejects non-UUID id", async () => {
     const caller = authedCaller();
     await expect(
       caller.account.archive({ id: "not-a-uuid" })
-    ).rejects.toMatchObject({ data: { code: "BAD_REQUEST" } });
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
   it("archive requires authed session (protectedProcedure)", async () => {
     const caller = publicCaller();
     await expect(
       caller.account.archive({ id: "00000000-0000-7000-8000-000000000012" })
-    ).rejects.toMatchObject({ data: { code: "UNAUTHORIZED" } });
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
   });
 
   it("unarchive requires authed session (protectedProcedure)", async () => {
     const caller = publicCaller();
     await expect(
       caller.account.unarchive({ id: "00000000-0000-7000-8000-000000000013" })
-    ).rejects.toMatchObject({ data: { code: "UNAUTHORIZED" } });
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
   });
 });
 

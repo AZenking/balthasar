@@ -75,14 +75,13 @@ describe("[T009-T012] category.list procedure", () => {
     const caller = authedCaller();
     await expect(
       caller.category.list({ type: "transfer" as any })
-    ).rejects.toMatchObject({ data: { code: "BAD_REQUEST" } });
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
   it("T012: requires authed session", async () => {
     const caller = publicCaller();
     await expect(caller.category.list()).rejects.toMatchObject({
-      data: { code: "UNAUTHORIZED" },
-    });
+      code: "UNAUTHORIZED",    });
   });
 });
 
@@ -111,20 +110,20 @@ describe("[T021-T023] category.get procedure", () => {
     const caller = authedCaller();
     await expect(
       caller.category.get({ id: "00000000-0000-5000-8000-000000000000" })
-    ).rejects.toMatchObject({ data: { code: "NOT_FOUND" } });
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 
   it("T022: rejects non-UUID id", async () => {
     const caller = authedCaller();
     await expect(
       caller.category.get({ id: "not-a-uuid" })
-    ).rejects.toMatchObject({ data: { code: "BAD_REQUEST" } });
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
   it("T023: requires authed session", async () => {
     const caller = publicCaller();
     await expect(
       caller.category.get({ id: "00000000-0000-5000-8000-000000000000" })
-    ).rejects.toMatchObject({ data: { code: "UNAUTHORIZED" } });
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
   });
 });

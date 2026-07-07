@@ -56,7 +56,7 @@ describe("[T008-T009] transaction.create", () => {
         type: "expense", accountId: "00000000-0000-7000-8000-000000000001",
         categoryId: "00000000-0000-5000-8000-000000000001", amount: 100,
       })
-    ).rejects.toMatchObject({ data: { code: "UNAUTHORIZED" } });
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
   });
 
   it("T009: rejects amount ≤ 0", async () => {
@@ -66,7 +66,7 @@ describe("[T008-T009] transaction.create", () => {
         type: "expense", accountId: "00000000-0000-7000-8000-000000000001",
         categoryId: "00000000-0000-5000-8000-000000000001", amount: 0,
       })
-    ).rejects.toMatchObject({ data: { code: "BAD_REQUEST" } });
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
   it("T009: rejects non-integer amount", async () => {
@@ -76,7 +76,7 @@ describe("[T008-T009] transaction.create", () => {
         type: "expense", accountId: "00000000-0000-7000-8000-000000000001",
         categoryId: "00000000-0000-5000-8000-000000000001", amount: 10.5,
       })
-    ).rejects.toMatchObject({ data: { code: "BAD_REQUEST" } });
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
   it("T009: rejects invalid type", async () => {
@@ -86,7 +86,7 @@ describe("[T008-T009] transaction.create", () => {
         type: "transfer" as any, accountId: "00000000-0000-7000-8000-000000000001",
         categoryId: "00000000-0000-5000-8000-000000000001", amount: 100,
       })
-    ).rejects.toMatchObject({ data: { code: "BAD_REQUEST" } });
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 });
 
@@ -95,14 +95,13 @@ describe("[T018-T019] transaction.get / list", () => {
     const c = publicCaller();
     await expect(
       c.transaction.get({ id: "00000000-0000-7000-8000-000000000001" })
-    ).rejects.toMatchObject({ data: { code: "UNAUTHORIZED" } });
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
   });
 
   it("T019: list requires auth", async () => {
     const c = publicCaller();
     await expect(c.transaction.list()).rejects.toMatchObject({
-      data: { code: "UNAUTHORIZED" },
-    });
+      code: "UNAUTHORIZED",    });
   });
 });
 
@@ -111,14 +110,14 @@ describe("[T026-T027] transaction.update", () => {
     const c = publicCaller();
     await expect(
       c.transaction.update({ id: "00000000-0000-7000-8000-000000000001", remark: "x" })
-    ).rejects.toMatchObject({ data: { code: "UNAUTHORIZED" } });
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
   });
 
   it("T027: rejects empty update (no fields to change)", async () => {
     const c = authedCaller();
     await expect(
       c.transaction.update({ id: "00000000-0000-7000-8000-000000000001" })
-    ).rejects.toMatchObject({ data: { code: "BAD_REQUEST" } });
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 });
 
@@ -127,6 +126,6 @@ describe("[T032] transaction.delete", () => {
     const c = publicCaller();
     await expect(
       c.transaction.delete({ id: "00000000-0000-7000-8000-000000000001" })
-    ).rejects.toMatchObject({ data: { code: "UNAUTHORIZED" } });
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
   });
 });

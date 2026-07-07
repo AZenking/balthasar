@@ -53,7 +53,6 @@ describe("[T004] dashboard.summary", () => {
   it("requires auth", async () => {
     const c = publicCaller();
     await expect(c.dashboard.summary()).rejects.toMatchObject({
-      data: { code: "UNAUTHORIZED" },
-    });
+      code: "UNAUTHORIZED",    });
   });
 });

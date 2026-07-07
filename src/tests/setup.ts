@@ -10,9 +10,12 @@
  */
 Object.assign(process.env, { NODE_ENV: "test" });
 
-// Set a dummy DATABASE_URL so that `src/server/db/client.ts` doesn't throw
-// at module load time for unit/procedure tests (which mock DB queries).
-// Integration tests override this with the real testcontainers connection.
+// Set dummy env vars so that `@t3-oss/env-nextjs` (src/lib/env.ts) and
+// `src/server/db/client.ts` don't throw at module load time for
+// unit/procedure tests (which mock DB queries and Better-Auth).
+// Integration tests override DATABASE_URL with testcontainers connection.
 if (!process.env.TESTCONTAINERS_OVERRIDE) {
   process.env.DATABASE_URL = "postgres://dummy:dummy@localhost:5432/dummy";
+  process.env.BETTER_AUTH_SECRET = "dummy-secret-for-tests-only-16chars";
+  process.env.BETTER_AUTH_URL = "http://localhost:3000";
 }
