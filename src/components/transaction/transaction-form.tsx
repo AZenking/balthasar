@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,12 +13,15 @@ import { trpc } from "@/lib/trpc/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
-export function TransactionForm() {
+export function TransactionForm({ editId }: { editId?: string }) {
   const router = useRouter();
   const utils = trpc.useUtils();
   const [serverError, setServerError] = useState("");
+
+  const isEditMode = !!editId;
 
   const { data: accounts } = trpc.account.list.useQuery();
   const [selectedType, setSelectedType] = useState<"income" | "expense">(
@@ -29,11 +32,19 @@ export function TransactionForm() {
     type: selectedType,
   });
 
+  // ── Edit mode: prefetch transaction data ──
+  const { data: editData, isLoading: isLoadingEdit } =
+    trpc.transaction.get.useQuery(
+      { id: editId! },
+      { enabled: isEditMode }
+    );
+
   const {
     register,
     handleSubmit,
     watch,
     setValue,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<TransactionFormValues>({
     resolver: zodResolver(transactionFormSchema),
@@ -45,10 +56,32 @@ export function TransactionForm() {
     },
   });
 
+  // ── Pre-fill form when edit data arrives ──
+  useEffect(() => {
+    if (!editData) return;
+    setSelectedType(editData.type);
+    reset({
+      type: editData.type,
+      accountId: editData.accountId,
+      categoryId: editData.categoryId,
+      amount: (editData.amount / 100).toFixed(2),
+      remark: editData.remark || "",
+      occurredAt: new Date(editData.occurredAt).toISOString().split("T")[0],
+    });
+  }, [editData, reset]);
+
   const createMutation = trpc.transaction.create.useMutation({
     onSuccess: () => {
       utils.dashboard.summary.invalidate();
       router.push("/dashboard");
+    },
+  });
+
+  const updateMutation = trpc.transaction.update.useMutation({
+    onSuccess: () => {
+      utils.dashboard.summary.invalidate();
+      utils.transaction.list.invalidate();
+      router.push("/transactions");
     },
   });
 
@@ -68,6 +101,20 @@ export function TransactionForm() {
     );
   }
 
+  // Edit mode loading
+  if (isEditMode && isLoadingEdit) {
+    return (
+      <div className="space-y-4 p-4 pt-6">
+        <Skeleton className="h-8 w-32" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-16 w-full" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-20 w-full" />
+        <Skeleton className="h-10 w-full" />
+      </div>
+    );
+  }
+
   const handleTypeSwitch = (type: "income" | "expense") => {
     setSelectedType(type);
     setValue("type", type);
@@ -77,30 +124,36 @@ export function TransactionForm() {
   const onSubmit = async (data: TransactionFormValues) => {
     setServerError("");
     try {
-      await createMutation.mutateAsync({
+      const payload = {
         type: data.type,
         accountId: data.accountId || unarchivedAccounts[0]!.id,
         categoryId: data.categoryId,
         amount: yuanToCents(data.amount),
         remark: data.remark || "",
         occurredAt: new Date(data.occurredAt).toISOString(),
-      });
+      };
+      if (isEditMode && editId) {
+        await updateMutation.mutateAsync({ id: editId, ...payload });
+      } else {
+        await createMutation.mutateAsync(payload);
+      }
     } catch (e: any) {
       setServerError(
-        e?.data?.message || e?.message || "记账失败,请重试"
+        e?.data?.message || e?.message || "操作失败,请重试"
       );
     }
   };
 
   const today = new Date().toISOString().split("T")[0];
-  const currentAccountId = watch("accountId");
 
   return (
     <form
       onSubmit={handleSubmit(onSubmit)}
       className="space-y-4 p-4 pt-6"
     >
-      <h1 className="text-xl font-bold">记一笔</h1>
+      <h1 className="text-xl font-bold">
+        {isEditMode ? "编辑交易" : "记一笔"}
+      </h1>
 
       {/* Type Switch */}
       <div className="flex gap-2">
@@ -132,7 +185,7 @@ export function TransactionForm() {
           type="text"
           inputMode="decimal"
           placeholder="0.00"
-          autoFocus
+          autoFocus={!isEditMode}
           className="text-2xl font-bold"
           {...register("amount")}
         />
@@ -210,7 +263,6 @@ export function TransactionForm() {
           id="occurredAt"
           type="date"
           max={today}
-          defaultValue={today}
           {...register("occurredAt")}
         />
       </div>
@@ -224,7 +276,11 @@ export function TransactionForm() {
         className="w-full"
         disabled={isSubmitting}
       >
-        {isSubmitting ? "提交中..." : "确认记账"}
+        {isSubmitting
+          ? "提交中..."
+          : isEditMode
+            ? "保存修改"
+            : "确认记账"}
       </Button>
     </form>
   );
