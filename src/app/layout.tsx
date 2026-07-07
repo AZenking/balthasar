@@ -1,5 +1,6 @@
 import "./globals.css";
 import type { Metadata } from "next";
+import { Providers } from "./providers";
 
 export const metadata: Metadata = {
   title: "BALTHASAR · 家庭记账",
@@ -13,8 +14,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="zh-CN">
-      <body className="min-h-screen bg-gray-50 text-gray-900 antialiased">
-        {children}
+      <body className="min-h-screen bg-background text-foreground antialiased">
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
