@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AccountItem } from "@/components/settings/account-item";
 import { AccountForm, type AccountFormValues } from "@/components/settings/account-form";
+import { ApiKeyManager } from "@/components/settings/api-key-manager";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -166,6 +167,9 @@ export default function SettingsPage() {
           </>
         )}
       </div>
+
+      {/* API Key 管理 */}
+      <ApiKeyManager />
 
       {/* 登出 */}
       <Button variant="outline" onClick={handleLogout} className="w-full text-destructive">
