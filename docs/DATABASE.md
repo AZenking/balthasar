@@ -8,7 +8,7 @@ Family (001)
 Member (001)
 Account (002) — 家庭级账户,招商银行卡 / 现金等
 Category (003) — 内置分类字典,22 条种子 (12 支出 + 8 收入),UUID v5 确定性 ID
-Transaction (后续 feature)
+Transaction (004) — 交易记录 (signed bigint amount, 硬删除)
 
 ### 认证表 (Better-Auth 自管,001 Phase 2)
 
@@ -22,6 +22,7 @@ Account (Better-Auth 内部表,与业务 accounts 不同名)
 AuthEvent (001) — 认证事件
 AuthFailureCounter (001) — 登录失败计数
 AccountEvent (002) — 账户操作审计
+TransactionEvent (004) — 交易操作审计 (FK SET NULL,删除后审计保留)
 RegistrationIpCounter (Better-Auth rate-limit 内部表)
 
 ## 后续
@@ -56,7 +57,8 @@ Investment
 
 - `0001_init.sql` —— 001-auth-family 初始 schema (8 张表)
 - `0002_accounts.sql` —— 002-account 追加 accounts + account_events + 索引
-- `0003_categories.sql` —— 003-category 追加 categories 表 + 22 条种子 (UUID v5 + ON CONFLICT 幂等)
+- `0003_categories.sql` —— 003-category 追加 categories 表 + 22 条种子
+- `0004_transactions.sql` —— 004-transaction 追加 transactions (signed bigint) + transaction_events (FK SET NULL)
 - 通过 `pnpm db:generate` (drizzle-kit) 生成,`pnpm db:migrate` 应用
 - 集成测试自动通过 `drizzle-orm/node-postgres/migrator` 应用最新迁移
 

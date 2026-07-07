@@ -15,3 +15,6 @@ export * from "./account";
 export * from "./account-events";
 // 003-category
 export * from "./category";
+// 004-transaction
+export * from "./transaction";
+export * from "./transaction-events";
