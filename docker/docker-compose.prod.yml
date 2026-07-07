@@ -1,0 +1,71 @@
+# docker-compose for BALTHASAR production.
+# 拉取预构建镜像,不构建本地代码。
+#
+# 启动:
+#   cp docker/.env.prod.example docker/.env.prod
+#   # 编辑 .env.prod,所有密钥必须改成强随机值
+#   docker compose -f docker/docker-compose.prod.yml --env-file docker/.env.prod up -d
+#
+# 升级:
+#   docker compose -f docker/docker-compose.prod.yml pull
+#   docker compose -f docker/docker-compose.prod.yml up -d
+#
+# 反向代理 (Caddy/nginx/Cloudflare Tunnel) 终结 TLS,把 3000 转出去。
+# 应用自身只监听容器内 3000,不直接暴露公网。
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: balthasar-pg
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - balthasar_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - balthasar_internal
+    logging: &default-logging
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  app:
+    image: ghcr.io/azenking/balthasar/app:${DOCKER_TAG:-latest}
+    container_name: balthasar-app
+    restart: always
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET required - openssl rand -base64 32}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:?BETTER_AUTH_URL required - public URL e.g. https://balthasar.example.com}
+      NODE_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/v1/transactions -S 2>&1 | grep -qE 'HTTP/1.1 (204|401)' || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    expose:
+      - "3000"   # 不直接映射到宿主机,由反向代理转发
+    networks:
+      - balthasar_internal
+      - balthasar_edge
+    logging: *default-logging
+
+volumes:
+  balthasar_pg_data:
+
+networks:
+  balthasar_internal:
+    internal: true   # Postgres + app 之间
+  balthasar_edge:    # 反向代理接入点
