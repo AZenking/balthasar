@@ -8,8 +8,10 @@ import {
   insertTransaction,
   getTransactionById,
   listTransactions,
+  getTransactionSummary,
   findTransactionForUpdate,
   serializeTransaction,
+  type TransactionFilters,
 } from "@/server/db/queries/transaction";
 import { writeTransactionEvent } from "@/server/db/queries/transaction-events";
 import {
@@ -150,8 +152,18 @@ export const transactionRouter = router({
     .input(
       z
         .object({
+          // 004 basic
           limit: z.number().int().min(1).max(100).default(50),
           cursor: z.string().datetime().optional(),
+          // 005 filters
+          type: z.enum(["income", "expense"]).optional(),
+          accountId: z.string().uuid().optional(),
+          categoryId: z.string().uuid().optional(),
+          startDate: z.string().datetime().optional(),
+          endDate: z.string().datetime().optional(),
+          keyword: z.string().max(200).optional(),
+          // 005 summary
+          includeSummary: z.boolean().default(false),
         })
         .strict()
         .optional()
@@ -161,16 +173,43 @@ export const transactionRouter = router({
         ctx.session.user.id
       ).then((r) => r.familyId);
 
+      const filters: TransactionFilters | undefined = input?.type ||
+      input?.accountId ||
+      input?.categoryId ||
+      input?.startDate ||
+      input?.endDate ||
+      input?.keyword
+        ? {
+            type: input.type,
+            accountId: input.accountId,
+            categoryId: input.categoryId,
+            startDate: input.startDate ? new Date(input.startDate) : undefined,
+            endDate: input.endDate ? new Date(input.endDate) : undefined,
+            keyword: input.keyword,
+          }
+        : undefined;
+
       const result = await listTransactions({
         familyId,
         limit: input?.limit ?? 50,
         cursor: input?.cursor ? new Date(input.cursor) : undefined,
+        filters,
       });
 
-      return {
+      const response: {
+        items: ReturnType<typeof serializeTransaction>[];
+        nextCursor: string | null;
+        summary?: { income: number; expense: number; net: number };
+      } = {
         items: result.items.map(serializeTransaction),
         nextCursor: result.nextCursor,
       };
+
+      if (input?.includeSummary) {
+        response.summary = await getTransactionSummary({ familyId, filters });
+      }
+
+      return response;
     }),
 
   /**

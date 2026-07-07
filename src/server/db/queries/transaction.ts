@@ -6,7 +6,7 @@ import {
   category,
   type TransactionType,
 } from "@/server/db/schema";
-import { eq, and, isNull, desc, lt } from "drizzle-orm";
+import { eq, and, isNull, desc, lt, gte, lte, ilike, sql, type SQL } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 
 /**
@@ -125,40 +125,82 @@ export async function getTransactionById(opts: {
 }
 
 /**
- * List transactions with cursor pagination (research.md Q5).
+ * Transaction filter conditions (005-transactions-list).
+ * Used by both listTransactions and getTransactionSummary.
+ */
+export interface TransactionFilters {
+  type?: TransactionType;
+  accountId?: string;
+  categoryId?: string;
+  startDate?: Date;
+  endDate?: Date;
+  keyword?: string;
+}
+
+function buildFilterConditions(familyId: string, filters?: TransactionFilters): SQL[] {
+  const conditions: SQL[] = [eq(transaction.familyId, familyId)];
+  if (filters?.type) {
+    conditions.push(eq(transaction.type, filters.type));
+  }
+  if (filters?.accountId) {
+    conditions.push(eq(transaction.accountId, filters.accountId));
+  }
+  if (filters?.categoryId) {
+    conditions.push(eq(transaction.categoryId, filters.categoryId));
+  }
+  if (filters?.startDate) {
+    conditions.push(gte(transaction.occurredAt, filters.startDate));
+  }
+  if (filters?.endDate) {
+    conditions.push(lte(transaction.occurredAt, filters.endDate));
+  }
+  if (filters?.keyword) {
+    const kw = filters.keyword.trim().slice(0, 200);
+    if (kw) {
+      conditions.push(ilike(transaction.remark, `%${kw}%`));
+    }
+  }
+  return conditions;
+}
+
+const transactionSelectFields = {
+  id: transaction.id,
+  familyId: transaction.familyId,
+  type: transaction.type,
+  accountId: transaction.accountId,
+  categoryId: transaction.categoryId,
+  amount: transaction.amount,
+  remark: transaction.remark,
+  occurredAt: transaction.occurredAt,
+  createdAt: transaction.createdAt,
+  updatedAt: transaction.updatedAt,
+  accountName: account.name,
+  categoryName: category.name,
+  categoryIcon: category.icon,
+};
+
+/**
+ * List transactions with cursor pagination + filters (005扩展).
  */
 export async function listTransactions(opts: {
   familyId: string;
   limit: number;
   cursor?: Date;
+  filters?: TransactionFilters;
 }) {
-  const conditions = [eq(transaction.familyId, opts.familyId)];
+  const conditions = buildFilterConditions(opts.familyId, opts.filters);
   if (opts.cursor) {
     conditions.push(lt(transaction.occurredAt, opts.cursor));
   }
 
   const rows = await db
-    .select({
-      id: transaction.id,
-      familyId: transaction.familyId,
-      type: transaction.type,
-      accountId: transaction.accountId,
-      categoryId: transaction.categoryId,
-      amount: transaction.amount,
-      remark: transaction.remark,
-      occurredAt: transaction.occurredAt,
-      createdAt: transaction.createdAt,
-      updatedAt: transaction.updatedAt,
-      accountName: account.name,
-      categoryName: category.name,
-      categoryIcon: category.icon,
-    })
+    .select(transactionSelectFields)
     .from(transaction)
     .leftJoin(account, eq(transaction.accountId, account.id))
     .leftJoin(category, eq(transaction.categoryId, category.id))
     .where(and(...conditions))
     .orderBy(desc(transaction.occurredAt))
-    .limit(opts.limit + 1); // +1 to detect hasMore
+    .limit(opts.limit + 1);
 
   const hasMore = rows.length > opts.limit;
   const items = hasMore ? rows.slice(0, opts.limit) : rows;
@@ -168,6 +210,30 @@ export async function listTransactions(opts: {
       : null;
 
   return { items, nextCursor };
+}
+
+/**
+ * Get summary (income/expense/net) for filtered transactions (005, research.md Q1).
+ * Separate query from list — no LIMIT, no cursor.
+ */
+export async function getTransactionSummary(opts: {
+  familyId: string;
+  filters?: TransactionFilters;
+}): Promise<{ income: number; expense: number; net: number }> {
+  const conditions = buildFilterConditions(opts.familyId, opts.filters);
+
+  const rows = await db
+    .select({
+      income: sql<number>`COALESCE(SUM(CASE WHEN ${transaction.amount} > 0 THEN ${transaction.amount} ELSE 0 END), 0)`,
+      expense: sql<number>`COALESCE(SUM(CASE WHEN ${transaction.amount} < 0 THEN ABS(${transaction.amount}) ELSE 0 END), 0)`,
+    })
+    .from(transaction)
+    .where(and(...conditions));
+
+  const row = rows[0];
+  const income = Number(row?.income ?? 0);
+  const expense = Number(row?.expense ?? 0);
+  return { income, expense, net: income - expense };
 }
 
 /**
