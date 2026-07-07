@@ -44,7 +44,7 @@ export const verification = pgTable("verification", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-export const account = pgTable("account", {
+export const oAuthAccount = pgTable("account", {
   id: text("id").primaryKey(),
   userId: text("user_id")
     .notNull()

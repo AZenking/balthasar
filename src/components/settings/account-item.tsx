@@ -12,7 +12,7 @@ export function AccountItem({
     name: string;
     currency: string;
     initialBalance: number;
-    archivedAt: string | null;
+    archivedAt: Date | null;
   };
   onEdit: (id: string) => void;
   onArchive: (id: string) => void;

@@ -9,7 +9,25 @@ import { createAuthClient } from "better-auth/client";
  *
  * baseURL omitted — defaults to current origin (window.location.origin),
  * which is correct for same-origin Better-Auth mounted at /api/auth/*.
+ *
+ * Type augmentation: Better-Auth client proxy infers methods dynamically,
+ * but TypeScript doesn't see emailAndPassword plugin methods at compile
+ * time. We declare them explicitly to pass `next build` type checking.
  */
-export const authClient = createAuthClient();
+interface AuthResult {
+  data?: unknown;
+  error?: { status?: number; message?: string } | null;
+}
+
+interface EmailPasswordClient {
+  signInEmail(opts: { email: string; password: string }): Promise<AuthResult>;
+  signUpEmail(opts: { email: string; password: string; name?: string }): Promise<AuthResult>;
+  signOut(): Promise<AuthResult>;
+}
+
+export const authClient = createAuthClient() as ReturnType<
+  typeof createAuthClient
+> &
+  EmailPasswordClient;
 
 export type AuthClient = typeof authClient;
