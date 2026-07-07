@@ -10,9 +10,9 @@
  */
 Object.assign(process.env, { NODE_ENV: "test" });
 
-// Ensure tests don't accidentally hit the production DB.
-// Testcontainers assigns a random port; production DATABASE_URL is irrelevant
-// during tests but we still forbid accidental reuse by unsetting it.
+// Set a dummy DATABASE_URL so that `src/server/db/client.ts` doesn't throw
+// at module load time for unit/procedure tests (which mock DB queries).
+// Integration tests override this with the real testcontainers connection.
 if (!process.env.TESTCONTAINERS_OVERRIDE) {
-  delete process.env.DATABASE_URL;
+  process.env.DATABASE_URL = "postgres://dummy:dummy@localhost:5432/dummy";
 }

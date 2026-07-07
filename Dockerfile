@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1.7
-#
 # Multi-stage build for BALTHASAR (Next.js 16 production).
 # Produces a minimal standalone image (~150MB).
 
