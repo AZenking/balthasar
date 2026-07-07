@@ -1,10 +1,29 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "@/server/db";
-import * as schema from "@/server/db/schema";
+import { user, session, verification, oAuthAccount } from "@/server/db/schema/auth";
 import { env } from "@/lib/env";
 import { onUserCreated } from "@/server/auth/hooks/family-init";
 import { writeAuditEvent } from "@/server/auth/hooks/audit";
+
+/**
+ * Curated schema for Better-Auth's drizzle adapter.
+ *
+ * Better-Auth resolves models by **TypeScript variable name**, not by the
+ * underlying `pgTable("name")`. The repo exports two conflicting variables:
+ *   - `account`     → business table "accounts"   (family ledger accounts)
+ *   - `oAuthAccount` → Better-Auth table "account" (OAuth/password credentials)
+ *
+ * If we pass the full schema (`import * as schema`), Better-Auth picks the
+ * business `account` and crashes looking for `userId`. So we hand it a minimal
+ * auth-only object with `account` explicitly remapped to `oAuthAccount`.
+ */
+const authSchema = {
+  user,
+  session,
+  verification,
+  account: oAuthAccount,
+};
 
 /**
  * Better-Auth server configuration.
@@ -22,7 +41,7 @@ import { writeAuditEvent } from "@/server/auth/hooks/audit";
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg",
-    schema,
+    schema: authSchema,
     transaction: true,
   }),
   baseURL: env.BETTER_AUTH_URL,
