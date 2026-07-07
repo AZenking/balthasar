@@ -1,0 +1,56 @@
+# docker-compose for BALTHASAR — Postgres + Next.js full stack.
+#
+# 文件位于 docker/ 子目录,Dockerfile context 指向仓库根。
+#
+# 本地一键启动:
+#   docker compose -f docker/docker-compose.yml --env-file docker/.env up --build
+#   docker compose -f docker/docker-compose.yml down
+#
+# CI (GitHub Actions) 构建推送:
+#   export DOCKER_REGISTRY=ghcr.io/<owner>/<repo>
+#   export DOCKER_TAG=<git-sha>
+#   docker compose -f docker/docker-compose.yml build
+#   docker push --all-tags "$DOCKER_REGISTRY/app"
+#
+# Next.js: http://localhost:3000
+# Postgres: localhost:5432
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: balthasar-pg
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-balthasar}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-balthasar}
+      POSTGRES_DB: ${POSTGRES_DB:-balthasar}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - balthasar_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-balthasar}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: ${DOCKER_REGISTRY:-balthasar}/app:${DOCKER_TAG:-latest}
+    container_name: balthasar-app
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-balthasar}:${POSTGRES_PASSWORD:-balthasar}@postgres:5432/${POSTGRES_DB:-balthasar}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET required - generate with `openssl rand -base64 32`}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+      NODE_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  balthasar_pg_data:

@@ -4,102 +4,139 @@
 
 ## 当前状态
 
-**Phase 1 Setup + Phase 2 Foundational 已完成** (T001-T027)。
+**MVP 闭环已完成**:认证 + 账户/分类/交易 + 仪表盘 + 设置 UI + 第三方开放 API。
 
-后续 Phase 3-7 (US1-US4 + Polish) 在 feature `001-auth-family` 的 `tasks.md` 中追踪,等待实施。
+| Feature | 范围 |
+|---|---|
+| 001-auth-family | Better-Auth + Family/Member + 审计/锁定 |
+| 002-account | 账户管理 (CRUD, 多币种) |
+| 003-category | 分类管理 (22 内置 + 自定义) |
+| 004-transaction | 交易录入 (signed bigint) |
+| 005-transactions-list | 交易列表 (游标分页) |
+| 006-dashboard | 月度仪表盘 |
+| 007-onboarding-ui | 首次登录引导 |
+| 008-transaction-ui | 交易表单 UI |
+| 009-transactions-list-ui | 交易列表 UI |
+| 010-settings-ui | 设置页 UI |
+| 011-open-api | REST API + API Key |
 
-## 技术栈 (Constitution v2.0.0)
+## 技术栈
 
 | 层 | 选择 |
 |---|---|
-| 全栈框架 | Next.js 14 (App Router) |
-| RPC | tRPC v11 |
-| 认证 | Better-Auth |
-| ORM | Drizzle ORM |
-| 数据库 | PostgreSQL 16 |
-| 样式 | Tailwind CSS |
-| 测试 | Vitest + testcontainers |
+| 全栈框架 | Next.js 16 (App Router, standalone output) |
+| RPC | tRPC v11 + superjson |
+| 认证 | Better-Auth (email/password + sliding session) |
+| ORM | Drizzle ORM + PostgreSQL 16 |
+| 样式 | Tailwind CSS v4 + shadcn/ui |
+| 校验 | zod |
+| 测试 | Vitest |
+| 容器 | Docker (node:22-alpine, pnpm 11.9) |
+| CI | GitHub Actions → GHCR |
 
 ## 快速开始
 
+### 本地开发
+
 ```bash
-# 1. 安装依赖
 pnpm install
+cp .env.example .env  # 填入 BETTER_AUTH_SECRET: openssl rand -base64 32
 
-# 2. 配置环境变量
-cp .env.example .env
-# 编辑 .env,填入 BETTER_AUTH_SECRET (openssl rand -base64 32)
-
-# 3. 启动 Postgres
 docker run -d --name balthasar-pg \
   -e POSTGRES_USER=balthasar \
   -e POSTGRES_PASSWORD=balthasar \
   -e POSTGRES_DB=balthasar \
-  -p 5432:5432 \
-  postgres:16-alpine
+  -p 5432:5432 postgres:16-alpine
 
-# 4. 应用迁移
 pnpm db:migrate
-
-# 5. 启动开发服务器
 pnpm dev
 ```
 
-打开 [http://localhost:3000](http://localhost:3000) 看到首页。
+打开 [http://localhost:3000](http://localhost:3000)。
+
+### Docker 一键启动
+
+```bash
+cp docker/.env.example docker/.env
+# 编辑 docker/.env,至少改 BETTER_AUTH_SECRET
+
+docker compose -f docker/docker-compose.yml --env-file docker/.env up --build
+# 应用: http://localhost:3000  Postgres: localhost:5432
+```
+
+### 拉取 CI 镜像
+
+每次推送到 `main` 都会构建并推送到 GHCR:
+
+```bash
+docker pull ghcr.io/<owner>/<repo>/app:latest
+docker run -p 3000:3000 \
+  -e DATABASE_URL=... -e BETTER_AUTH_SECRET=... -e BETTER_AUTH_URL=... \
+  ghcr.io/<owner>/<repo>/app:latest
+```
 
 ## 项目结构
 
 ```
 src/
-├── app/                          # Next.js App Router
-│   ├── api/auth/[...all]/        # Better-Auth 端点
-│   ├── api/trpc/[trpc]/          # tRPC 端点
-│   ├── layout.tsx
-│   ├── page.tsx
-│   └── globals.css
+├── app/                         # Next.js App Router
+│   ├── (app)/                   # 受保护路由 (dashboard / settings / transactions)
+│   ├── (auth)/                  # 登录/注册页
+│   ├── api/
+│   │   ├── auth/[...all]/       # Better-Auth HTTP handler
+│   │   ├── trpc/[trpc]/         # tRPC endpoint
+│   │   └── v1/transactions/     # REST Open API (011, API Key 鉴权)
+│   └── layout.tsx
 ├── server/
 │   ├── api/
-│   │   ├── root.ts               # appRouter (Phase 2: 空)
-│   │   └── trpc.ts               # createContext + protectedProcedure
+│   │   ├── root.ts              # appRouter (auth/account/category/transaction/dashboard/apiKey)
+│   │   └── trpc.ts              # createContext + protectedProcedure
 │   ├── auth/
-│   │   ├── config.ts             # Better-Auth 配置
-│   │   └── client.ts             # Better-Auth browser client
+│   │   ├── config.ts            # Better-Auth 配置
+│   │   ├── api-key-auth.ts      # API Key 验证 (REST)
+│   │   └── api-rate-limit.ts    # 内存限流 60/min/Key
 │   ├── db/
-│   │   ├── client.ts             # Drizzle 单例
-│   │   ├── schema/               # 8 张表 schema
-│   │   ├── migrations/           # 0001_init.sql
-│   │   └── index.ts
-│   └── domain/auth/              # 纯领域函数 (无 IO)
-│       ├── email-normalize.ts
-│       ├── password-policy.ts    # NIST 800-63B
-│       └── lockout-policy.ts     # 5/5min 决策
-├── lib/
-│   ├── env.ts                    # zod 校验环境变量
-│   ├── uuid.ts                   # UUID v7 生成器
-│   └── trpc/
-│       ├── client.ts             # 浏览器 tRPC hooks
-│       └── server.ts             # RSC caller
-└── tests/
-    ├── helpers/db.ts             # testcontainers Postgres
-    ├── setup.ts                  # 全局测试 setup
-    └── integration-setup.ts      # 集成测试全局
+│   │   ├── client.ts            # Drizzle 单例 + withTransaction
+│   │   ├── schema/              # 业务 + 认证 schema
+│   │   ├── queries/             # 数据访问层
+│   │   └── migrations/          # 0001-0005
+│   └── domain/                  # 纯领域函数 (无 IO)
+├── components/                  # React + shadcn/ui
+└── lib/
+    ├── env.ts                   # zod 校验环境变量
+    └── trpc/                    # client + server caller
 ```
 
 ## 测试
 
 ```bash
-pnpm test:unit         # 单元 (无 DB)
-pnpm test:procedure    # tRPC procedure (无 DB)
-pnpm test:integration  # 集成 (testcontainers Postgres)
-pnpm test:coverage     # 覆盖率
+pnpm test         # 全部 (Vitest)
+pnpm lint         # ESLint 9
+pnpm tsc --noEmit # 类型检查
 ```
+
+## 第三方 API
+
+| 方法 | 路径 | 鉴权 | 说明 |
+|---|---|---|---|
+| POST | `/api/v1/transactions` | API Key | 创建交易 (元转分) |
+| PATCH | `/api/v1/transactions/:id` | API Key | 更新交易 |
+| OPTIONS | `/api/v1/*` | - | CORS preflight |
+
+API Key 在 `/settings` 页生成,格式 `bk_` + 32 字符。详情见
+[`specs/011-open-api/`](specs/011-open-api/)。
 
 ## 设计文档
 
-- 业务规约: `specs/001-auth-family/spec.md`
-- 实施计划: `specs/001-auth-family/plan.md`
-- 技术决策: `specs/001-auth-family/research.md`
-- 数据模型: `specs/001-auth-family/data-model.md`
-- 任务清单: `specs/001-auth-family/tasks.md`
-- 验证脚本: `specs/001-auth-family/quickstart.md`
 - 宪章: `.specify/memory/constitution.md` (v2.0.0)
+- 各 feature 设计: `specs/<NNN>-<name>/` (spec / plan / tasks / research / data-model / quickstart)
+
+## CI/CD
+
+推送到 `main` 触发 [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml):
+
+1. 用 `docker/docker-compose.yml` 构建 `app` 镜像
+2. 打 5 个 tag:`<version>` / `<major.minor>` / `<major>` / `latest` / `<sha>`
+3. 推送到 `ghcr.io/<owner>/<repo>/app`
+
+镜像只包含 Next.js standalone 产物 + node 运行时,约 150MB。

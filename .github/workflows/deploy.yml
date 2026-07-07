@@ -1,0 +1,61 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # 构建期占位值 - 真实值在容器启动时由 docker-compose 注入
+  BETTER_AUTH_SECRET: build-placeholder-secret
+  BETTER_AUTH_URL: http://localhost:3000
+  DATABASE_URL: postgres://build:build@localhost:5432/build
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare Docker image variables
+        id: image
+        run: |
+          registry="ghcr.io/${GITHUB_REPOSITORY,,}"
+          version=$(jq -r .version package.json)
+          short_sha=$(git rev-parse --short=8 HEAD)
+          major=$(echo "$version" | cut -d. -f1)
+          major_minor=$(echo "$version" | cut -d. -f1,2)
+          echo "registry=${registry}" >> "$GITHUB_OUTPUT"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "short_sha=${short_sha}" >> "$GITHUB_OUTPUT"
+          echo "tags=${version},${major_minor},${major},latest,${short_sha}" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push images
+        env:
+          DOCKER_REGISTRY: ${{ steps.image.outputs.registry }}
+          DOCKER_TAG: ${{ steps.image.outputs.short_sha }}
+          BETTER_AUTH_SECRET: ${{ env.BETTER_AUTH_SECRET }}
+          BETTER_AUTH_URL: ${{ env.BETTER_AUTH_URL }}
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+        run: |
+          docker compose -f docker/docker-compose.yml build
+
+          TAGS="${{ steps.image.outputs.tags }}"
+          SOURCE="${DOCKER_REGISTRY}/app:${DOCKER_TAG}"
+          for tag in ${TAGS//,/ }; do
+            target="${DOCKER_REGISTRY}/app:${tag}"
+            docker tag "$SOURCE" "$target"
+          done
+          docker push --all-tags "${DOCKER_REGISTRY}/app"
