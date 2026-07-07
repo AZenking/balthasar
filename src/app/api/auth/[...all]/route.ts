@@ -55,9 +55,38 @@ function lockedResponse(retryAfterSeconds: number): Response {
   );
 }
 
+/**
+ * Rewrite kebab-case paths from Better-Auth client SDK to slash convention.
+ * Client sends /sign-in-email, server expects /sign-in/email.
+ */
+function rewritePath(url: URL): URL {
+  const newPath = url.pathname
+    .replace("/sign-in-email", "/sign-in/email")
+    .replace("/sign-up-email", "/sign-up/email");
+  if (newPath !== url.pathname) {
+    const newUrl = new URL(newPath, url.origin);
+    newUrl.search = url.search;
+    return newUrl;
+  }
+  return url;
+}
+
 export const POST = async (req: Request): Promise<Response> => {
-  const url = new URL(req.url);
-  const path = url.pathname.replace(/^\/api\/auth/, "");
+  const originalUrl = new URL(req.url);
+  const rewrittenUrl = rewritePath(originalUrl);
+  const path = rewrittenUrl.pathname.replace(/^\/api\/auth/, "");
+
+  // If URL was rewritten, create a new request with correct URL for Better-Auth
+  if (rewrittenUrl.pathname !== originalUrl.pathname) {
+    const text = await req.text();
+    req = new Request(rewrittenUrl, {
+      method: req.method,
+      headers: req.headers,
+      body: text,
+      // @ts-expect-error: duplex is needed for streaming body in Node fetch
+      duplex: "half",
+    });
+  }
 
   // ─── Sign-in lockout wrapper ───────────────────────────────────────────
   if (path === "/sign-in/email") {
