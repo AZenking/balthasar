@@ -2,6 +2,13 @@
 
 > 10 秒记账,每天坚持。
 
+## 文档
+
+- [故障排查](docs/troubleshooting.md) — 21 症状 → 原因 → 修复 → 验证
+- [配置变量](docs/configuration.md) — 环境变量速查 (类型 / 默认 / 重启)
+
+部署相关见 [deploy/simple/README.md](deploy/simple/README.md);开发约定见 [docs/AGENTS.md](docs/AGENTS.md)。
+
 ## 当前状态
 
 **MVP 闭环已完成**:认证 + 账户/分类/交易 + 仪表盘 + 设置 UI + 第三方开放 API。
