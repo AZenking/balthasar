@@ -32,6 +32,16 @@ ENV BETTER_AUTH_URL=http://localhost:3000
 
 RUN pnpm build
 
+# ---- Stage 2b: migrate-deps (drizzle-kit + 传递依赖,扁平 node_modules) ----
+# pnpm 的 node_modules/.pnpm/ 符号链接结构跨容器 COPY 会断链,改用 npm
+# 在独立 stage 装一份扁平结构 (esbuild / dotenv / chalk 等都会被拉齐)。
+# 多架构 build 时,buildx 会在每个平台跑这个 stage,esbuild native binary
+# 自动匹配目标架构 (linux/amd64 + linux/arm64)。
+FROM node:22-alpine AS migrate-deps
+WORKDIR /migrate
+RUN npm init -y >/dev/null 2>&1 && \
+    npm install --no-package-lock drizzle-kit@^0.30 drizzle-orm@^0.39
+
 # ---- Stage 3: runner (minimal runtime) ----
 FROM node:22-alpine AS runner
 WORKDIR /app
@@ -59,9 +69,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/drizzle.config.ts ./drizzle.config.ts
 COPY --from=builder --chown=nextjs:nodejs /app/src/server/db/migrations ./src/server/db/migrations
 COPY --from=builder --chown=nextjs:nodejs /app/src/server/db/schema ./src/server/db/schema
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/drizzle-kit ./node_modules/drizzle-kit
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/drizzle-orm ./node_modules/drizzle-orm
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pg ./node_modules/pg
+COPY --from=migrate-deps --chown=nextjs:nodejs /migrate/node_modules ./node_modules
 COPY --from=builder --chown=nextjs:nodejs /app/docker/entrypoint.sh ./docker/entrypoint.sh
 COPY --from=builder --chown=nextjs:nodejs /app/tsconfig.json ./tsconfig.json
 
