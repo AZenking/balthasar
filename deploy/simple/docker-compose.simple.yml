@@ -1,0 +1,86 @@
+# docker-compose for BALTHASAR simple-deploy (013).
+# 单文件家用 / NAS / 内网部署。无反向代理 sidecar,无备份 sidecar。
+# TLS 由部署平台提供 (Synology DSM Reverse Proxy / Cloudflare Tunnel / 外部代理)。
+#
+# 启动:
+#   cp deploy/simple/.env.simple.example deploy/simple/.env
+#   # 编辑 .env (至少 BETTER_AUTH_SECRET)
+#   docker compose -f deploy/simple/docker-compose.simple.yml --env-file deploy/simple/.env up -d
+#
+# 升级:
+#   # 改 .env 中 DOCKER_TAG, 然后:
+#   docker compose -f deploy/simple/docker-compose.simple.yml --env-file deploy/simple/.env pull
+#   docker compose -f deploy/simple/docker-compose.simple.yml --env-file deploy/simple/.env up -d
+#
+# 应用: http://localhost:${APP_PORT:-3000}
+# Postgres: 127.0.0.1:${POSTGRES_PORT:-5432} (默认不对外)
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: balthasar-pg
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-balthasar}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-balthasar}
+      POSTGRES_DB: ${POSTGRES_DB:-balthasar}
+      TZ: ${TZ:-Asia/Shanghai}
+    ports:
+      # 默认仅本机可访问。需要外部工具连库时,在 .env 设 POSTGRES_BIND=0.0.0.0
+      - "${POSTGRES_BIND:-127.0.0.1}:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - balthasar_pg_data_simple:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-balthasar}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - balthasar_internal
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    mem_limit: 512m
+
+  app:
+    image: ghcr.io/azenking/balthasar/app:${DOCKER_TAG:-latest}
+    container_name: balthasar-app
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-balthasar}:${POSTGRES_PASSWORD:-balthasar}@postgres:5432/${POSTGRES_DB:-balthasar}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET required - generate with `openssl rand -base64 32`}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:?BETTER_AUTH_URL required - e.g. http://localhost:3000 or https://balthasar.example.com}
+      ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-false}
+      NEXT_PUBLIC_ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-false}
+      TZ: ${TZ:-Asia/Shanghai}
+      NODE_ENV: production
+      BALTHASAR_ENTRYPOINT_MODE: serve
+      POSTGRES_HOST: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/v1/transactions -S 2>&1 | grep -qE 'HTTP/1.1 (204|401)' || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - balthasar_internal
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    mem_limit: 512m
+    stop_grace_period: 30s
+
+volumes:
+  balthasar_pg_data_simple:
+
+networks:
+  balthasar_internal:

@@ -5,6 +5,7 @@ import { user, session, verification, oAuthAccount } from "@/server/db/schema/au
 import { env } from "@/lib/env";
 import { onUserCreated } from "@/server/auth/hooks/family-init";
 import { writeAuditEvent } from "@/server/auth/hooks/audit";
+import { registrationGate } from "@/server/auth/hooks/registration-gate";
 
 /**
  * Curated schema for Better-Auth's drizzle adapter.
@@ -103,6 +104,7 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
+        before: registrationGate.user.create.before,
         after: async (createdUser) => {
           await onUserCreated(createdUser);
           await writeAuditEvent({
