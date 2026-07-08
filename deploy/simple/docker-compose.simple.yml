@@ -13,12 +13,11 @@
 #   docker compose -f deploy/simple/docker-compose.simple.yml --env-file deploy/simple/.env up -d
 #
 # 应用: http://localhost:${APP_PORT:-3000}
-# Postgres: 127.0.0.1:${POSTGRES_PORT:-5432} (默认不对外)
+# Postgres: ${POSTGRES_BIND:-127.0.0.1}:${POSTGRES_PORT:-5432} (默认仅本机)
 
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: balthasar-pg
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-balthasar}
@@ -46,7 +45,6 @@ services:
 
   app:
     image: ghcr.io/azenking/balthasar/app:${DOCKER_TAG:-latest}
-    container_name: balthasar-app
     restart: unless-stopped
     ports:
       - "${APP_PORT:-3000}:3000"
@@ -64,7 +62,9 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/v1/transactions -S 2>&1 | grep -qE 'HTTP/1.1 (204|401)' || exit 1"]
+      # 用 node 内置 fetch 检测,避免 alpine busybox wget -S 与 -q 冲突
+      # 接受 204 (CORS preflight) 或 401 (无 key 正确拒绝) 都算"健康"
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3000/api/v1/transactions').then(r=>process.exit([204,401].includes(r.status)?0:1)).catch(()=>process.exit(1))\""]
       interval: 30s
       timeout: 5s
       retries: 3
