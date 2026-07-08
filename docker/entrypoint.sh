@@ -35,8 +35,7 @@ wait_for_postgres() {
 run_migrations() {
   echo "[entrypoint] running drizzle-kit migrate ..."
   node node_modules/drizzle-kit/bin.cjs migrate \
-    --config=drizzle.config.ts \
-    --dialect=postgresql
+    --config=drizzle.config.ts
 }
 
 wait_for_postgres
