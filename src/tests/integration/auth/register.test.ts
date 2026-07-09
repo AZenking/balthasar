@@ -34,6 +34,8 @@ afterAll(async () => {
 
 async function registerViaProcedure(email: string, password = "valid-pass-1234") {
   const caller = createCaller({ session: null });
+  // @ts-expect-error Phase 7 moved register/login/logout out of tRPC to Better-Auth;
+  // this integration test awaits rewrite to use authClient.signUpEmail.
   return caller.auth.register({ email, password });
 }
 

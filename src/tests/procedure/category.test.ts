@@ -106,6 +106,7 @@ describe("[T021-T023] category.get procedure", () => {
   });
 
   it("T022: throws NOT_FOUND when missing", async () => {
+    // @ts-expect-error intentional null to simulate NOT_FOUND; mock signature disallows it
     mockedFindById.mockResolvedValueOnce(null);
     const caller = authedCaller();
     await expect(

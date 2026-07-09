@@ -112,7 +112,7 @@ describe("[T008-T009] account.create procedure", () => {
   it("T009: rejects currency not in whitelist (RMB)", async () => {
     const caller = authedCaller();
     await expect(
-      caller.account.create({ name: "test", currency: "RMB", initialBalance: 0 })
+      caller.account.create({ name: "test", currency: "RMB" as "CNY", initialBalance: 0 })
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
