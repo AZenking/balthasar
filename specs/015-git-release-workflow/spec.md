@@ -15,6 +15,7 @@
 - Q: 单人项目下 `main` 分支保护严格度? → A: **B** —— 日常 PR + admin 紧急 bypass 允许;默认走 PR 留痕,紧急时(线上挂)可直接 push main,但所有 bypass 必须事后补 PR 说明。
 - Q: `release/vX.Y` 分支创建时机? → A: **B** —— 按需创建:仅当某个已发布 minor line 首次需要 patch 时才从对应 tag 切出;patch 周期结束后可删除(保留 tag 即可重建)。避免无用分支堆积。
 - Q: `deploy.yml` 触发策略? → A: **B** —— tag 与镜像严格 1:1 绑定。main push 改为只构建 `<short-sha>` / `edge` 滚动镜像;tag push 才构建 `X.Y.Z` / `X.Y` / `X` / `latest` version 镜像。修复 patch 流程无法触发构建的漏洞,同时避免 main 上 version 提前漂移。
+- Q(执行时发现):仓库当前 `lint` 跑不起来 —— `next lint` 在 Next 16 被移除,直接 `eslint .` 又因 `eslint-config-next` 与 ESLint 9 FlatConfig 不兼容而 crash(`circular structure`)。 → A: **FR-007 降级** —— `type-check` + `test` 为 MUST;`lint` 在 CI 中以 `continue-on-error: true` 运行作为非阻塞质量信号。lint 兼容性修复 defer 到独立 task(超出 015 范围)。
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -95,7 +96,7 @@
 #### PR & 合并
 
 - **FR-006**: 日常合并到 `main` 的变更 MUST 经 Pull Request;**禁止** 非紧急情况直接 push 到 `main`。管理员紧急情况下(线上故障、回滚等)MAY 直接 push 到 `main`,但 MUST 在 **24 小时内补一条 PR**(描述变更原因、影响、回滚方案),以保留审计痕迹。
-- **FR-007**: PR MUST 通过以下状态检查后方可合并:`lint`、`type-check`、`test`(单元 + 集成);任一失败 MUST 阻断合并。
+- **FR-007**: PR MUST 通过以下状态检查后方可合并:`type-check`、`test`(单元 + 集成);任一失败 MUST 阻断合并。`lint` 为非阻塞检查(允许失败,作为质量信号),待 `eslint-config-next` 与 ESLint 9 FlatConfig 兼容性修复后升级为 MUST(详见 Clarifications Q4 与 tasks.md T014)。
 - **FR-008**: 合并方式 MUST 为 **squash merge**;合并后的 commit message MUST 遵循 Conventional Commits(类型 + 可选 scope + 描述 + 可选 footer)。
 - **FR-009**: 合并后短分支 MUST 自动删除(GitHub 仓库设置 "Automatically delete head branches" 启用)。
 - **FR-010**: 每个 PR MUST 在描述中链接到对应的 `specs/NNN-*` 目录或 issue;无对应 spec 的 trivial 修复(如 typo)MUST 在 PR 描述中说明 "no spec required"。
