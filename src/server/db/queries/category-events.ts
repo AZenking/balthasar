@@ -49,8 +49,8 @@ export async function writeCategoryEvent(
 export interface CategoryEventBatchItem {
   eventType: CategoryEventType;
   categoryId: string;
-  before?: CategoryMutationSnapshot | null;
-  after?: CategoryMutationSnapshot | null;
+  before?: Partial<CategoryMutationSnapshot> | null;
+  after?: Partial<CategoryMutationSnapshot> | null;
 }
 
 /**

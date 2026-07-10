@@ -2,14 +2,15 @@ import "server-only";
 import { db, withTransaction } from "@/server/db/client";
 import {
   category,
+  transaction,
   type Category,
   type CategoryType,
   type CategoryMutationSnapshot,
 } from "@/server/db/schema";
 import { TRPCError } from "@trpc/server";
 import { uuidv7 } from "uuidv7";
-import { and, count, eq, isNull, or, sql } from "drizzle-orm";
-import { writeCategoryEvent } from "@/server/db/queries/category-events";
+import { and, count, eq, inArray, isNull, ne, or, sql } from "drizzle-orm";
+import { writeCategoryEvent, writeCategoryEventsBatch } from "@/server/db/queries/category-events";
 
 /**
  * Query module for category (003 + 018 extension).
@@ -310,5 +311,352 @@ export async function createCategory(
     });
 
     return inserted;
+  });
+}
+
+// ─── 018 US2: Update + Reorder ─────────────────────────────────────
+
+export interface UpdateCategoryInput {
+  id: string;
+  familyId: string;
+  actorMemberId: string;
+  name?: string;
+  icon?: string;
+  sortOrder?: number;
+  parentId?: string | null; // null = demote to top-level; undefined = no change
+  type?: CategoryType;
+}
+
+/**
+ * Snapshot helper for audit before/after.
+ */
+function snapshot(c: Category): CategoryMutationSnapshot {
+  return {
+    name: c.name,
+    icon: c.icon,
+    sortOrder: c.sortOrder,
+    parentId: c.parentId,
+    type: c.type,
+    archivedAt: c.archivedAt ? c.archivedAt.toISOString() : null,
+  };
+}
+
+/**
+ * Update a custom category (FR-008..FR-014).
+ *
+ * Atomic transaction:
+ *   1. SELECT FOR UPDATE the target row
+ *   2. isBuiltIn → 403; family mismatch → 404
+ *   3. If archived (archivedAt !== null): only name/icon/sortOrder editable
+ *      (FR-014). type/parentId changes → 400.
+ *   4. type change (FR-013): reject if has transactions OR has children
+ *      OR archived (redundant with #3 but defensive)
+ *   5. parentId change (FR-010): reject if has children (would create 3rd
+ *      level via demotion). New parent validation (FR-005):
+ *      exists / same family or built-in / top-level / type-match /
+ *      no self-cycle.
+ *   6. name change → check uniqueness (excluding self)
+ *   7. UPDATE + writeCategoryEvent(category_edited, before/after)
+ *
+ * LWW (Last-Write-Wins, no version field) — matches 004 transaction pattern.
+ */
+export async function updateCategory(
+  input: UpdateCategoryInput,
+): Promise<Category> {
+  return withTransaction(async (tx) => {
+    // 1. SELECT FOR UPDATE
+    const targetRows = await tx
+      .select()
+      .from(category)
+      .where(eq(category.id, input.id))
+      .limit(1);
+    const target = targetRows[0];
+    if (!target) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "分类不存在" });
+    }
+    // 2. isBuiltIn / family
+    if (target.isBuiltIn) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "内置分类不可编辑" });
+    }
+    if (target.familyId !== input.familyId) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "分类不存在" });
+    }
+
+    const before = snapshot(target);
+
+    // 3. archived limitations (FR-014)
+    const isArchived = target.archivedAt !== null;
+    if (isArchived && (input.type !== undefined || input.parentId !== undefined)) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "已归档分类不可修改 type 或 parentId",
+      });
+    }
+
+    // 4. type change restrictions (FR-013)
+    if (input.type !== undefined && input.type !== target.type) {
+      // (a) has transactions referencing this category
+      const txCountRows = await tx
+        .select({ c: count() })
+        .from(transaction)
+        .where(eq(transaction.categoryId, input.id));
+      if (Number(txCountRows[0]?.c ?? 0) > 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "已被交易引用的分类不可切换 type",
+        });
+      }
+      // (b) has children
+      const childCountRows = await tx
+        .select({ c: count() })
+        .from(category)
+        .where(eq(category.parentId, input.id));
+      if (Number(childCountRows[0]?.c ?? 0) > 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "已有子分类的分类不可切换 type",
+        });
+      }
+    }
+
+    // 5. parentId change (FR-010 + FR-005)
+    const parentIdChanging =
+      input.parentId !== undefined && input.parentId !== target.parentId;
+    if (parentIdChanging) {
+      // Has children? Can't demote (would create 3rd level)
+      const childCountRows = await tx
+        .select({ c: count() })
+        .from(category)
+        .where(eq(category.parentId, input.id));
+      if (Number(childCountRows[0]?.c ?? 0) > 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "已有子分类的分类不可变为二级",
+        });
+      }
+
+      // New parent validation
+      if (input.parentId !== null && input.parentId !== undefined) {
+        if (input.parentId === input.id) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "parentId 不可指向自己 (循环引用)",
+          });
+        }
+        const parentRows = await tx
+          .select()
+          .from(category)
+          .where(eq(category.id, input.parentId))
+          .limit(1);
+        const parent = parentRows[0];
+        if (!parent) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "父分类不存在",
+          });
+        }
+        if (parent.familyId !== null && parent.familyId !== input.familyId) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "不能使用其他家庭的分类作为父分类",
+          });
+        }
+        if (parent.parentId !== null) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "二级分类下不可再建子分类 (最多 2 层)",
+          });
+        }
+        // type-match: if user is changing both type and parent, the new type
+        // must match parent.type. If only changing parent, target.type must
+        // match parent.type.
+        const effectiveType = input.type ?? target.type;
+        if (parent.type !== effectiveType) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "子分类 type 必须与父一致",
+          });
+        }
+      }
+    }
+
+    // 6. name uniqueness (if changing name)
+    if (input.name !== undefined && input.name !== target.name) {
+      const effectiveType = input.type ?? target.type;
+      const effectiveParentId = input.parentId ?? target.parentId;
+      const parentIdCond =
+        effectiveParentId === null
+          ? isNull(category.parentId)
+          : eq(category.parentId, effectiveParentId);
+      const dupRows = await tx
+        .select({ id: category.id })
+        .from(category)
+        .where(
+          and(
+            eq(category.familyId, input.familyId),
+            eq(category.type, effectiveType),
+            parentIdCond,
+            sql`LOWER(${category.name}) = LOWER(${input.name})`,
+            ne(category.id, input.id),
+          ),
+        )
+        .limit(1);
+      if (dupRows.length > 0) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "同级下分类名已存在",
+        });
+      }
+    }
+
+    // 7. UPDATE
+    const updates: Partial<typeof category.$inferInsert> = {};
+    if (input.name !== undefined) updates.name = input.name;
+    if (input.icon !== undefined) updates.icon = input.icon;
+    if (input.sortOrder !== undefined) updates.sortOrder = input.sortOrder;
+    if (input.parentId !== undefined) updates.parentId = input.parentId;
+    if (input.type !== undefined) updates.type = input.type;
+    updates.updatedAt = new Date();
+
+    const updatedRows = await tx
+      .update(category)
+      .set(updates)
+      .where(eq(category.id, input.id))
+      .returning();
+    const updated = updatedRows[0];
+    if (!updated) {
+      throw new Error("Failed to update category");
+    }
+
+    await writeCategoryEvent(tx, {
+      eventType: "category_edited",
+      categoryId: updated.id,
+      actorMemberId: input.actorMemberId,
+      before,
+      after: snapshot(updated),
+    });
+
+    return updated;
+  });
+}
+
+// ─── 018 US2: Reorder (batch, atomic) ──────────────────────────────
+
+export interface ReorderItem {
+  id: string;
+  sortOrder: number;
+}
+
+export interface ReorderCategoryInput {
+  items: ReorderItem[];
+  familyId: string;
+  actorMemberId: string;
+}
+
+/**
+ * Batch-reorder sibling categories atomically (FR-031(d)).
+ *
+ * Single transaction:
+ *   1. SELECT FOR UPDATE all target rows
+ *   2. Validate: all isBuiltIn=false (else 403), all familyId=current
+ *      (else 404), all same parentId (else 400 "reorder 仅支持同级"),
+ *      items sortOrder unique within array (else 400)
+ *   3. UPDATE × N + writeCategoryEventsBatch (before/after only sortOrder)
+ *
+ * Failed validation or any DB error → full rollback (FR-031(d) atomicity).
+ *
+ * Use case: frontend drag-drop triggers renumber when integer gap exhausted.
+ * Client computes new sortOrders via renumberSortOrders(count) then calls
+ * this endpoint once.
+ */
+export async function reorderCategories(
+  input: ReorderCategoryInput,
+): Promise<{ updated: string[] }> {
+  if (input.items.length === 0) {
+    return { updated: [] };
+  }
+  if (input.items.length > 200) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "reorder 单次最多 200 项",
+    });
+  }
+
+  // items sortOrder unique?
+  const sortOrderSet = new Set(input.items.map((i) => i.sortOrder));
+  if (sortOrderSet.size !== input.items.length) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "items 内 sortOrder 必须唯一",
+    });
+  }
+
+  const ids = input.items.map((i) => i.id);
+
+  return withTransaction(async (tx) => {
+    // 1. SELECT FOR UPDATE
+    const rows = await tx
+      .select()
+      .from(category)
+      .where(inArray(category.id, ids));
+    if (rows.length !== ids.length) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "部分分类不存在",
+      });
+    }
+
+    // 2. Validate all rows
+    let sharedParentId: string | null | undefined;
+    for (const row of rows) {
+      if (row.isBuiltIn) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "内置分类不可重排",
+        });
+      }
+      if (row.familyId !== input.familyId) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "分类不存在",
+        });
+      }
+      if (sharedParentId === undefined) {
+        sharedParentId = row.parentId;
+      } else if (sharedParentId !== row.parentId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "reorder 仅支持同级分类",
+        });
+      }
+    }
+
+    // 3. UPDATE × N + audit batch
+    const auditItems = [];
+    const updated: string[] = [];
+    for (const item of input.items) {
+      const row = rows.find((r) => r.id === item.id)!;
+      const before: Partial<CategoryMutationSnapshot> = {
+        sortOrder: row.sortOrder,
+      };
+      const after: Partial<CategoryMutationSnapshot> = {
+        sortOrder: item.sortOrder,
+      };
+      await tx
+        .update(category)
+        .set({ sortOrder: item.sortOrder, updatedAt: new Date() })
+        .where(eq(category.id, item.id));
+      auditItems.push({
+        eventType: "category_edited" as const,
+        categoryId: item.id,
+        before,
+        after,
+      });
+      updated.push(item.id);
+    }
+
+    await writeCategoryEventsBatch(tx, auditItems, input.actorMemberId);
+
+    return { updated };
   });
 }

@@ -5,6 +5,8 @@ import {
   findAllCategories,
   findCategoryById,
   createCategory,
+  updateCategory,
+  reorderCategories,
 } from "@/server/db/queries/category";
 import { loadFamilyAndMemberIdsByUserId } from "@/server/db/queries/account";
 import { isCategoryEmoji } from "@/server/domain/category/rules";
@@ -99,6 +101,64 @@ export const categoryRouter = router({
         actorMemberId: memberId,
         parentId: input.parentId,
         sortOrder: input.sortOrder,
+      });
+    }),
+
+  // ─── 018 US2: update custom category ─────────────────────────────
+  update: protectedProcedure
+    .input(
+      z
+        .object({
+          id: z.string().uuid(),
+          name: nameSchema.optional(),
+          icon: iconSchema.optional(),
+          sortOrder: z.number().int().min(0).optional(),
+          parentId: z.union([z.string().uuid(), z.null()]).optional(),
+          type: typeSchema.optional(),
+        })
+        .strict(),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const { familyId, memberId } = await loadFamilyAndMemberIdsByUserId(
+        ctx.session.user.id,
+      );
+      return updateCategory({
+        id: input.id,
+        familyId,
+        actorMemberId: memberId,
+        name: input.name,
+        icon: input.icon,
+        sortOrder: input.sortOrder,
+        parentId: input.parentId,
+        type: input.type,
+      });
+    }),
+
+  // ─── 018 US2: reorder (batch, atomic, FR-031(d)) ─────────────────
+  reorder: protectedProcedure
+    .input(
+      z
+        .object({
+          items: z
+            .array(
+              z.object({
+                id: z.string().uuid(),
+                sortOrder: z.number().int().min(0),
+              }),
+            )
+            .min(1, "items 不能为空")
+            .max(200, "items 不能超过 200"),
+        })
+        .strict(),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const { familyId, memberId } = await loadFamilyAndMemberIdsByUserId(
+        ctx.session.user.id,
+      );
+      return reorderCategories({
+        items: input.items,
+        familyId,
+        actorMemberId: memberId,
       });
     }),
 });
