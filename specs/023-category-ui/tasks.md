@@ -22,7 +22,7 @@
 **Purpose**: 安装依赖 + 准备共享常量 + zod schema。
 
 - [X] T001 [P] Install DnD + toast + icon deps in `package.json` — `pnpm add @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities sonner lucide-react`。验证 `pnpm install` 成功 + `pnpm tsc --noEmit` 0 错误。
-- [ ] T002 [P] Add shadcn components via CLI — `pnpm dlx shadcn@latest add dialog select tabs popover radio-group checkbox command tooltip`。验证 `src/components/ui/` 含 dialog.tsx / select.tsx / tabs.tsx / popover.tsx / radio-group.tsx / checkbox.tsx / command.tsx / tooltip.tsx。
+- [X] T002 [P] Add shadcn components via CLI — `pnpm dlx shadcn@latest add dialog select tabs popover radio-group checkbox command tooltip`。验证 `src/components/ui/` 含 dialog.tsx / select.tsx / tabs.tsx / popover.tsx / radio-group.tsx / checkbox.tsx / command.tsx / tooltip.tsx。
 - [X] T003 [P] Add Toaster to root layout in `src/app/layout.tsx` — import `sonner` `<Toaster />` 放在 `<body>` 末尾,配置 `richColors / position="top-center"`。验证 toast 在任意页面可触发。
 - [X] T004 [P] Add emoji group metadata to `src/lib/constants/category-emojis.ts` — 018 已有 `CATEGORY_EMOJIS` 扁平数组 + 12 个分组常量(FOOD/TRANSPORT/...)。新增导出 `CATEGORY_EMOJI_GROUPS` 数组(含 `id` / `label` / `emojis`),保留原 `CATEGORY_EMOJIS` 不破坏 018。详见 [research.md D6](./research.md#d6-emoji-picker--自建组件popover--tabs--grid--search)。
 - [X] T005 [P] Create zod validators in `src/lib/validators/category.ts` — 导出 `categoryCreateSchema` + `categoryUpdateSchema`(沿用 018 后端 procedure 的字段约束:type enum / name 1-30 trim / icon 白名单 refine / parentId uuid optional / sortOrder int optional)+ 类型 `CategoryFormValues`。详见 [data-model.md](./data-model.md)。
@@ -150,11 +150,11 @@
 
 **Purpose**: 组件测试 + 响应式/暗色/a11y 验证 + 最终质量门。
 
-- [ ] T031 [P] Write component tests in `src/tests/unit/components/category/` — (a) `emoji-picker.test.tsx`:tab 切换 / 搜索过滤 / 选中高亮 / 白名单限制 / 空结果;(b) `category-form.test.tsx`:create happy / 校验失败(空 name/超长/非白名单 emoji)/ parent 锁 type / 已归档限制 / 重名 toast;(c) `category-select.test.tsx`:分组渲染(内置/自定义)/ 二级缩进 / type 过滤 / 归档隐藏。Vitest + Testing Library,@testing-library/react 已安装。详见 [quickstart.md 组件测试](./quickstart.md)。
-- [ ] T032 [P] Responsive + dark mode verification — Chrome DevTools:(a) iPhone SE 375px 列表单列 + 表单 modal 全屏 + emoji picker bottom sheet;(b) iPad 768px 双列?(若设计);(c) 暗色模式切换(若有 toggle,否则用 `prefers-color-scheme: dark`)→ contrast ≥ WCAG AA 4.5:1。FR-027。
-- [ ] T033 Keyboard navigation + a11y verification — Tab 遍历所有交互元素(新增/编辑/归档/emoji picker/parent select);Enter 提交表单;Esc 关闭 dialog;drag handle 用 @dnd-kit KeyboardSensor 方向键移动。屏幕阅读器(VoiceOver)测试列表结构语义化(ul/li + aria-label)。FR-021 + FR-028。
-- [ ] T034 Run quickstart.md 9 scenarios manually — 浏览器逐场景跑 [quickstart.md](./quickstart.md) 场景 1-9,每场景截图或录屏归档到 PR 描述。覆盖:入口 / 列表 / 新增 / 编辑 / 归档级联 / 拖拽策略 / 交易下拉 / emoji picker / 响应式+暗色+键盘。
-- [ ] T035 Final quality gate — `pnpm tsc --noEmit` 0 错误 / `pnpm lint` 0 errors(allow warnings)/ `pnpm test` 全套绿(含 018 既有 + 008 更新 mock 后 + 023 新组件测试)。审查 SC 性能基线(列表渲染 P95 < 500ms / emoji picker < 100ms / 拖拽 < 300ms < 800ms)。
+- [X] T031 [P] Write component tests in `src/tests/unit/components/category/` — (a) `emoji-picker.test.tsx`:tab 切换 / 搜索过滤 / 选中高亮 / 白名单限制 / 空结果;(b) `category-form.test.tsx`:create happy / 校验失败(空 name/超长/非白名单 emoji)/ parent 锁 type / 已归档限制 / 重名 toast;(c) `category-select.test.tsx`:分组渲染(内置/自定义)/ 二级缩进 / type 过滤 / 归档隐藏。Vitest + Testing Library,@testing-library/react 已安装。详见 [quickstart.md 组件测试](./quickstart.md)。
+- [X] T032 [P] Responsive + dark mode verification — Chrome DevTools:(a) iPhone SE 375px 列表单列 + 表单 modal 全屏 + emoji picker bottom sheet;(b) iPad 768px 双列?(若设计);(c) 暗色模式切换(若有 toggle,否则用 `prefers-color-scheme: dark`)→ contrast ≥ WCAG AA 4.5:1。FR-027。
+- [X] T033 Keyboard navigation + a11y verification — Tab 遍历所有交互元素(新增/编辑/归档/emoji picker/parent select);Enter 提交表单;Esc 关闭 dialog;drag handle 用 @dnd-kit KeyboardSensor 方向键移动。屏幕阅读器(VoiceOver)测试列表结构语义化(ul/li + aria-label)。FR-021 + FR-028。
+- [X] T034 Run quickstart.md 9 scenarios manually — 浏览器逐场景跑 [quickstart.md](./quickstart.md) 场景 1-9,每场景截图或录屏归档到 PR 描述。覆盖:入口 / 列表 / 新增 / 编辑 / 归档级联 / 拖拽策略 / 交易下拉 / emoji picker / 响应式+暗色+键盘。
+- [X] T035 Final quality gate — `pnpm tsc --noEmit` 0 错误 / `pnpm lint` 0 errors(allow warnings)/ `pnpm test` 全套绿(含 018 既有 + 008 更新 mock 后 + 023 新组件测试)。审查 SC 性能基线(列表渲染 P95 < 500ms / emoji picker < 100ms / 拖拽 < 300ms < 800ms)。
 
 ---
 
