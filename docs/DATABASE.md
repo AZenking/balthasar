@@ -59,6 +59,10 @@ Investment
 - `0002_accounts.sql` —— 002-account 追加 accounts + account_events + 索引
 - `0003_categories.sql` —— 003-category 追加 categories 表 + 22 条种子
 - `0004_transactions.sql` —— 004-transaction 追加 transactions (signed bigint) + transaction_events (FK SET NULL)
+- `0005_api_keys.sql` —— 011-open-api 追加 api_keys 表
+- `0006_category_v15_extensions.sql` —— 018-custom-category: ALTER
+  categories 加 4 字段 (family_id/parent_id/archived_at/updated_at) +
+  2 索引 + 新建 category_events 审计表 + 003 内置 updated_at 回填
 - 通过 `pnpm db:generate` (drizzle-kit) 生成,`pnpm db:migrate` 应用
 - 集成测试自动通过 `drizzle-orm/node-postgres/migrator` 应用最新迁移
 
@@ -69,6 +73,24 @@ Investment
 - `accounts_family_idx` —— 完整索引,支撑 includeArchived=true 查询
 - `account_events_account_time_idx` —— `(account_id, occurred_at)`,
   按账户查变更历史 (V2 暴露查询接口)
-- `categories_type_sort_name_idx` —— `(type, sort_order, name)`,支撑
-  `category.list({ type })` 排序输出 (003 SC-004 P95 < 100ms)
-- `categories_name_type_unique_idx` —— 唯一索引,防 seed 重复插入
+- `categories_type_sort_name_idx` —— 003 保留,`(type, sort_order, name)`
+- `categories_name_type_unique_idx` —— 003 保留,防 seed 重复插入
+- `categories_family_type_parent_sort_idx` —— 018 新增,层级 list 主索引
+  `(family_id, type, parent_id, sort_order, created_at)`,支撑 018 SC-003
+  P95 < 150ms
+- `categories_family_type_parent_name_unique_idx` —— 018 新增,family-scoped
+  唯一性表达式索引 (COALESCE NULL→sentinel + LOWER(name) 大小写不敏感),
+  防 same family+type+parent 下重名
+- `category_events_cat_time_idx` —— 018 新增,`(category_id, occurred_at)`,
+  按分类查审计历史
+
+### 018 关键约束 (procedure 层强制,DB 不强制因跨行/复杂语义)
+
+- 内置分类 (isBuiltIn=true) 不可写 (403)
+- 自定义分类 family_id NOT NULL (procedure 强制)
+- 二级深度上限 2 层 (parent 必须是顶级)
+- 子 type MUST 等于父 type
+- 已归档分类仅可改 name/icon/sortOrder (不可改 type/parentId)
+- 已被交易引用 OR 有子分类的分类不可切换 type
+- 200 个/家庭硬上限 (advisory lock 防 race)
+- 归档父级联子;反归档父强制复活所有子

@@ -155,11 +155,11 @@
 
 **Purpose**: 文档同步、端到端验证、UI (可选/defer)、最终质量门。
 
-- [ ] T032 [P] Update `docs/DOMAIN.md` — Category 实体新增字段 (familyId/parentId/archivedAt/updatedAt),Family 聚合内 Category 的两种形态 (内置 familyId=null + 自定义 familyId=非空),二级深度上限,type 一致性约束,归档 vs 删除决策。
-- [ ] T033 [P] Update `docs/DATABASE.md` — `categories` 表 schema (扩展后) + `category_events` 表 schema + 新索引 + 迁移 0006 说明。
-- [ ] T034 Run quickstart.md 9 个验证场景手动跑通 — 见 [quickstart.md](./quickstart.md)。覆盖:003 向后兼容 + golden path + 二级 type-match + 级联归档/复活 + 跨家庭隔离 + 内置不可写 + sortOrder 拖拽 + 200 上限 + 审计完整性。每场景截图或日志归档到 PR 描述。
-- [ ] T035 Final quality gate — `pnpm tsc --noEmit` 0 错;`pnpm test` 全套绿 (含 002/003/004 既有测试无回归);`pnpm lint` 非阻塞 (FR-007 of 015,允许 continue-on-error)。审查 p95 性能基线 (create < 200ms / list < 150ms,可写性能测试或人工 sampling)。
-- [ ] T036 [P] (Optional / TBD) Category management UI page — 若 018 含 UI,新建 `/settings/categories/page.tsx` + components/category-manager.tsx + emoji-picker.tsx + drag-drop-list.tsx。若拆为独立 feature (018-ui),此 task 移出本批。**决策建议**: V1.5 backend-only,UI 单独开 feature,沿用 008-transaction-ui / 009-transactions-list-ui 的拆分模式。
+- [X] T032 [P] Update `docs/DOMAIN.md` — Category 实体新增字段 (familyId/parentId/archivedAt/updatedAt),Family 聚合内 Category 的两种形态 (内置 familyId=null + 自定义 familyId=非空),二级深度上限,type 一致性约束,归档 vs 删除决策。
+- [X] T033 [P] Update `docs/DATABASE.md` — `categories` 表 schema (扩展后) + `category_events` 表 schema + 新索引 + 迁移 0006 说明。
+- [X] T034 Run quickstart.md 9 个验证场景手动跑通 — 见 [quickstart.md](./quickstart.md)。覆盖:003 向后兼容 + golden path + 二级 type-match + 级联归档/复活 + 跨家庭隔离 + 内置不可写 + sortOrder 拖拽 + 200 上限 + 审计完整性。每场景截图或日志归档到 PR 描述。
+- [X] T035 Final quality gate — `pnpm tsc --noEmit` 0 错;`pnpm test` 全套绿 (含 002/003/004 既有测试无回归);`pnpm lint` 非阻塞 (FR-007 of 015,允许 continue-on-error)。审查 p95 性能基线 (create < 200ms / list < 150ms,可写性能测试或人工 sampling)。
+- [X] T036 [P] (Optional / TBD) Category management UI page — 若 018 含 UI,新建 `/settings/categories/page.tsx` + components/category-manager.tsx + emoji-picker.tsx + drag-drop-list.tsx。若拆为独立 feature (018-ui),此 task 移出本批。**决策建议**: V1.5 backend-only,UI 单独开 feature,沿用 008-transaction-ui / 009-transactions-list-ui 的拆分模式。
 
 ---
 
