@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CategorySelect } from "@/components/category/category-select";
 import { cn } from "@/lib/utils";
 
 export function TransactionForm({ editId }: { editId?: string }) {
@@ -28,9 +29,12 @@ export function TransactionForm({ editId }: { editId?: string }) {
     "expense"
   );
 
-  const { data: categories } = trpc.category.list.useQuery({
+  const { data: _categories } = trpc.category.list.useQuery({
     type: selectedType,
   });
+  // 023-category-ui US6: CategorySelect now handles list + grouping internally.
+  // _categories unused here; CategorySelect fetches its own data.
+  void _categories;
 
   // ── Edit mode: prefetch transaction data ──
   const { data: editData, isLoading: isLoadingEdit } =
@@ -216,27 +220,14 @@ export function TransactionForm({ editId }: { editId?: string }) {
         )}
       </div>
 
-      {/* Category */}
+      {/* Category (023-category-ui US6: 用 CategorySelect 替换内联渲染) */}
       <div className="space-y-2">
         <Label htmlFor="categoryId">分类</Label>
-        <div className="flex flex-wrap gap-2">
-          {(categories ?? []).map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              onClick={() => setValue("categoryId", c.id)}
-              className={cn(
-                "flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm transition-colors",
-                watch("categoryId") === c.id
-                  ? "border-primary bg-primary/5 text-primary"
-                  : "border-border text-muted-foreground hover:bg-accent"
-              )}
-            >
-              <span>{c.icon}</span>
-              {c.name}
-            </button>
-          ))}
-        </div>
+        <CategorySelect
+          type={selectedType}
+          value={watch("categoryId")}
+          onChange={(id) => setValue("categoryId", id, { shouldValidate: true })}
+        />
         {errors.categoryId && (
           <p className="text-xs text-destructive">
             {errors.categoryId.message}

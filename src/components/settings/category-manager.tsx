@@ -2,10 +2,14 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { TRPCClientError } from "@trpc/client";
 import { trpc } from "@/lib/trpc/client";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Modal } from "@/components/ui/modal";
 import { CategoryItem, type CategoryNode } from "./category-item";
+import { CategoryForm } from "./category-form";
+import type { CategoryCreateValues } from "@/lib/validators/category";
 
 const CUSTOM_CATEGORY_CAP = 200;
 
@@ -26,6 +30,7 @@ export function CategoryManager() {
   // ─── filters state ───
   const [type, setType] = useState<"income" | "expense">("expense");
   const [includeArchived, setIncludeArchived] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
   // ─── list query ───
   // list returns CategoryTreeNode[] when no parentId (buildCategoryTree applied).
@@ -49,17 +54,33 @@ export function CategoryManager() {
   }, [tree]);
   const capReached = customCount >= CUSTOM_CATEGORY_CAP;
 
-  // ─── mutation callbacks (added in Phase 4-7) ───
+  // ─── US2: create mutation (server-first, FR-024a) ───
+  const createMutation = trpc.category.create.useMutation({
+    onSuccess: () => {
+      utils.category.list.invalidate();
+      setShowCreateForm(false);
+      toast.success("已创建");
+    },
+    onError: (err) => {
+      const msg =
+        err instanceof TRPCClientError ? err.message : "创建失败,请重试";
+      toast.error(msg);
+      // form stays open (FR-024a server-first, preserve input on error)
+    },
+  });
+
+  const handleCreate = async (values: CategoryCreateValues) => {
+    await createMutation.mutateAsync(values);
+  };
+
+  // ─── mutation callbacks (added in Phase 5-7) ───
   const onEdit = (_id: string) => {
-    // Phase 5 (US3): open edit dialog
     toast.info("编辑功能将在 US3 实现");
   };
   const onArchive = (_id: string, _childCount: number) => {
-    // Phase 6 (US4): optimistic archive
     toast.info("归档功能将在 US4 实现");
   };
   const onUnarchive = (_id: string, _childCount: number) => {
-    // Phase 6 (US4): optimistic unarchive
     toast.info("反归档功能将在 US4 实现");
   };
 
@@ -109,7 +130,7 @@ export function CategoryManager() {
           size="sm"
           disabled={capReached}
           title={capReached ? `已达上限 ${CUSTOM_CATEGORY_CAP}` : undefined}
-          onClick={() => toast.info("新增功能将在 US2 实现")}
+          onClick={() => setShowCreateForm(true)}
         >
           + 新增分类
         </Button>
@@ -139,6 +160,21 @@ export function CategoryManager() {
           ))}
         </div>
       )}
+
+      {/* US2 create form modal */}
+      <Modal
+        open={showCreateForm}
+        onClose={() => setShowCreateForm(false)}
+        title="新增分类"
+      >
+        <CategoryForm
+          mode="create"
+          categories={tree ?? []}
+          onSubmit={handleCreate}
+          onCancel={() => setShowCreateForm(false)}
+          submitting={createMutation.isPending}
+        />
+      </Modal>
     </div>
   );
 }
