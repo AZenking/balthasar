@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Tags } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { authClient } from "@/server/auth/client";
 import { Button } from "@/components/ui/button";
@@ -170,6 +172,24 @@ export default function SettingsPage() {
 
       {/* API Key 管理 */}
       <ApiKeyManager />
+
+      {/* 分类管理入口 (023-category-ui T007) */}
+      <div className="mb-6">
+        <h2 className="mb-2 text-sm font-semibold text-muted-foreground">分类管理</h2>
+        <Link
+          href="/settings/categories"
+          className="flex items-center justify-between rounded-md border border-border bg-card p-4 transition-colors hover:bg-accent"
+        >
+          <div className="flex items-center gap-3">
+            <Tags className="h-5 w-5 text-muted-foreground" />
+            <div>
+              <p className="text-sm font-medium">自定义分类</p>
+              <p className="text-xs text-muted-foreground">新增、编辑、归档、排序分类</p>
+            </div>
+          </div>
+          <span className="text-muted-foreground">›</span>
+        </Link>
+      </div>
 
       {/* 登出 */}
       <Button variant="outline" onClick={handleLogout} className="w-full text-destructive">

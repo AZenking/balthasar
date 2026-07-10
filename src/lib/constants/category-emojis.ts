@@ -111,6 +111,29 @@ export const CATEGORY_EMOJIS = [
 export type CategoryEmoji = (typeof CATEGORY_EMOJIS)[number];
 
 /**
+ * Emoji groups for picker tabs (023-category-ui T004).
+ * Each group maps to a tab in the EmojiPicker popover.
+ * Order = tab order (食物 first, 其他 last).
+ */
+export const CATEGORY_EMOJI_GROUPS = [
+  { id: "food", label: "食物", emojis: [...FOOD] },
+  { id: "transport", label: "交通", emojis: [...TRANSPORT] },
+  { id: "shopping", label: "购物", emojis: [...SHOPPING] },
+  { id: "home", label: "家居", emojis: [...HOME] },
+  { id: "health", label: "医疗", emojis: [...HEALTH] },
+  { id: "entertainment", label: "娱乐", emojis: [...ENTERTAINMENT] },
+  { id: "education", label: "教育", emojis: [...EDUCATION_WORK] },
+  { id: "gifts", label: "人情", emojis: [...GIFTS] },
+  { id: "finance", label: "财务", emojis: [...FINANCE] },
+  { id: "pets", label: "宠物", emojis: [...PETS] },
+  { id: "travel", label: "旅行", emojis: [...TRAVEL] },
+  { id: "family", label: "家庭", emojis: [...FAMILY] },
+  { id: "misc", label: "其他", emojis: [...MISC] },
+] as const;
+
+export type EmojiGroup = (typeof CATEGORY_EMOJI_GROUPS)[number];
+
+/**
  * O(1) lookup set for validation. Built once at module load.
  *
  * Usage:
