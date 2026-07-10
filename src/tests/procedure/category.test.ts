@@ -14,10 +14,21 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 
 vi.mock("@/server/db/queries/category", () => ({
   findAllCategories: vi.fn().mockResolvedValue([
-    { id: "c1", name: "餐饮", type: "expense", icon: "🍔", sortOrder: 100, isBuiltIn: true },
-    { id: "c2", name: "工资", type: "income", icon: "💰", sortOrder: 100, isBuiltIn: true },
+    { id: "c1", name: "餐饮", type: "expense", icon: "🍔", sortOrder: 100, isBuiltIn: true, familyId: null, parentId: null, archivedAt: null, updatedAt: new Date(), createdAt: new Date() },
+    { id: "c2", name: "工资", type: "income", icon: "💰", sortOrder: 100, isBuiltIn: true, familyId: null, parentId: null, archivedAt: null, updatedAt: new Date(), createdAt: new Date() },
   ]),
   findCategoryById: vi.fn(),
+}));
+
+vi.mock("@/server/db/queries/account", () => ({
+  loadFamilyAndMemberIdsByUserId: vi
+    .fn()
+    .mockResolvedValue({ familyId: "fam_test", memberId: "mem_test" }),
+}));
+
+vi.mock("@/server/domain/category/rules", () => ({
+  buildCategoryTree: vi.fn((flat: unknown[]) => flat),
+  isCategoryEmoji: vi.fn(() => true),
 }));
 
 import { createCaller } from "@/lib/trpc/server";
@@ -106,7 +117,6 @@ describe("[T021-T023] category.get procedure", () => {
   });
 
   it("T022: throws NOT_FOUND when missing", async () => {
-    // @ts-expect-error intentional null to simulate NOT_FOUND; mock signature disallows it
     mockedFindById.mockResolvedValueOnce(null);
     const caller = authedCaller();
     await expect(

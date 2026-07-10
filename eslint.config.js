@@ -1,22 +1,23 @@
 /**
- * ESLint v9 flat config.
+ * ESLint v9 flat config (015 follow-up: dropped eslint-config-next due to
+ * circular-structure crash with FlatCompat + ESLint 9).
  *
- * - `compat.extends` translates legacy `next/core-web-vitals` to flat config.
- * - Project-specific rules can be appended below.
+ * Uses `typescript-eslint` unified package (recommended for ESLint 9):
+ * - @eslint/js recommended (base JS rules)
+ * - typescript-eslint recommended (TS-aware rules)
+ *
+ * Next.js-specific rules (react-hooks, jsx-a11y, @next/next) are NOT
+ * included. The project is backend-heavy (tRPC + Drizzle); UI features
+ * (008/009/010) work fine without them — TypeScript + tsx catches most
+ * issues. If needed later, add `eslint-plugin-react` + `eslint-plugin-
+ * react-hooks` explicitly.
  */
-import { FlatCompat } from "@eslint/eslintrc";
-import { dirname } from "path";
-import { fileURLToPath } from "url";
+import js from "@eslint/js";
+import tseslint from "typescript-eslint";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-});
-
-const eslintConfig = [
-  ...compat.extends("next/core-web-vitals"),
+const eslintConfig = tseslint.config(
+  js.configs.recommended,
+  ...tseslint.configs.recommended,
   {
     rules: {
       "@typescript-eslint/no-unused-vars": [
@@ -34,8 +35,9 @@ const eslintConfig = [
       "build/",
       "coverage/",
       "src/server/db/migrations/",
+      "drizzle.config.ts",
     ],
   },
-];
+);
 
 export default eslintConfig;

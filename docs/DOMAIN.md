@@ -56,13 +56,29 @@ Debt
 Budget
 Investment
 
-## Category (003-category) — 内置分类字典
+## Category (003-category + 018-custom-category) — 内置字典 + 家庭自定义
 
+003 内置分类 (20 条,read-only):
 - id (UUID v5,基于 `"${type}:${name}"` 在 DNS 命名空间)
 - name (中文名 1-30 字符)
 - type (`income` | `expense`,pgEnum)
-- icon (emoji 1-4 UTF-16 code units)
-- sortOrder (整数,默认 100)
-- isBuiltIn (MVP 全 true,V2 自定义分类时区分)
-- 无 family_id (所有家庭共享)
-- 22 条种子通过迁移 SQL 注入,read-only (无 CRUD)
+- icon (emoji,白名单见 `src/lib/constants/category-emojis.ts`)
+- sortOrder (整数,默认 100,整数间隔 + 耗尽重排算法见 018 FR-031)
+- isBuiltIn = true (内置)
+- family_id IS NULL (所有家庭共享只读)
+- 20 条种子通过迁移 SQL 注入 (003 是 12 expense + 8 income)
+
+018 自定义分类 (V1.5 增强):
+- id (UUID v7,运行时随机)
+- family_id NOT NULL (按家庭隔离,跨家庭访问 → 404 不暴露存在性)
+- parent_id (NULL = 顶级;非 NULL = 二级,深度上限 2 层)
+- archived_at (NULL = 活跃;非 NULL = 归档,软停用,不硬删)
+- updated_at (每次 update/refresh 触发)
+- 子分类 type MUST 等于父分类 type (FR-005(d))
+- 同家庭 + 同 type + 同 parentId 下 name 唯一 (case-insensitive + trim)
+- 200 个/家庭硬上限 (含归档,advisory lock 防 race)
+- CRUD via tRPC: create / update / archive / unarchive / reorder / list / get
+- 审计: category_events 表 (沿用 transaction_events 模式,永久保留)
+- 归档级联: archive 父 → 级联 archive 未归档子;unarchive 父 → 强制级联复活所有子 (含独立归档过的)
+- 下游 feature (004 transaction / 019 budget / 020 reports) 引用 categoryId
+  时不区分 isBuiltIn,行为完全一致 (FR-025)
