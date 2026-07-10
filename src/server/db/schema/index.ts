@@ -15,6 +15,8 @@ export * from "./account";
 export * from "./account-events";
 // 003-category
 export * from "./category";
+// 018-custom-category (extends 003)
+export * from "./category-events";
 // 004-transaction
 export * from "./transaction";
 export * from "./transaction-events";

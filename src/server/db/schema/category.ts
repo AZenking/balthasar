@@ -9,24 +9,41 @@ import {
   uniqueIndex,
   index,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { family } from "./family";
 
 /**
- * `categories` — built-in category dictionary (003-category).
+ * `categories` — built-in dictionary (003) + custom categories (018).
  *
- * Per data-model.md + research.md:
- * - Q2: `id` is UUID v5 (deterministic from name+type in DNS namespace) — set by seed SQL
- * - Q4: `type` uses pgEnum (DB-level enum enforcement)
- * - Q5: index `(type, sort_order, name)` for list query (sorted output via index scan)
- * - Q6: NO family_id field — shared global dictionary, all families see same data
+ * Per data-model.md (018):
+ * - Q2: `id` is UUID v5 for built-in (deterministic from name+type), UUID v7 for custom.
+ * - Q4: `type` uses pgEnum (DB-level enum enforcement).
+ * - 018 extension: add familyId (NULL=built-in, family- scoped custom),
+ *   parentId (NULL=顶级, self-ref for 二级), archivedAt (NULL=active),
+ *   updatedAt.
  *
- * MVP invariant: 22 built-in categories (12 expense + 8 income) seeded via migration.
- * V2 will add user-defined categories (with family_id NULL = built-in, non-NULL = custom).
+ * Indexes:
+ * - categories_type_sort_name_idx (003, kept): list by type, sorted
+ * - categories_name_type_unique_idx (003, kept): idempotent seed
+ * - categories_family_type_parent_sort_idx (018 NEW): hierarchical list
+ * - categories_family_type_parent_name_unique_idx (018 NEW): family-scoped
+ *   unique name, case-insensitive, NULL→sentinel (via COALESCE+LOWER expr)
+ *
+ * parentId self-reference FK is added in migration 0006 (Drizzle self-ref
+ * is awkward; SQL ALTER TABLE is cleaner per data-model.md).
+ *
+ * Invariants (enforced at procedure layer, not DB):
+ * - isBuiltIn=true → MUST NOT be written (403)
+ * - custom (isBuiltIn=false) → family_id MUST NOT be null (procedure)
+ * - depth ≤ 2 (parentId chain length)
+ * - child.type === parent.type
  */
 export const categoryType = pgEnum("category_type", ["income", "expense"]);
 
 export const category = pgTable(
   "categories",
   {
+    // ─── 003 既有字段 (向后兼容) ───
     id: uuid("id").primaryKey(),
     name: text("name").notNull(),
     type: categoryType("type").notNull(),
@@ -36,21 +53,45 @@ export const category = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
+
+    // ─── 018 新增字段 ───
+    familyId: uuid("family_id").references(() => family.id, {
+      onDelete: "restrict",
+    }),
+    parentId: uuid("parent_id"), // self-ref FK added in migration SQL
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
   },
   (t) => ({
-    // Composite index for list query: WHERE type = $ + ORDER BY sort_order, name
-    // Postgres can use this single index for both filter and sort.
+    // 003 既有索引 (保留, 003 list 仍用)
     typeSortNameIdx: index("categories_type_sort_name_idx").on(
       t.type,
       t.sortOrder,
-      t.name
+      t.name,
     ),
-    // Uniqueness guard for idempotent seed (INSERT ... ON CONFLICT DO NOTHING by id)
     nameTypeUniqueIdx: uniqueIndex("categories_name_type_unique_idx").on(
       t.name,
-      t.type
+      t.type,
     ),
-  })
+
+    // 018 新增: 层级 list 主索引
+    familyTypeParentSortIdx: index(
+      "categories_family_type_parent_sort_idx",
+    ).on(t.familyId, t.type, t.parentId, t.sortOrder, t.createdAt),
+
+    // 018 新增: family-scoped 唯一性 (COALESCE NULL→sentinel + LOWER case-insensitive)
+    familyTypeParentNameUniqueIdx: uniqueIndex(
+      "categories_family_type_parent_name_unique_idx",
+    ).on(
+      sql`COALESCE(${t.familyId}, '00000000-0000-0000-0000-000000000000'::uuid)`,
+      t.type,
+      sql`COALESCE(${t.parentId}, '00000000-0000-0000-0000-000000000000'::uuid)`,
+      sql`LOWER(${t.name})`,
+    ),
+  }),
 );
 
 export type Category = typeof category.$inferSelect;
