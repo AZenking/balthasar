@@ -26,6 +26,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { startTestDb, stopTestDb, type TestDb } from "@/tests/helpers/db";
 import { db } from "@/server/db/client";
 import {
+  account,
   category,
   categoryEvent,
   family,
@@ -192,42 +193,34 @@ describe("[US2] updateCategory", () => {
       familyId: famId,
       actorMemberId: memId,
     });
-    // Insert a transaction referencing this category
-    const accountId = uuidv7();
-    // Need an account first — use a minimal insert
-    await db.insert(category).values({}).catch(() => {});
-    await db
-      .insert(transaction)
-      .values({
-        id: uuidv7(),
-        familyId: famId,
-        memberId: memId,
-        accountId: uuidv7(), // fake account id (FK not enforced without account row, but type check still hits)
-        categoryId: c.id,
-        type: "expense",
-        amount: -1000,
-        remark: "",
-        occurredAt: new Date(),
-      })
-      .catch(() => {
-        // FK on accountId may fail; if so, skip this test scenario
-      });
+    // Create a real account + transaction referencing the category
+    const acctId = uuidv7();
+    await db.insert(account).values({
+      id: acctId,
+      familyId: famId,
+      name: "TestAcct",
+      currency: "CNY",
+      initialBalance: 0,
+    });
+    await db.insert(transaction).values({
+      id: uuidv7(),
+      familyId: famId,
+      type: "expense",
+      accountId: acctId,
+      categoryId: c.id,
+      amount: -1000,
+      remark: "",
+      occurredAt: new Date(),
+    });
 
-    // If the transaction insert succeeded, type change should fail
-    const txCount = await db
-      .select()
-      .from(transaction)
-      .where(eq(transaction.categoryId, c.id));
-    if (txCount.length > 0) {
-      await expect(
-        updateCategory({
-          id: c.id,
-          familyId: famId,
-          actorMemberId: memId,
-          type: "income",
-        }),
-      ).rejects.toMatchObject({ code: "BAD_REQUEST" });
-    }
+    await expect(
+      updateCategory({
+        id: c.id,
+        familyId: famId,
+        actorMemberId: memId,
+        type: "income",
+      }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
   it("7. throws NOT_FOUND when cross-family update", async () => {

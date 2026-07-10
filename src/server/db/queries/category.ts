@@ -660,3 +660,176 @@ export async function reorderCategories(
     return { updated };
   });
 }
+
+// ─── 018 US3: Archive + Unarchive (cascade) ────────────────────────
+
+export interface ArchiveCategoryInput {
+  id: string;
+  familyId: string;
+  actorMemberId: string;
+}
+
+/**
+ * Archive a custom category, cascading to its children (FR-015..FR-018).
+ *
+ * Semantics (research.md D5 + Clarify Q2):
+ *   - archive: cascade to children where archived_at IS NULL (idempotent —
+ *     already-archived children keep their original archivedAt)
+ *   - unarchive: 强制级联复活 ALL children (including independently-archived
+ *     ones — user can re-archive manually if needed)
+ *
+ * Single transaction:
+ *   1. SELECT FOR UPDATE parent (validate isBuiltIn=false / family match)
+ *   2. SELECT children FOR UPDATE
+ *   3. UPDATE parent + eligible children
+ *   4. writeCategoryEventsBatch (1 + N events, before/after snapshots)
+ *
+ * Returns archivedChildren IDs (only those actually changed).
+ */
+export async function archiveCategory(
+  input: ArchiveCategoryInput,
+): Promise<{ archivedChildren: string[] }> {
+  return withTransaction(async (tx) => {
+    const parentRows = await tx
+      .select()
+      .from(category)
+      .where(eq(category.id, input.id))
+      .limit(1);
+    const parent = parentRows[0];
+    if (!parent) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "分类不存在" });
+    }
+    if (parent.isBuiltIn) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "内置分类不可归档" });
+    }
+    if (parent.familyId !== input.familyId) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "分类不存在" });
+    }
+
+    // Children (only those not already archived — idempotent cascade)
+    const children = await tx
+      .select()
+      .from(category)
+      .where(
+        and(
+          eq(category.parentId, input.id),
+          isNull(category.archivedAt),
+        ),
+      );
+    const childIds = children.map((c) => c.id);
+
+    const now = new Date();
+    const beforeParent = snapshot(parent);
+    const beforeChildren = children.map(snapshot);
+
+    // UPDATE parent
+    await tx
+      .update(category)
+      .set({ archivedAt: now, updatedAt: now })
+      .where(eq(category.id, input.id));
+
+    // UPDATE eligible children
+    if (childIds.length > 0) {
+      await tx
+        .update(category)
+        .set({ archivedAt: now, updatedAt: now })
+        .where(
+          and(
+            eq(category.parentId, input.id),
+            isNull(category.archivedAt),
+          ),
+        );
+    }
+
+    // Audit: 1 + N events
+    const auditItems = [
+      {
+        eventType: "category_archived" as const,
+        categoryId: parent.id,
+        before: beforeParent,
+        after: { ...beforeParent, archivedAt: now.toISOString() },
+      },
+      ...children.map((c, i) => ({
+        eventType: "category_archived" as const,
+        categoryId: c.id,
+        before: beforeChildren[i],
+        after: { ...beforeChildren[i], archivedAt: now.toISOString() },
+      })),
+    ];
+    await writeCategoryEventsBatch(tx, auditItems, input.actorMemberId);
+
+    return { archivedChildren: childIds };
+  });
+}
+
+/**
+ * Unarchive a custom category, 强制级联复活 ALL children (Clarify Q2).
+ *
+ * Unlike archive (which skips already-archived children), unarchive forces
+ * all children to archived_at = NULL regardless of prior state. User can
+ * re-archive specific children manually if needed.
+ */
+export async function unarchiveCategory(
+  input: ArchiveCategoryInput,
+): Promise<{ unarchivedChildren: string[] }> {
+  return withTransaction(async (tx) => {
+    const parentRows = await tx
+      .select()
+      .from(category)
+      .where(eq(category.id, input.id))
+      .limit(1);
+    const parent = parentRows[0];
+    if (!parent) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "分类不存在" });
+    }
+    if (parent.isBuiltIn) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "内置分类不可反归档" });
+    }
+    if (parent.familyId !== input.familyId) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "分类不存在" });
+    }
+
+    // ALL children (regardless of archived state) — 强制级联复活
+    const children = await tx
+      .select()
+      .from(category)
+      .where(eq(category.parentId, input.id));
+    const childIds = children.map((c) => c.id);
+
+    const beforeParent = snapshot(parent);
+    const beforeChildren = children.map(snapshot);
+
+    // UPDATE parent
+    await tx
+      .update(category)
+      .set({ archivedAt: null, updatedAt: new Date() })
+      .where(eq(category.id, input.id));
+
+    // UPDATE ALL children (force resurrect)
+    if (childIds.length > 0) {
+      await tx
+        .update(category)
+        .set({ archivedAt: null, updatedAt: new Date() })
+        .where(eq(category.parentId, input.id));
+    }
+
+    // Audit: 1 + N events
+    const auditItems = [
+      {
+        eventType: "category_unarchived" as const,
+        categoryId: parent.id,
+        before: beforeParent,
+        after: { ...beforeParent, archivedAt: null },
+      },
+      ...children.map((c, i) => ({
+        eventType: "category_unarchived" as const,
+        categoryId: c.id,
+        before: beforeChildren[i],
+        after: { ...beforeChildren[i], archivedAt: null },
+      })),
+    ];
+    await writeCategoryEventsBatch(tx, auditItems, input.actorMemberId);
+
+    return { unarchivedChildren: childIds };
+  });
+}

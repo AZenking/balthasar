@@ -98,15 +98,15 @@
 
 ### Tests for User Story 3 (TDD)
 
-- [ ] T021 [P] [US3] Write procedure test for `category.archive` + `category.unarchive` in `src/tests/procedure/category-archive.test.ts` — 覆盖 spec US3 全部 10 个 Acceptance Scenarios (单归档 + 级联子 + 反归档强制复活 + 反归档级联复活独立归档过的子 + 403 内置 + 404 跨家庭 + 401 + 历史交易 JOIN 不破)。**特别**:验证 Clarify Q2 强制复活语义 —— 反归档父时,所有子 (无论 prior archived state) 统一 archivedAt = null。
+- [X] T021 [P] [US3] Write procedure test for `category.archive` + `category.unarchive` in `src/tests/procedure/category-archive.test.ts` — 覆盖 spec US3 全部 10 个 Acceptance Scenarios (单归档 + 级联子 + 反归档强制复活 + 反归档级联复活独立归档过的子 + 403 内置 + 404 跨家庭 + 401 + 历史交易 JOIN 不破)。**特别**:验证 Clarify Q2 强制复活语义 —— 反归档父时,所有子 (无论 prior archived state) 统一 archivedAt = null。
 
 ### Implementation for User Story 3
 
-- [ ] T022 [US3] Implement `archiveCategory` + `unarchiveCategory` queries in `src/server/db/queries/category.ts` — 单事务内:
+- [X] T022 [US3] Implement `archiveCategory` + `unarchiveCategory` queries in `src/server/db/queries/category.ts` — 单事务内:
   - **archive**:(1) `SELECT parent FOR UPDATE WHERE id = $1 AND family_id = $current`;(2) 若 isBuiltIn → 403;(3) `UPDATE categories SET archived_at = now() WHERE id = $1`;(4) `UPDATE categories SET archived_at = now() WHERE parent_id = $1 AND archived_at IS NULL` (仅级联未归档的子);(5) `writeCategoryEventsBatch` 写 1 + N 条 `category_archived` 事件。
   - **unarchive**:(1) 同 SELECT FOR UPDATE;(2) `UPDATE categories SET archived_at = NULL WHERE id = $1`;(3) `UPDATE categories SET archived_at = NULL WHERE parent_id = $1` (**强制级联复活所有子**,无 `AND archived_at IS NULL` 过滤);(4) `writeCategoryEventsBatch` 写 1 + N 条 `category_unarchived` 事件。详见 [research.md D5](./research.md#d5-反归档父级联语义--强制级联复活-clarify-q2)。
-- [ ] T023 [US3] Implement `category.archive` + `category.unarchive` procedures in `src/server/api/routers/category.ts` — input `{ id: uuid }`。`protectedProcedure`。返回 `{ success: true, archivedChildren: string[] }` / `{ success: true, unarchivedChildren: string[] }`。详见 [contracts/category-procedures.md#archive + #unarchive](./contracts/category-procedures.md)。
-- [ ] T024 [US3] Verify US3 tests green — `pnpm test -- category/archive` + 含级联复活语义的 5 个场景全绿。
+- [X] T023 [US3] Implement `category.archive` + `category.unarchive` procedures in `src/server/api/routers/category.ts` — input `{ id: uuid }`。`protectedProcedure`。返回 `{ success: true, archivedChildren: string[] }` / `{ success: true, unarchivedChildren: string[] }`。详见 [contracts/category-procedures.md#archive + #unarchive](./contracts/category-procedures.md)。
+- [X] T024 [US3] Verify US3 tests green — `pnpm test -- category/archive` + 含级联复活语义的 5 个场景全绿。
 
 **Checkpoint**: US1 + US2 + US3 均独立可用。P1 写操作 (create/edit/archive) 完整闭环。
 

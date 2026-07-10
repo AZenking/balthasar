@@ -7,6 +7,8 @@ import {
   createCategory,
   updateCategory,
   reorderCategories,
+  archiveCategory,
+  unarchiveCategory,
 } from "@/server/db/queries/category";
 import { loadFamilyAndMemberIdsByUserId } from "@/server/db/queries/account";
 import { isCategoryEmoji } from "@/server/domain/category/rules";
@@ -157,6 +159,34 @@ export const categoryRouter = router({
       );
       return reorderCategories({
         items: input.items,
+        familyId,
+        actorMemberId: memberId,
+      });
+    }),
+
+  // ─── 018 US3: archive (cascade to children) ──────────────────────
+  archive: protectedProcedure
+    .input(z.object({ id: z.string().uuid() }).strict())
+    .mutation(async ({ input, ctx }) => {
+      const { familyId, memberId } = await loadFamilyAndMemberIdsByUserId(
+        ctx.session.user.id,
+      );
+      return archiveCategory({
+        id: input.id,
+        familyId,
+        actorMemberId: memberId,
+      });
+    }),
+
+  // ─── 018 US3: unarchive (强制级联复活所有子,Clarify Q2) ─────────
+  unarchive: protectedProcedure
+    .input(z.object({ id: z.string().uuid() }).strict())
+    .mutation(async ({ input, ctx }) => {
+      const { familyId, memberId } = await loadFamilyAndMemberIdsByUserId(
+        ctx.session.user.id,
+      );
+      return unarchiveCategory({
+        id: input.id,
         familyId,
         actorMemberId: memberId,
       });
