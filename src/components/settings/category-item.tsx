@@ -27,6 +27,7 @@ export interface CategoryItemProps {
   onEdit?: (id: string) => void;
   onArchive?: (id: string, childCount: number) => void;
   onUnarchive?: (id: string, childCount: number) => void;
+  dragHandle?: React.ReactNode;
 }
 
 export function CategoryItem({
@@ -35,6 +36,7 @@ export function CategoryItem({
   onEdit,
   onArchive,
   onUnarchive,
+  dragHandle,
 }: CategoryItemProps) {
   const isArchived = node.archivedAt !== null;
   const canManage = !node.isBuiltIn; // 内置不可写
@@ -46,6 +48,7 @@ export function CategoryItem({
         className={`flex items-center justify-between py-2 ${isChild ? "pl-8" : "pl-2"}`}
       >
         <div className="flex items-center gap-2 min-w-0">
+          {dragHandle}
           {!isChild && !canManage && (
             <Lock className="h-3 w-3 text-muted-foreground shrink-0" aria-label="内置分类" />
           )}
