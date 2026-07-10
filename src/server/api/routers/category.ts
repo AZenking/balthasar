@@ -93,9 +93,20 @@ export const categoryRouter = router({
 
   get: protectedProcedure
     .input(z.object({ id: z.string().uuid() }).strict())
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
+      const { familyId } = await loadFamilyAndMemberIdsByUserId(
+        ctx.session.user.id,
+      );
       const row = await findCategoryById(input.id);
       if (!row) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "分类不存在",
+        });
+      }
+      // FR-023: cross-family access → 404 (don't expose existence)
+      // Built-in (isBuiltIn=true, familyId=null) is visible to all families.
+      if (!row.isBuiltIn && row.familyId !== familyId) {
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "分类不存在",

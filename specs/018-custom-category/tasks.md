@@ -140,12 +140,12 @@
 
 ### Tests for User Story 5 (TDD)
 
-- [ ] T029 [P] [US5] Write procedure test for `category.get` (extended) in `src/tests/procedure/category-get.test.ts` — 覆盖 spec US5 全部 5 个 Acceptance Scenarios (自家自定义 + 跨家庭 404 + 不存在 404 + 内置可见 + 401)。验证返回字段含 familyId/isBuiltIn/parentId/archivedAt/updatedAt (018 新增)。
+- [X] T029 [P] [US5] Write procedure test for `category.get` (extended) in `src/tests/procedure/category-get.test.ts` — 覆盖 spec US5 全部 5 个 Acceptance Scenarios (自家自定义 + 跨家庭 404 + 不存在 404 + 内置可见 + 401)。验证返回字段含 familyId/isBuiltIn/parentId/archivedAt/updatedAt (018 新增)。
 
 ### Implementation for User Story 5
 
-- [ ] T030 [US5] Extend `findCategoryById` + `category.get` procedure for cross-family isolation in `src/server/db/queries/category.ts` + `src/server/api/routers/category.ts` — query 层不变 (按 id 单查);procedure 层加校验:if `!row.isBuiltIn && row.familyId !== currentFamilyId` → 404 (不暴露存在性)。内置 (isBuiltIn=true) 任意家庭可读。返回字段含所有 018 新增。
-- [ ] T031 [US5] Verify US5 tests green — `pnpm test -- category/get` + `pnpm test -- procedure/category-get` 全绿。
+- [X] T030 [US5] Extend `findCategoryById` + `category.get` procedure for cross-family isolation in `src/server/db/queries/category.ts` + `src/server/api/routers/category.ts` — query 层不变 (按 id 单查);procedure 层加校验:if `!row.isBuiltIn && row.familyId !== currentFamilyId` → 404 (不暴露存在性)。内置 (isBuiltIn=true) 任意家庭可读。返回字段含所有 018 新增。
+- [X] T031 [US5] Verify US5 tests green — `pnpm test -- category/get` + `pnpm test -- procedure/category-get` 全绿。
 
 **Checkpoint**: 全部 5 个 US 完整可用。功能闭环。
 
