@@ -11,7 +11,7 @@ import {
   unarchiveCategory,
 } from "@/server/db/queries/category";
 import { loadFamilyAndMemberIdsByUserId } from "@/server/db/queries/account";
-import { isCategoryEmoji } from "@/server/domain/category/rules";
+import { buildCategoryTree, isCategoryEmoji } from "@/server/domain/category/rules";
 import { categoryType } from "@/server/db/schema";
 
 /**
@@ -61,18 +61,34 @@ const createInputSchema = z
   .strict(); // FR-001: reject client-supplied familyId/isBuiltIn/etc.
 
 export const categoryRouter = router({
-  // ─── 003 (unchanged): built-in dictionary read ───────────────────
+  // ─── 003 + 018 US4: list (built-in + custom, hierarchical) ───────
   list: protectedProcedure
     .input(
       z
         .object({
           type: z.enum(["income", "expense"]).optional(),
+          parentId: z.string().uuid().optional(),
+          includeArchived: z.boolean().optional(),
         })
         .strict()
         .optional(),
     )
-    .query(async ({ input }) => {
-      return findAllCategories(input);
+    .query(async ({ input, ctx }) => {
+      const { familyId } = await loadFamilyAndMemberIdsByUserId(
+        ctx.session.user.id,
+      );
+      const flat = await findAllCategories({
+        familyId,
+        type: input?.type,
+        includeArchived: input?.includeArchived,
+        parentId: input?.parentId,
+      });
+
+      // parentId mode: flat list (no nesting). Otherwise: hierarchical tree.
+      if (input?.parentId) {
+        return flat;
+      }
+      return buildCategoryTree(flat);
     }),
 
   get: protectedProcedure

@@ -120,13 +120,13 @@
 
 ### Tests for User Story 4 (TDD)
 
-- [ ] T025 [P] [US4] Write procedure test for `category.list` (extended) in `src/tests/procedure/category-list.test.ts` — 覆盖 spec US4 全部 7 个 Acceptance Scenarios (无参默认 + 二级嵌套 children + type 过滤 + includeArchived + 跨家庭隔离 + parentId 级联查询 + 401)。**额外**:003 既有测试 (`src/tests/procedure/category.test.ts` 的 list 部分) 全绿 (向后兼容)。
+- [X] T025 [P] [US4] Write procedure test for `category.list` (extended) in `src/tests/procedure/category-list.test.ts` — 覆盖 spec US4 全部 7 个 Acceptance Scenarios (无参默认 + 二级嵌套 children + type 过滤 + includeArchived + 跨家庭隔离 + parentId 级联查询 + 401)。**额外**:003 既有测试 (`src/tests/procedure/category.test.ts` 的 list 部分) 全绿 (向后兼容)。
 
 ### Implementation for User Story 4
 
-- [ ] T026 [US4] Extend `findAllCategories` (built in T010) with **hierarchical output + 3 new filters** in `src/server/db/queries/category.ts` — 在 T010 的 family_id + active 过滤基础上加:(a) `type?` 过滤参数;(b) `includeArchived?` 参数 (默认 false,设 true 时 WHERE 改为 `(family_id IS NULL OR = $current)` 不加 archivedAt 过滤);(c) `parentId?` 参数 (指定后:`SELECT WHERE parent_id = $parentId` 返回平铺无嵌套,用于级联场景)。无 parentId 模式:用 `buildCategoryTree` (T002) 在应用层组树成 parent + children 嵌套,O(N)。**保留** T010 的基础行为作为默认。详见 [research.md D8](./research.md#d8-层级-list-查询--单次-select--应用层组树)。
-- [ ] T027 [US4] Update `category.list` procedure in `src/server/api/routers/category.ts` — 扩展 zod input:`{ type?: categoryTypeEnum, parentId?: uuid, includeArchived?: boolean }`。调用扩展后的 `findAllCategories`,返回嵌套或平铺结构。003 旧调用 (无参或 `{type}`) 行为不变 (字段超集,无破坏)。详见 [contracts/category-procedures.md#list](./contracts/category-procedures.md#categorylist-扩展-003)。
-- [ ] T028 [US4] Verify US4 tests green + 003 list backward compat — `pnpm test -- category/list` 全绿;003 既有测试 (`pnpm test -- procedure/category.test.ts`) 全绿。
+- [X] T026 [US4] Extend `findAllCategories` (built in T010) with **hierarchical output + 3 new filters** in `src/server/db/queries/category.ts` — 在 T010 的 family_id + active 过滤基础上加:(a) `type?` 过滤参数;(b) `includeArchived?` 参数 (默认 false,设 true 时 WHERE 改为 `(family_id IS NULL OR = $current)` 不加 archivedAt 过滤);(c) `parentId?` 参数 (指定后:`SELECT WHERE parent_id = $parentId` 返回平铺无嵌套,用于级联场景)。无 parentId 模式:用 `buildCategoryTree` (T002) 在应用层组树成 parent + children 嵌套,O(N)。**保留** T010 的基础行为作为默认。详见 [research.md D8](./research.md#d8-层级-list-查询--单次-select--应用层组树)。
+- [X] T027 [US4] Update `category.list` procedure in `src/server/api/routers/category.ts` — 扩展 zod input:`{ type?: categoryTypeEnum, parentId?: uuid, includeArchived?: boolean }`。调用扩展后的 `findAllCategories`,返回嵌套或平铺结构。003 旧调用 (无参或 `{type}`) 行为不变 (字段超集,无破坏)。详见 [contracts/category-procedures.md#list](./contracts/category-procedures.md#categorylist-扩展-003)。
+- [X] T028 [US4] Verify US4 tests green + 003 list backward compat — `pnpm test -- category/list` 全绿;003 既有测试 (`pnpm test -- procedure/category.test.ts`) 全绿。
 
 **Checkpoint**: P1 + US4 (P2 查询) 完整。分类管理页 UI 可基于此 API 渲染。
 

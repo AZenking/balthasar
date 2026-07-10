@@ -38,22 +38,44 @@ import { writeCategoryEvent, writeCategoryEventsBatch } from "@/server/db/querie
  * - `{}` or `{ type }` (003 mode, no familyId): returns ALL rows of given
  *   type (or all types), sorted by (sort_order, name). Used by 003-era
  *   code paths. After 018, callers should pass familyId to get custom too.
- * - `{ familyId }` (018 mode): WHERE `(family_id IS NULL OR family_id = $1)
- *   AND archived_at IS NULL`, sorted by `(parent_id NULLS FIRST, sort_order,
- *   created_at)`. Built-in + family's active custom, flat (no hierarchy).
- *   US4 T026 will extend this with hierarchy + filters.
+ * - `{ familyId, type?, includeArchived?, parentId? }` (018 mode, US4 T026):
+ *   - includeArchived=false (default): WHERE archived_at IS NULL
+ *   - includeArchived=true: no archived filter (returns all incl. archived)
+ *   - parentId provided: WHERE parent_id = $parentId (flat list of direct
+ *     children — used for "select parent → load children" cascade)
+ *   - parentId absent: WHERE (family_id IS NULL OR family_id = $1) AND
+ *     archived filter, sorted by (parent_id NULLS FIRST, sort_order,
+ *     created_at). Returns FLAT list — caller (procedure) calls
+ *     buildCategoryTree to nest children.
  */
 export async function findAllCategories(
   opts?:
     | { type?: CategoryType }
-    | { familyId: string; type?: CategoryType },
+    | {
+        familyId: string;
+        type?: CategoryType;
+        includeArchived?: boolean;
+        parentId?: string;
+      },
 ): Promise<Category[]> {
   if (opts && "familyId" in opts && opts.familyId) {
     // 018 mode
+    if (opts.parentId) {
+      // Cascade mode: flat list of direct children
+      return findAllCategoriesByParent({
+        familyId: opts.familyId,
+        parentId: opts.parentId,
+        type: opts.type,
+        includeArchived: opts.includeArchived,
+      });
+    }
+
     const conds = [
       or(isNull(category.familyId), eq(category.familyId, opts.familyId)),
-      isNull(category.archivedAt),
     ];
+    if (!opts.includeArchived) {
+      conds.push(isNull(category.archivedAt));
+    }
     if (opts.type) {
       conds.push(eq(category.type, opts.type));
     }
