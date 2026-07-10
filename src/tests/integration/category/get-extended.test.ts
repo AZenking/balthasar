@@ -14,7 +14,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { startTestDb, stopTestDb, type TestDb } from "@/tests/helpers/db";
 import { db } from "@/server/db/client";
-import { category, family, member, user } from "@/server/db/schema";
+import { family, member, user } from "@/server/db/schema";
 import { createCategory } from "@/server/db/queries/category";
 import { createCaller } from "@/lib/trpc/server";
 import { uuidv7 } from "uuidv7";
@@ -76,7 +76,7 @@ afterAll(async () => {
   if (testDb) await stopTestDb(testDb);
 });
 
-function callerFor(userId: string, memberId: string) {
+function callerFor(userId: string) {
   return createCaller({
     session: {
       user: {
@@ -112,7 +112,7 @@ describe("[US5] category.get procedure extended", () => {
       actorMemberId: memId,
     });
 
-    const caller = callerFor(userId, memId);
+    const caller = callerFor(userId);
     const result = await caller.category.get({ id: c.id });
 
     expect(result).toMatchObject({
@@ -139,14 +139,14 @@ describe("[US5] category.get procedure extended", () => {
       actorMemberId: otherMemId,
     });
 
-    const caller = callerFor(userId, memId); // logged in as famId user
+    const caller = callerFor(userId); // logged in as famId user
     await expect(caller.category.get({ id: other.id })).rejects.toMatchObject({
       code: "NOT_FOUND",
     });
   });
 
   it("3. non-existent ID → 404", async () => {
-    const caller = callerFor(userId, memId);
+    const caller = callerFor(userId);
     await expect(
       caller.category.get({ id: "00000000-0000-5000-8000-000000000000" }),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
@@ -154,7 +154,7 @@ describe("[US5] category.get procedure extended", () => {
 
   it("4. built-in visible to any family (isBuiltIn=true, familyId=null)", async () => {
     const builtinId = "95d6dc66-12c4-5f2b-bf9b-1d439a9c8100"; // 餐饮
-    const caller = callerFor(userId, memId);
+    const caller = callerFor(userId);
     const result = await caller.category.get({ id: builtinId });
 
     expect(result.isBuiltIn).toBe(true);
@@ -177,7 +177,7 @@ describe("[US5] category.get procedure extended", () => {
       [c.id],
     );
 
-    const caller = callerFor(userId, memId);
+    const caller = callerFor(userId);
     const result = await caller.category.get({ id: c.id });
     expect(result.archivedAt).not.toBeNull();
     expect(result.name).toBe("GetExtArchived");

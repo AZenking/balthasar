@@ -180,6 +180,7 @@ describe("[US1] category.create procedure", () => {
     const caller = authedCaller();
     await expect(
       caller.category.create({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         type: "invalid" as any,
         name: "Test",
         icon: "🐾",
@@ -298,6 +299,7 @@ describe("[US1] category.create procedure", () => {
         name: "Test",
         icon: "🐾",
         familyId: "attacker_injected",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });

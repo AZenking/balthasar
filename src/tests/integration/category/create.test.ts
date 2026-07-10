@@ -13,13 +13,11 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { startTestDb, stopTestDb, type TestDb } from "@/tests/helpers/db";
-import { db, withTransaction } from "@/server/db/client";
-import { category, categoryEvent, family, member, user } from "@/server/db/schema";
-import { createCategory } from "@/server/db/queries/category";
-import { countCustomCategoriesByFamily } from "@/server/db/queries/category";
+import { db } from "@/server/db/client";
+import { categoryEvent, family, member, user } from "@/server/db/schema";
+import { createCategory, countCustomCategoriesByFamily } from "@/server/db/queries/category";
 import { eq } from "drizzle-orm";
 import { uuidv7 } from "uuidv7";
-import { TRPCError } from "@trpc/server";
 
 let testDb: TestDb | undefined;
 let userId: string;
