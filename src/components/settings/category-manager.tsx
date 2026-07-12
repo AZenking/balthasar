@@ -22,7 +22,14 @@ import { GripVertical } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Modal } from "@/components/ui/modal";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   computeSortOrder,
   renumberSortOrders,
@@ -240,15 +247,16 @@ export function CategoryManager() {
             </button>
           ))}
         </div>
-        <label className="flex items-center gap-1.5 text-sm text-muted-foreground cursor-pointer">
-          <input
-            type="checkbox"
+        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+          <Checkbox
+            id="include-archived"
             checked={includeArchived}
-            onChange={(e) => setIncludeArchived(e.target.checked)}
-            className="h-4 w-4 rounded border-border"
+            onCheckedChange={(v) => setIncludeArchived(v === true)}
           />
-          显示已归档
-        </label>
+          <Label htmlFor="include-archived" className="cursor-pointer">
+            显示已归档
+          </Label>
+        </div>
       </div>
 
       {/* 新增按钮 */}
@@ -299,45 +307,50 @@ export function CategoryManager() {
         </DndContext>
       )}
 
-      {/* create form modal */}
-      <Modal
-        open={showCreateForm}
-        onClose={() => setShowCreateForm(false)}
-        title="新增分类"
-      >
-        <CategoryForm
-          mode="create"
-          categories={tree ?? []}
-          onSubmit={handleCreate}
-          onCancel={() => setShowCreateForm(false)}
-          submitting={createMutation.isPending}
-        />
-      </Modal>
-
-      {/* edit form modal (US3) */}
-      <Modal
-        open={!!editingCategoryId}
-        onClose={() => setEditingCategoryId(null)}
-        title="编辑分类"
-      >
-        {editingNode && (
+      {/* create form dialog (024 US2: shadcn Dialog, replaces Modal) */}
+      <Dialog open={showCreateForm} onOpenChange={setShowCreateForm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>新增分类</DialogTitle>
+          </DialogHeader>
           <CategoryForm
-            mode="edit"
+            mode="create"
             categories={tree ?? []}
-            editingCategory={editingNode}
-            defaultValues={{
-              type: editingNode.type,
-              name: editingNode.name,
-              icon: editingNode.icon,
-              parentId: editingNode.parentId ?? undefined,
-              sortOrder: editingNode.sortOrder,
-            }}
-            onSubmit={handleUpdate}
-            onCancel={() => setEditingCategoryId(null)}
-            submitting={updateMutation.isPending}
+            onSubmit={handleCreate}
+            onCancel={() => setShowCreateForm(false)}
+            submitting={createMutation.isPending}
           />
-        )}
-      </Modal>
+        </DialogContent>
+      </Dialog>
+
+      {/* edit form dialog (US3) */}
+      <Dialog
+        open={!!editingCategoryId}
+        onOpenChange={(v) => { if (!v) setEditingCategoryId(null); }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>编辑分类</DialogTitle>
+          </DialogHeader>
+          {editingNode && (
+            <CategoryForm
+              mode="edit"
+              categories={tree ?? []}
+              editingCategory={editingNode}
+              defaultValues={{
+                type: editingNode.type,
+                name: editingNode.name,
+                icon: editingNode.icon,
+                parentId: editingNode.parentId ?? undefined,
+                sortOrder: editingNode.sortOrder,
+              }}
+              onSubmit={handleUpdate}
+              onCancel={() => setEditingCategoryId(null)}
+              submitting={updateMutation.isPending}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

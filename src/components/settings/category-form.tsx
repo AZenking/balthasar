@@ -5,6 +5,16 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { categoryCreateSchema, type CategoryCreateValues } from "@/lib/validators/category";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { EmojiPicker } from "./emoji-picker";
 import type { CategoryNode } from "./category-item";
 
@@ -95,28 +105,35 @@ export function CategoryForm({
     await onSubmit(values);
   });
 
+  // Sentinel for "顶级分类" (no parent). shadcn Select cannot use empty-string value.
+  const PARENT_ROOT_SENTINEL = "__root__";
+
   return (
     <form onSubmit={submit} className="space-y-4">
-      {/* type radio */}
+      {/* type radio group (024 US2: shadcn RadioGroup) */}
       <div>
-        <label className="mb-1 block text-sm font-medium">类型</label>
-        <div className="flex rounded-md border border-border p-0.5">
-          {(["expense", "income"] as const).map((t) => (
-            <button
-              key={t}
-              type="button"
+        <Label className="mb-1 block">类型</Label>
+        <Controller
+          control={control}
+          name="type"
+          render={({ field }) => (
+            <RadioGroup
+              value={field.value}
+              onValueChange={(v) => setValue("type", v as "expense" | "income", { shouldValidate: true })}
               disabled={typeDisabled}
-              className={`flex-1 px-3 py-1.5 text-sm rounded transition-colors disabled:opacity-50 ${
-                currentType === t
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-              onClick={() => setValue("type", t, { shouldValidate: true })}
+              className="flex gap-4"
             >
-              {t === "expense" ? "支出" : "收入"}
-            </button>
-          ))}
-        </div>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="expense" id="type-expense" />
+                <Label htmlFor="type-expense">支出</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="income" id="type-income" />
+                <Label htmlFor="type-income">收入</Label>
+              </div>
+            </RadioGroup>
+          )}
+        />
         {typeDisabled && (
           <p className="mt-1 text-xs text-muted-foreground">已归档分类不可改类型</p>
         )}
@@ -127,13 +144,13 @@ export function CategoryForm({
 
       {/* name */}
       <div>
-        <label className="mb-1 block text-sm font-medium">名称</label>
-        <input
+        <Label htmlFor="category-name" className="mb-1 block">名称</Label>
+        <Input
+          id="category-name"
           type="text"
           {...register("name")}
           maxLength={30}
           placeholder="1-30 字"
-          className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
         />
         {errors.name && (
           <p className="mt-1 text-xs text-destructive">{errors.name.message}</p>
@@ -142,7 +159,7 @@ export function CategoryForm({
 
       {/* emoji picker (Controller-wrapped, RHF manages value) */}
       <div>
-        <label className="mb-1 block text-sm font-medium">图标</label>
+        <Label className="mb-1 block">图标</Label>
         <Controller
           control={control}
           name="icon"
@@ -158,23 +175,35 @@ export function CategoryForm({
         )}
       </div>
 
-      {/* parent select (only top-level) */}
+      {/* parent select (only top-level) — 024 US2: shadcn Select */}
       <div>
-        <label className="mb-1 block text-sm font-medium">父分类 (可选)</label>
-        <select
-          {...register("parentId")}
-          disabled={parentDisabled}
-          className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm disabled:opacity-50"
-          value={currentParentId ?? ""}
-        >
-          <option value="">(顶级分类)</option>
-          {parentOptions.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.icon} {c.name}
-              {c.isBuiltIn ? " (内置)" : ""}
-            </option>
-          ))}
-        </select>
+        <Label className="mb-1 block">父分类 (可选)</Label>
+        <Controller
+          control={control}
+          name="parentId"
+          render={({ field }) => (
+            <Select
+              value={field.value ?? PARENT_ROOT_SENTINEL}
+              onValueChange={(v) =>
+                field.onChange(v === PARENT_ROOT_SENTINEL ? undefined : v)
+              }
+              disabled={parentDisabled}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="(顶级分类)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={PARENT_ROOT_SENTINEL}>(顶级分类)</SelectItem>
+                {parentOptions.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.icon} {c.name}
+                    {c.isBuiltIn ? " (内置)" : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        />
         {parentDisabled && (
           <p className="mt-1 text-xs text-muted-foreground">
             {isArchived
@@ -188,14 +217,14 @@ export function CategoryForm({
 
       {/* sortOrder */}
       <div>
-        <label className="mb-1 block text-sm font-medium">排序 (可选)</label>
-        <input
+        <Label htmlFor="category-sort-order" className="mb-1 block">排序 (可选)</Label>
+        <Input
+          id="category-sort-order"
           type="number"
           {...register("sortOrder", { valueAsNumber: true })}
           min={0}
           step={1}
           placeholder="默认 100"
-          className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
         />
         {errors.sortOrder && (
           <p className="mt-1 text-xs text-destructive">{errors.sortOrder.message}</p>

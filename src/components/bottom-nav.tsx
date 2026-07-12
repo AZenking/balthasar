@@ -2,13 +2,27 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import {
+  LayoutDashboard,
+  ReceiptText,
+  PencilLine,
+  Settings,
+  type LucideIcon,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const tabs = [
-  { href: "/dashboard", label: "首页", icon: "📊" },
-  { href: "/transactions", label: "流水", icon: "📋" },
-  { href: "/transaction/new", label: "记账", icon: "✏️" },
-  { href: "/settings", label: "设置", icon: "⚙️" },
+/**
+ * BottomNav (024-ui-consistency US3: emoji → lucide-react icons).
+ *
+ * Replaces 4 emoji chars (📊 📋 ✏️ ⚙️) with lucide-react line icons for
+ * cross-platform visual consistency and screen-reader predictability.
+ * Active state colors and ≥ 44×44px tap targets are preserved.
+ */
+const tabs: { href: string; label: string; Icon: LucideIcon }[] = [
+  { href: "/dashboard", label: "首页", Icon: LayoutDashboard },
+  { href: "/transactions", label: "流水", Icon: ReceiptText },
+  { href: "/transaction/new", label: "记账", Icon: PencilLine },
+  { href: "/settings", label: "设置", Icon: Settings },
 ];
 
 export function BottomNav() {
@@ -16,19 +30,19 @@ export function BottomNav() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 flex h-14 border-t bg-background">
-      {tabs.map((tab) => {
-        const active = pathname === tab.href;
+      {tabs.map(({ href, label, Icon }) => {
+        const active = pathname === href;
         return (
           <Link
-            key={tab.href}
-            href={tab.href}
+            key={href}
+            href={href}
             className={cn(
               "flex flex-1 flex-col items-center justify-center gap-0.5 text-xs transition-colors",
               active ? "text-primary" : "text-muted-foreground hover:text-foreground"
             )}
           >
-            <span className="text-lg">{tab.icon}</span>
-            <span>{tab.label}</span>
+            <Icon className="h-5 w-5" aria-hidden />
+            <span>{label}</span>
           </Link>
         );
       })}
