@@ -5,6 +5,13 @@ import { SUPPORTED_CURRENCIES, CURRENCY_MINOR_UNITS } from "@/server/domain/acco
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export interface AccountFormValues {
   name: string;
@@ -71,16 +78,18 @@ export function AccountForm({
 
       <div className="space-y-1">
         <Label htmlFor={`currency-${mode}`}>币种</Label>
-        <select
-          id={`currency-${mode}`}
-          value={currency}
-          onChange={(e) => setCurrency(e.target.value)}
-          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-        >
-          {SUPPORTED_CURRENCIES.map((c) => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
+        <Select value={currency} onValueChange={setCurrency}>
+          <SelectTrigger id={`currency-${mode}`} className="h-10 w-full">
+            <SelectValue placeholder="选择币种" />
+          </SelectTrigger>
+          <SelectContent>
+            {SUPPORTED_CURRENCIES.map((c) => (
+              <SelectItem key={c} value={c}>
+                {c}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {mode === "create" && (

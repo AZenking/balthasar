@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Tags } from "lucide-react";
+import { TRPCClientError } from "@trpc/client";
+import { toast } from "sonner";
 import { trpc } from "@/lib/trpc/client";
 import { authClient } from "@/server/auth/client";
 import { Button } from "@/components/ui/button";
@@ -41,13 +43,25 @@ export default function SettingsPage() {
   const archiveMutation = trpc.account.archive.useMutation({
     onSuccess: () => {
       utils.account.list.invalidate();
+      utils.dashboard.summary.invalidate();
+      toast.success("已归档");
     },
+    onError: (err) =>
+      toast.error(
+        err instanceof TRPCClientError ? err.message : "归档失败"
+      ),
   });
 
   const unarchiveMutation = trpc.account.unarchive.useMutation({
     onSuccess: () => {
       utils.account.list.invalidate();
+      utils.dashboard.summary.invalidate();
+      toast.success("已恢复");
     },
+    onError: (err) =>
+      toast.error(
+        err instanceof TRPCClientError ? err.message : "恢复失败"
+      ),
   });
 
   const handleLogout = async () => {
@@ -75,8 +89,8 @@ export default function SettingsPage() {
     });
   };
 
+  // 025: archive is reversible → no confirm (Q2). Server-first + toast (R5/R6).
   const handleArchive = (id: string) => {
-    if (!window.confirm("确认归档?此操作不影响已有交易")) return;
     archiveMutation.mutate({ id });
   };
 
