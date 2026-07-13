@@ -1,21 +1,21 @@
 "use client";
 
-import * as React from "react";
-
 /**
- * CategoryDonut — 自建 SVG 环形图(spec US3 / FR-D002 / FR-D003 / FR-D004)。
+ * CategoryDonut — recharts 实现的环形图(spec US3 / FR-D002 / FR-D003 / FR-D004)。
  *
- * 实现要点(research.md R4):
- * - SVG `<circle>` + `stroke-dasharray` + `stroke-dashoffset` 计算每段弧长;
- *   每段是一个独立的 `<circle>`,叠加在同一个 `<svg>` 内,通过 dasharray
- *   截取该段弧长 + dashoffset 旋转到正确起点。
- * - 每段挂 `onClick` 触发 `onCategoryClick(categoryId)` 完成下钻。
- * - 每段内嵌 `<title>` 作为可访问文本后备(spec FR-D004 / SC-004)。
- * - 中央总额挂 `data-attribute`(隐私模式 CSS 隐藏;research.md R5)。
+ * 实现要点:
+ * - recharts PieChart + Pie(innerRadius=60 outerRadius=80)做出 donut 形态;
+ *   每段渲染为一个 `<Cell>`,颜色取自 8 色调色板循环。
+ * - 每段挂 `onClick` 触发 `onCategoryClick(categoryId)`(payload 反查)。
+ * - Tooltip 自定义渲染,挂 `data-amount` 走隐私模式 CSS。
+ * - 中央总额用绝对定位 div 叠加,同样挂 `data-attribute`。
  *
  * 颜色策略:用 8 色固定调色板循环(避免随机,保证稳定),与 HeroUI
  * 主题无强耦合,后续若改主题只需替换数组。
  */
+
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
+import type { PieSectorDataItem } from "recharts";
 
 export type CategoryItem = {
   categoryId: string;
@@ -42,15 +42,54 @@ const PALETTE = [
   "#B07B5E", // 棕
 ];
 
-// 环形图几何参数
-const SIZE = 200; // SVG viewBox 边长
-const STROKE_WIDTH = 28; // 圆环宽度
-const RADIUS = (SIZE - STROKE_WIDTH) / 2; // 半径 = 86
-const CIRCUMFERENCE = 2 * Math.PI * RADIUS; // 周长,用于 dasharray 计算
-const CENTER = SIZE / 2; // 圆心 = 100
+const INNER_RADIUS = 60;
+const OUTER_RADIUS = 80;
 
 function formatAmount(cents: number): string {
   return `¥${(cents / 100).toFixed(2)}`;
+}
+
+interface ChartSlice {
+  name: string;
+  value: number; // 分
+  percentage: number;
+  categoryId: string;
+}
+
+/** 自定义 Tooltip:挂 data-amount 走隐私模式 CSS。 */
+function CustomTooltip({
+  active,
+  payload,
+}: {
+  active?: boolean;
+  payload?: Array<{
+    name: string;
+    value: number;
+    payload?: ChartSlice;
+  }>;
+}) {
+  if (!active || !payload || payload.length === 0) return null;
+  const item = payload[0];
+  const slice = item.payload;
+  return (
+    <div className="rounded-md border border-border bg-popover px-3 py-2 text-xs shadow-md">
+      <div className="font-medium text-foreground">{item.name}</div>
+      <div className="mt-1 flex items-center gap-3" data-amount>
+        <span className="text-muted-foreground">金额</span>
+        <span className="ml-auto font-medium text-foreground">
+          {formatAmount(item.value)}
+        </span>
+      </div>
+      {slice && (
+        <div className="flex items-center gap-3">
+          <span className="text-muted-foreground">占比</span>
+          <span className="ml-auto font-medium text-foreground">
+            {slice.percentage}%
+          </span>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function CategoryDonut({ items, onCategoryClick }: Props) {
@@ -67,106 +106,60 @@ export function CategoryDonut({ items, onCategoryClick }: Props) {
   }
 
   const totalAmount = items.reduce((sum, item) => sum + item.amount, 0);
+  const slices: ChartSlice[] = items.map((it) => ({
+    name: it.categoryName,
+    value: it.amount,
+    percentage: it.percentage,
+    categoryId: it.categoryId,
+  }));
 
-  // 累积偏移量:每段从上一段终点开始绘制
-  let cumulativePercentage = 0;
+  const clickable = Boolean(onCategoryClick);
+
+  // Pie onClick 第 1 参 PieSectorDataItem.payload 含原始 slice 数据。
+  const handlePieClick = clickable
+    ? (data: PieSectorDataItem) => {
+        const slice = data?.payload as ChartSlice | undefined;
+        if (slice?.categoryId) {
+          onCategoryClick?.(slice.categoryId);
+        }
+      }
+    : undefined;
 
   return (
     <div
-      className="relative mx-auto"
-      style={{ width: SIZE, height: SIZE }}
+      className="relative mx-auto w-full"
+      style={{ maxWidth: 200, height: 200 }}
       role="img"
-      aria-label={`分类支出环形图,共 ${items.length} 个分类,合计 ${formatAmount(totalAmount)}`}
+      aria-label={`分类支出环形图,共 ${items.length} 个分类,合计 ${formatAmount(
+        totalAmount,
+      )}`}
     >
-      <svg
-        width={SIZE}
-        height={SIZE}
-        viewBox={`0 0 ${SIZE} ${SIZE}`}
-        // 旋转 -90deg 让第一段从顶部 12 点钟方向开始
-        style={{ transform: "rotate(-90deg)" }}
-      >
-        {/* 底环:无点击、浅灰,提供视觉容器 */}
-        <circle
-          cx={CENTER}
-          cy={CENTER}
-          r={RADIUS}
-          fill="none"
-          stroke="oklch(0.97 0 0)"
-          strokeWidth={STROKE_WIDTH}
-        />
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <Pie
+            data={slices}
+            dataKey="value"
+            nameKey="name"
+            innerRadius={INNER_RADIUS}
+            outerRadius={OUTER_RADIUS}
+            startAngle={90}
+            endAngle={-270}
+            paddingAngle={items.length > 1 ? 1 : 0}
+            stroke="none"
+            isAnimationActive={false}
+            onClick={handlePieClick}
+            cursor={clickable ? "pointer" : "default"}
+          >
+            {slices.map((slice, index) => (
+              <Cell key={slice.categoryId} fill={PALETTE[index % PALETTE.length]} />
+            ))}
+          </Pie>
+          <Tooltip content={<CustomTooltip />} />
+        </PieChart>
+      </ResponsiveContainer>
 
-        {items.map((item, index) => {
-          // dasharray = [本段弧长, 剩余周长]
-          const segmentLength = (item.percentage / 100) * CIRCUMFERENCE;
-          const dashArray = `${segmentLength} ${CIRCUMFERENCE - segmentLength}`;
-          // dashoffset = 周长 - 已累积弧长(让段起点对齐)
-          const dashOffset = CIRCUMFERENCE
-            - (cumulativePercentage / 100) * CIRCUMFERENCE;
-          const color = PALETTE[index % PALETTE.length];
-          const clickable = Boolean(onCategoryClick);
-
-          const segment = (
-            <circle
-              key={item.categoryId}
-              cx={CENTER}
-              cy={CENTER}
-              r={RADIUS}
-              fill="none"
-              stroke={color}
-              strokeWidth={STROKE_WIDTH}
-              strokeDasharray={dashArray}
-              strokeDashoffset={dashOffset}
-              // hover 高亮:仅可点击时启用,避免空回调误以为可点
-              style={{
-                cursor: clickable ? "pointer" : "default",
-                transition: "stroke-width 150ms ease",
-              }}
-              onClick={
-                clickable
-                  ? () => onCategoryClick?.(item.categoryId)
-                  : undefined
-              }
-              onMouseEnter={(e) => {
-                if (clickable) {
-                  e.currentTarget.style.strokeWidth = `${STROKE_WIDTH + 4}`;
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (clickable) {
-                  e.currentTarget.style.strokeWidth = `${STROKE_WIDTH}`;
-                }
-              }}
-              role={clickable ? "button" : undefined}
-              tabIndex={clickable ? 0 : undefined}
-              aria-label={`${item.categoryName} ${formatAmount(item.amount)} 占比 ${item.percentage}%`}
-              onKeyDown={
-                clickable
-                  ? (e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        onCategoryClick?.(item.categoryId);
-                      }
-                    }
-                  : undefined
-              }
-            >
-              <title>
-                {`${item.categoryName}: ${formatAmount(item.amount)} (${item.percentage}%)`}
-              </title>
-            </circle>
-          );
-
-          cumulativePercentage += item.percentage;
-          return segment;
-        })}
-      </svg>
-
-      {/* 中央总额(覆盖在 svg 之上,需反向旋转抵消 svg 的 -90deg 不必要 — 此处用绝对定位独立层,不受 svg transform 影响) */}
-      <div
-        className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center"
-        // 整个 donut 中心区域可点击下钻(任选一类的下钻不太合理,故中心不挂 onClick;
-        // 此处仅展示总额,下钻交互在单段和外层 Card 列表完成)
-      >
+      {/* 中央总额(覆盖在 svg 之上,绝对定位独立层,不受 svg transform 影响)。 */}
+      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
         <span className="text-xs text-muted-foreground">本月支出</span>
         <span
           className="text-lg font-semibold"

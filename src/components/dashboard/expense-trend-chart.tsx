@@ -9,17 +9,24 @@
  *
  * 数据契约:specs/026-cream-amber-revamp/contracts/dashboard-summary.md §expenseTrend
  *
- * 实现要点(research.md R4 决策:禁第三方图表库):
- * - CSS Grid + height percentage,与 reports/monthly-trend-chart.tsx 同风格。
- * - 颜色:支出语义 → HeroUI 默认 `--danger` token(见 globals.css 业务映射)。
- * - 可访问性:容器 `role="img"` + `aria-label`(总览),每桶 `sr-only` 文本(细节)。
- * - 隐私模式:金额文本节点挂 `data-amount`,globals.css 的
+ * 实现要点:
+ * - recharts BarChart 单系列(支出),颜色映射 HeroUI `--danger` token(支出语义红)。
+ * - 可访问性:容器 `role="img"` + `aria-label`(总览)。
+ * - 隐私模式:Tooltip 的金额节点挂 `data-amount`,globals.css 的
  *   `.privacy-on [data-amount]` 规则自动隐藏并显示 `***`(research.md R5)。
- * - 空数据(全 0):依然渲染柱条(高度 0),只显示标签;不破坏图表结构,
- *   dashboard.summary 测试场景"空数据月 buckets 全 0"在此正确显示。
+ * - 空数据(全 0):依然渲染柱条(高度 0),只显示标签;不破坏图表结构。
  *
  * amount 单位:**分**(契约口径),展示层除以 100。
  */
+
+import {
+  Bar,
+  BarChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 // ─── 数据契约(从 dashboard-summary.md §Output Schema 派生) ────────────
 
@@ -52,22 +59,17 @@ function formatAmount(cents: number): string {
   return `¥${yuan.toFixed(2)}`;
 }
 
-/** 计算柱状图最大值,最小 1 分避免除零。 */
-function calcMaxValue(values: number[]): number {
-  let max = 0;
-  for (const v of values) max = Math.max(max, v);
-  return max > 0 ? max : 1;
-}
-
-/** 柱条高度百分比;最小 0(无数据时不显示);最大 100。 */
-function heightPct(value: number, max: number): number {
-  if (max <= 0 || value <= 0) return 0;
-  return (value / max) * 100;
+/** 把分转成以"元"为单位的可读 tick(用于 Y 轴)。 */
+function formatYuanTick(cents: number): string {
+  const yuan = cents / 100;
+  if (Math.abs(yuan) >= 10000) {
+    return `${(yuan / 10000).toFixed(0)}万`;
+  }
+  return `${Math.round(yuan)}`;
 }
 
 /** 把 'YYYY-MM-DD' 转成短日期(月/日),用于 daily 桶的轴标签。 */
 function shortDate(iso: string): string {
-  // 'YYYY-MM-DD' → 'M/D'(不带前导零,与 getUtcWeeksInMonth label 风格一致)
   const [, m, d] = iso.split("-");
   return `${Number(m)}/${Number(d)}`;
 }
@@ -75,13 +77,72 @@ function shortDate(iso: string): string {
 /** 把 'YYYY-MM-DD' 转成中文周几缩写(周一..周日),用于 daily 视图 X 轴标签。 */
 const CN_WEEKDAY = ["一", "二", "三", "四", "五", "六", "日"];
 function weekdayLabel(iso: string): string {
-  // JS Date.UTC 月是 0-indexed;ISO YYYY-MM-DD 在 UTC 下 getUTCDay() 返回 0=Sun..6=Sat
-  // 我们要 ISO 周一..周日 = 下标 0..6。
   const [y, m, d] = iso.split("-").map(Number);
   const date = new Date(Date.UTC(y, m - 1, d));
   const dow = date.getUTCDay(); // 0=Sun..6=Sat
   const isoIdx = dow === 0 ? 6 : dow - 1; // 0=Mon..6=Sun
   return CN_WEEKDAY[isoIdx] ?? "";
+}
+
+interface DailyRow {
+  label: string; // 周几(用于 X 轴)
+  date: string;
+  subLabel: string; // 短日期(用于 Tooltip)
+  amount: number;
+}
+
+interface WeeklyRow {
+  label: string;
+  amount: number;
+}
+
+/** 自定义 Tooltip:挂 data-amount 走隐私模式 CSS。 */
+function DailyTooltip({
+  active,
+  payload,
+}: {
+  active?: boolean;
+  payload?: Array<{ value: number; payload?: DailyRow }>;
+}) {
+  if (!active || !payload || payload.length === 0) return null;
+  const item = payload[0];
+  const row = item.payload;
+  return (
+    <div className="rounded-md border border-border bg-popover px-3 py-2 text-xs shadow-md">
+      <div className="font-medium text-foreground">
+        {row ? `${row.label} ${row.subLabel}` : ""}
+      </div>
+      <div className="mt-1 flex items-center gap-3" data-amount>
+        <span className="text-muted-foreground">支出</span>
+        <span className="ml-auto font-medium text-foreground">
+          {formatAmount(item.value)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function WeeklyTooltip({
+  active,
+  payload,
+}: {
+  active?: boolean;
+  payload?: Array<{ value: number; payload?: WeeklyRow }>;
+}) {
+  if (!active || !payload || payload.length === 0) return null;
+  const item = payload[0];
+  const row = item.payload;
+  return (
+    <div className="rounded-md border border-border bg-popover px-3 py-2 text-xs shadow-md">
+      <div className="font-medium text-foreground">{row?.label ?? ""}</div>
+      <div className="mt-1 flex items-center gap-3" data-amount>
+        <span className="text-muted-foreground">支出</span>
+        <span className="ml-auto font-medium text-foreground">
+          {formatAmount(item.value)}
+        </span>
+      </div>
+    </div>
+  );
 }
 
 // ─── 主组件 ────────────────────────────────────────────────────────────
@@ -102,67 +163,63 @@ export function ExpenseTrendChart({ trend, title }: Props) {
   );
 }
 
-// ─── daily 视图:7 桶(周一..周日),每桶标注 周几 + 金额 ────────────────
+// ─── daily 视图:7 桶(周一..周日) ───────────────────────────────────────
 
 function DailyView({ buckets }: { buckets: DailyBucket[] }) {
-  const maxValue = calcMaxValue(buckets.map((b) => b.amount));
+  const rows: DailyRow[] = buckets.map((b) => ({
+    label: weekdayLabel(b.date),
+    date: b.date,
+    subLabel: shortDate(b.date),
+    amount: b.amount,
+  }));
   const total = buckets.reduce((acc, b) => acc + b.amount, 0);
-  const overallAria = `本周支出趋势,周一至周日每日金额,合计 ${formatAmount(
-    total,
-  )}`;
+  const overallAria = `本周支出趋势,周一至周日每日金额,合计 ${formatAmount(total)}`;
 
   return (
     <div role="img" aria-label={overallAria}>
-      <div
-        className="grid w-full items-end gap-1.5"
-        style={{
-          gridTemplateColumns: `repeat(${Math.max(buckets.length, 1)}, minmax(0, 1fr))`,
-        }}
-      >
-        {buckets.map((b) => {
-          const hp = heightPct(b.amount, maxValue);
-          const aria = `${weekdayLabel(b.date)}(${shortDate(
-            b.date,
-          )}) 支出 ${formatAmount(b.amount)}`;
-          return (
-            <div
-              key={b.date}
-              className="flex h-32 flex-col items-center justify-end gap-1"
-            >
-              <span
-                data-amount
-                className="text-[10px] leading-none text-muted-foreground"
-              >
-                {formatAmount(b.amount)}
-              </span>
-              {/* 柱条:height % 还原数据。min-h-[2px] 保证有数据的桶至少可见。 */}
-              <div className="flex h-full w-full max-w-[28px] items-end">
-                <div
-                  className="w-full rounded-t-sm"
-                  style={{
-                    height: `${hp}%`,
-                    minHeight: hp > 0 ? "2px" : 0,
-                    backgroundColor: "var(--danger)",
-                  }}
-                  aria-hidden
-                />
-              </div>
-              <span className="text-[11px] leading-none text-muted-foreground">
-                {weekdayLabel(b.date)}
-              </span>
-              <span className="sr-only">{aria}</span>
-            </div>
-          );
-        })}
-      </div>
+      <ResponsiveContainer width="100%" height={200}>
+        <BarChart
+          data={rows}
+          margin={{ top: 8, right: 0, left: 0, bottom: 0 }}
+          barCategoryGap="20%"
+        >
+          <XAxis
+            dataKey="label"
+            tickLine={false}
+            axisLine={{ stroke: "oklch(0.9 0.004 286.32)" }}
+            tick={{ fontSize: 11, fill: "oklch(0.5517 0.0138 285.94)" }}
+          />
+          <YAxis
+            tickFormatter={formatYuanTick}
+            tickLine={false}
+            axisLine={false}
+            tick={{ fontSize: 10, fill: "oklch(0.5517 0.0138 285.94)" }}
+            width={40}
+          />
+          <Tooltip
+            content={<DailyTooltip />}
+            cursor={{ fill: "oklch(0.2103 0.0059 285.89 / 0.05)" }}
+          />
+          <Bar
+            dataKey="amount"
+            name="支出"
+            fill="var(--danger)"
+            radius={[3, 3, 0, 0]}
+            isAnimationActive={false}
+          />
+        </BarChart>
+      </ResponsiveContainer>
     </div>
   );
 }
 
-// ─── weekly 视图:N 桶(4-5 周,首尾不完整),每桶标注 label + 金额 ──────
+// ─── weekly 视图:N 桶(4-5 周,首尾不完整) ──────────────────────────────
 
 function WeeklyView({ buckets }: { buckets: WeeklyBucket[] }) {
-  const maxValue = calcMaxValue(buckets.map((b) => b.amount));
+  const rows: WeeklyRow[] = buckets.map((b) => ({
+    label: b.label,
+    amount: b.amount,
+  }));
   const total = buckets.reduce((acc, b) => acc + b.amount, 0);
   const overallAria = `本月按周支出趋势,共 ${buckets.length} 周,合计 ${formatAmount(
     total,
@@ -170,46 +227,42 @@ function WeeklyView({ buckets }: { buckets: WeeklyBucket[] }) {
 
   return (
     <div role="img" aria-label={overallAria}>
-      <div
-        className="grid w-full items-end gap-1.5"
-        style={{
-          gridTemplateColumns: `repeat(${Math.max(buckets.length, 1)}, minmax(0, 1fr))`,
-        }}
-      >
-        {buckets.map((b) => {
-          const hp = heightPct(b.amount, maxValue);
-          const aria = `${b.label} 支出 ${formatAmount(b.amount)}`;
-          return (
-            <div
-              key={`${b.startDate}-${b.endDate}`}
-              className="flex h-32 flex-col items-center justify-end gap-1"
-            >
-              <span
-                data-amount
-                className="text-[10px] leading-none text-muted-foreground"
-              >
-                {formatAmount(b.amount)}
-              </span>
-              <div className="flex h-full w-full max-w-[40px] items-end">
-                <div
-                  className="w-full rounded-t-sm"
-                  style={{
-                    height: `${hp}%`,
-                    minHeight: hp > 0 ? "2px" : 0,
-                    backgroundColor: "var(--danger)",
-                  }}
-                  aria-hidden
-                />
-              </div>
-              {/* 周标签:可能横跨月份(e.g. '6/29-7/5');字号 9px 保证不换行。 */}
-              <span className="text-[9px] leading-tight text-muted-foreground text-center">
-                {b.label}
-              </span>
-              <span className="sr-only">{aria}</span>
-            </div>
-          );
-        })}
-      </div>
+      <ResponsiveContainer width="100%" height={200}>
+        <BarChart
+          data={rows}
+          margin={{ top: 8, right: 0, left: 0, bottom: 0 }}
+          barCategoryGap="20%"
+        >
+          <XAxis
+            dataKey="label"
+            tickLine={false}
+            axisLine={{ stroke: "oklch(0.9 0.004 286.32)" }}
+            tick={{ fontSize: 9, fill: "oklch(0.5517 0.0138 285.94)" }}
+            interval={0}
+          />
+          <YAxis
+            tickFormatter={formatYuanTick}
+            tickLine={false}
+            axisLine={false}
+            tick={{ fontSize: 10, fill: "oklch(0.5517 0.0138 285.94)" }}
+            width={40}
+          />
+          <Tooltip
+            content={<WeeklyTooltip />}
+            cursor={{ fill: "oklch(0.2103 0.0059 285.89 / 0.05)" }}
+          />
+          <Bar
+            dataKey="amount"
+            name="支出"
+            fill="var(--danger)"
+            radius={[3, 3, 0, 0]}
+            isAnimationActive={false}
+          />
+        </BarChart>
+      </ResponsiveContainer>
     </div>
   );
 }
+
+// 注:daily/weekly 当前均不可点击,Bar 不挂 onClick。如后续需要点击下钻,
+// 可参考 reports/monthly-trend-chart.tsx 中 handleBarClick 的实现。
