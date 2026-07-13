@@ -3,6 +3,17 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+// Sentinel for "全部账户/全部分类". shadcn Select (Radix) doesn't allow
+// empty-string value, so use a string that cannot collide with uuid/cuid ids.
+const ALL_SENTINEL = "__all__";
 
 export interface FilterValues {
   type: "income" | "expense" | undefined;
@@ -74,29 +85,51 @@ export function TransactionFilters({
           </div>
 
           {/* Account */}
-          <select
-            value={filters.accountId ?? ""}
-            onChange={(e) => onChange({ ...filters, accountId: e.target.value || undefined })}
-            className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+          <Select
+            value={filters.accountId ?? ALL_SENTINEL}
+            onValueChange={(v) =>
+              onChange({
+                ...filters,
+                accountId: v === ALL_SENTINEL ? undefined : v,
+              })
+            }
           >
-            <option value="">全部账户</option>
-            {unarchivedAccounts.map((a) => (
-              <option key={a.id} value={a.id}>{a.name}</option>
-            ))}
-          </select>
+            <SelectTrigger className="h-9 w-full">
+              <SelectValue placeholder="全部账户" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_SENTINEL}>全部账户</SelectItem>
+              {unarchivedAccounts.map((a) => (
+                <SelectItem key={a.id} value={a.id}>
+                  {a.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
           {/* Category */}
           {filters.type && (
-            <select
-              value={filters.categoryId ?? ""}
-              onChange={(e) => onChange({ ...filters, categoryId: e.target.value || undefined })}
-              className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+            <Select
+              value={filters.categoryId ?? ALL_SENTINEL}
+              onValueChange={(v) =>
+                onChange({
+                  ...filters,
+                  categoryId: v === ALL_SENTINEL ? undefined : v,
+                })
+              }
             >
-              <option value="">全部分类</option>
-              {(categories ?? []).map((c) => (
-                <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
-              ))}
-            </select>
+              <SelectTrigger className="h-9 w-full">
+                <SelectValue placeholder="全部分类" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL_SENTINEL}>全部分类</SelectItem>
+                {(categories ?? []).map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.icon} {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           )}
         </div>
       )}
