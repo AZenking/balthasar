@@ -2,13 +2,12 @@
 
 import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
+import { Card, Skeleton } from "@heroui/react";
 import { MonthPicker } from "@/components/dashboard/month-picker";
 import { ExpenseTrendChart } from "@/components/dashboard/expense-trend-chart";
 import { TopCategoryCard } from "@/components/dashboard/top-category-card";
 import { PrivacyToggle } from "@/components/privacy-toggle";
 import { RecentTransactions } from "@/components/dashboard/recent-transactions";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent } from "@/components/ui/card";
 
 /**
  * DashboardPage (026-cream-amber-revamp, spec US4 + US5 + US6 + FR-C001..C009).
@@ -145,11 +144,11 @@ function SummaryHeroCard({
   monthExpense: number;
   monthNet: number;
 }) {
-  const netColor = monthNet >= 0 ? "text-green-600" : "text-red-500";
+  const netColor = monthNet >= 0 ? "text-[var(--success)]" : "text-[var(--danger)]";
   return (
     <section aria-label="本月结余" className="px-4 pt-4">
       <Card>
-        <CardContent className="p-4">
+        <Card.Content className="p-4">
           <p className="text-xs text-muted-foreground">本月结余</p>
           <p
             data-amount
@@ -160,18 +159,18 @@ function SummaryHeroCard({
           <div className="mt-3 flex gap-4 text-sm">
             <div className="flex items-center gap-1">
               <span className="text-muted-foreground">收入</span>
-              <span data-amount className="font-semibold text-green-600">
+              <span data-amount className="font-semibold text-[var(--success)]">
                 {formatCents(monthIncome)}
               </span>
             </div>
             <div className="flex items-center gap-1">
               <span className="text-muted-foreground">支出</span>
-              <span data-amount className="font-semibold text-red-500">
+              <span data-amount className="font-semibold text-[var(--danger)]">
                 {formatCents(monthExpense)}
               </span>
             </div>
           </div>
-        </CardContent>
+        </Card.Content>
       </Card>
     </section>
   );
@@ -187,12 +186,12 @@ function TrendSection({
   return (
     <section aria-label="支出趋势" className="px-4 pt-4">
       <Card>
-        <CardContent className="p-4">
+        <Card.Content className="p-4">
           <h2 className="mb-3 text-sm font-medium text-foreground">
             {isDaily ? "本周支出趋势" : "本月支出趋势(按周)"}
           </h2>
           <ExpenseTrendChart trend={trend} />
-        </CardContent>
+        </Card.Content>
       </Card>
     </section>
   );

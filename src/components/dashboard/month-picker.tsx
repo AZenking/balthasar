@@ -26,6 +26,7 @@ import {
   ListBox,
   type SelectProps,
 } from "@heroui/react";
+import { CalendarIcon } from "lucide-react";
 import { getLast24Months } from "@/lib/date-ranges";
 
 interface MonthPickerProps {
@@ -63,6 +64,7 @@ export function MonthPicker({
   // 降序,当前月首位;实测变化频率低,放渲染时算即可(每次切换不会重新挂载)。
   const months = getLast24Months();
   const selectedKey = keyOf(value.year, value.month);
+  const currentKey = keyOf(months[0].year, months[0].month);
 
   const handleSelectionChange: NonNullable<
     SelectProps<object, "single">["onSelectionChange"]
@@ -84,21 +86,34 @@ export function MonthPicker({
       {...selectProps}
     >
       <Select.Trigger>
+        {/* 日历图标:视觉提示这是日期/月份选择器,与 HeroUI 默认 chevron 形成 icon+label+indicator 组合 */}
+        <CalendarIcon className="mr-2 size-4 text-muted-foreground" aria-hidden />
         <Select.Value />
         <Select.Indicator />
       </Select.Trigger>
       <Select.Popover>
         <ListBox>
-          {months.map((m) => (
-            <ListBox.Item
-              key={keyOf(m.year, m.month)}
-              id={keyOf(m.year, m.month)}
-              // textValue 既是 trigger 默认显示,也是屏幕阅读器朗读的文本。
-              textValue={m.label}
-            >
-              {m.label}
-            </ListBox.Item>
-          ))}
+          {months.map((m) => {
+            const key = keyOf(m.year, m.month);
+            const isCurrent = key === currentKey;
+            return (
+              <ListBox.Item
+                key={key}
+                id={key}
+                // textValue 既是 trigger 默认显示,也是屏幕阅读器朗读的文本。
+                textValue={isCurrent ? `${m.label}(本月)` : m.label}
+              >
+                <span className="flex items-center justify-between gap-2">
+                  <span>{m.label}</span>
+                  {isCurrent && (
+                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                      本月
+                    </span>
+                  )}
+                </span>
+              </ListBox.Item>
+            );
+          })}
         </ListBox>
       </Select.Popover>
     </Select>
