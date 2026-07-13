@@ -128,7 +128,7 @@
 - tRPC client hooks 已配置 (007 providers.tsx)。
 - 筛选用 `trpc.transaction.list.useQuery({ type, accountId, categoryId, cursor, includeSummary })`。
 - 分页用 cursor (005 已实现),前端维护 "已加载全部" 状态 (nextCursor=null)。
-- 删除确认用 `window.confirm` (MVP 简化,不用自定义 dialog 组件;V2 评估 shadcn Dialog)。
+- 删除确认用 `window.confirm` (MVP 简化,不用自定义 dialog 组件;V2 评估 → 1.0.0 已实现为 HeroUI AlertDialog,见 026-cream-amber-revamp)。
 - 编辑模式: `/transaction/new?id=xxx` query param,008 表单组件需适配 (本 feature 改 008 表单加 edit 模式)。
 - 筛选区域可折叠: 默认收起,点击"筛选"按钮展开;展开时显示类型/账户/分类选择器 + 实时小计。
 - 不实现日期范围筛选 (005 后端支持,但前端日历组件复杂;V2 评估)。
