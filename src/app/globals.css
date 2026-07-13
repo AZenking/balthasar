@@ -19,6 +19,14 @@
 .privacy-on [data-amount] { color: transparent; }
 .privacy-on [data-amount]::after { content: '***'; }
 
+/* MonthPicker(026-cream-amber-revamp):用 HeroUI DatePicker 选日期但语义是选月,
+ * 隐藏 DateField 的 day segment(只显示 YYYY/MM)。react-aria DateField 的
+ * segment 暴露 data-type 属性(year/month/day/hour 等),用属性选择器精准隐藏。 */
+.month-picker-no-day [data-type="day"],
+.month-picker-no-day [data-type="literal"] {
+  display: none;
+}
+
 @theme {
   /* shadcn legacy tokens remapped to HeroUI v3 default palette (026 Phase 10).
    * Values copied from node_modules/@heroui/styles/dist/themes/default/variables.css

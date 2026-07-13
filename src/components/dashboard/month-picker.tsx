@@ -3,119 +3,92 @@
 /**
  * MonthPicker (026-cream-amber-revamp, spec US4 / FR-C002 / clarify Q2).
  *
- * HeroUI v3 原生 `Select` 下拉枚举最近 24 个月(当前月在首位,降序)。
- * 选择后通过 `onChange(year, month)` 通知父组件,父组件负责触发数据重取。
+ * **HeroUI v3 DatePicker 实现**(2026-07-13 修订):用户在日历选某天,
+ * 组件 onChange 只取 year+month 给父组件(忽略 day)。DateField 显示
+ * 年/月/日 3 段,但 day 通过 `[data-type="day"]` CSS 隐藏(让视觉只
+ * 显示 YYYY/MM,符合"选月"语义)。
  *
- * 数据源:`getLast24Months()`(spike 落地,见 src/lib/date-ranges.ts)。
+ * 替代方案考量(已否决):
+ * - HeroUI 无原生 MonthPicker
+ * - React Aria granularity 仅支持到 'day',无 'month' level
+ * - 自定义 Calendar month-only grid 复杂且破坏 react-aria 内部状态
+ * - HeroUI Select + 24 月枚举(原方案):移动端 UX 优,但用户偏好 DatePicker
  *
- * HeroUI v3 Select API 说明(与 task 示例不同,这是 v3 的真实形态):
- * - v3 Select 是 **组合式 API**(不是 v1/v2 的 `<Select><SelectItem/></Select>`)。
- *   完整形态:`<Select>(<Select.Trigger><Select.Value/><Select.Indicator/></Select.Trigger>
- *   <Select.Popover><ListBox><ListBox.Item/></ListBox></Select.Popover>)</Select>`。
- * - v3 没有 `SelectItem` 导出;选项挂在 `ListBox.Item` 上,`id` 作为 key,
- *   `textValue` 作为 trigger 显示文本。
- * - 受控属性沿用 react-aria:`selectedKey` / `onSelectionChange`。
- *   (任务示例中的这两个属性名与 v3 一致 —— 只是子项 API 调整。)
+ * 数据源:`{year, month}` ↔ `CalendarDate(year, month, 1)` 转换。
  *
- * 移动端命中区域 ≥ 44px(FR-A007):HeroUI Select trigger 默认高度 ≥ 40px,
- * 触摸热区扩展由 trigger padding 提供,实测满足。
+ * 移动端命中区域 ≥ 44px(FR-A007):HeroUI DatePicker trigger 默认高度
+ * ≥ 40px,padding 扩展触摸热区满足。
  */
 
 import {
-  Select,
-  ListBox,
-  type SelectProps,
+  DatePicker,
+  Calendar,
+  DateField,
+  Label,
 } from "@heroui/react";
-import { CalendarIcon } from "lucide-react";
-import { getLast24Months } from "@/lib/date-ranges";
+import { CalendarDate } from "@internationalized/date";
 
 interface MonthPickerProps {
   /** 当前选中年月(受控)。month 为 1-12。 */
   value: { year: number; month: number };
   /** 切换月份触发。父组件用于触发 dashboard.summary 重取。 */
   onChange: (year: number, month: number) => void;
-  /** 透传到 Select 根(尺寸/variant/aria-label 等)。 */
-  className?: string;
-  /** 选 Extra Select props(e.g. aria-label)。 */
-  selectProps?: Partial<SelectProps<object, "single">>;
 }
 
-/** 把 `{year, month}` 编码成 ListBox.Item 的稳定 id(key)。 */
-function keyOf(year: number, month: number): string {
-  return `${year}-${month}`;
-}
+export function MonthPicker({ value, onChange }: MonthPickerProps) {
+  // {year, month} → CalendarDate(该月第一天;DatePicker 必须有完整日期)。
+  const calendarValue = new CalendarDate(value.year, value.month, 1);
 
-/** 从 ListBox.Item id 反解 `{year, month}`;失败时返回 null。 */
-function parseKey(key: React.Key | null): { year: number; month: number } | null {
-  if (key == null) return null;
-  const [yStr, mStr] = String(key).split("-");
-  const year = Number(yStr);
-  const month = Number(mStr);
-  if (!Number.isFinite(year) || !Number.isFinite(month)) return null;
-  return { year, month };
-}
-
-export function MonthPicker({
-  value,
-  onChange,
-  className,
-  selectProps,
-}: MonthPickerProps) {
-  // 降序,当前月首位;实测变化频率低,放渲染时算即可(每次切换不会重新挂载)。
-  const months = getLast24Months();
-  const selectedKey = keyOf(value.year, value.month);
-  const currentKey = keyOf(months[0].year, months[0].month);
-
-  const handleSelectionChange: NonNullable<
-    SelectProps<object, "single">["onSelectionChange"]
-  > = (key) => {
-    const parsed = parseKey(key);
-    if (!parsed) return;
-    onChange(parsed.year, parsed.month);
+  const handleChange = (date: CalendarDate | null) => {
+    if (!date) return;
+    // 只取 year + month,忽略 day(选月语义)。
+    onChange(date.year, date.month);
   };
 
   return (
-    <Select
-      // 受控:由 value 驱动;切换月份不会出现内部状态漂移。
-      selectedKey={selectedKey}
-      onSelectionChange={handleSelectionChange}
+    <DatePicker
+      value={calendarValue}
+      onChange={handleChange}
       aria-label="选择月份"
-      className={className}
-      // popover 触发器宽度撑满父容器(首页顶部一行布局可读)。
-      fullWidth
-      {...selectProps}
+      // 隐藏 DateField 的 day segment(只显示 YYYY/MM)
+      className="month-picker-no-day w-full"
     >
-      <Select.Trigger>
-        {/* 日历图标:视觉提示这是日期/月份选择器,与 HeroUI 默认 chevron 形成 icon+label+indicator 组合 */}
-        <CalendarIcon className="mr-2 size-4 text-muted-foreground" aria-hidden />
-        <Select.Value />
-        <Select.Indicator />
-      </Select.Trigger>
-      <Select.Popover>
-        <ListBox>
-          {months.map((m) => {
-            const key = keyOf(m.year, m.month);
-            const isCurrent = key === currentKey;
-            return (
-              <ListBox.Item
-                key={key}
-                id={key}
-                // textValue 既是 trigger 默认显示,也是屏幕阅读器朗读的文本。
-                textValue={isCurrent ? `${m.label}(本月)` : m.label}
-              >
-                <span className="flex items-center justify-between gap-2">
-                  <span>{m.label}</span>
-                  {isCurrent && (
-                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
-                      本月
-                    </span>
-                  )}
-                </span>
-              </ListBox.Item>
-            );
-          })}
-        </ListBox>
-      </Select.Popover>
-    </Select>
+      <Label className="sr-only">选择月份</Label>
+      <DateField.Group fullWidth>
+        <DateField.Input>
+          {(segment) => <DateField.Segment segment={segment} />}
+        </DateField.Input>
+        <DateField.Suffix>
+          <DatePicker.Trigger>
+            <DatePicker.TriggerIndicator />
+          </DatePicker.Trigger>
+        </DateField.Suffix>
+      </DateField.Group>
+      <DatePicker.Popover>
+        <Calendar aria-label="月份选择日历">
+          <Calendar.Header>
+            <Calendar.YearPickerTrigger>
+              <Calendar.YearPickerTriggerHeading />
+              <Calendar.YearPickerTriggerIndicator />
+            </Calendar.YearPickerTrigger>
+            <Calendar.NavButton slot="previous" />
+            <Calendar.NavButton slot="next" />
+          </Calendar.Header>
+          <Calendar.Grid>
+            <Calendar.GridHeader>
+              {(day) => <Calendar.HeaderCell>{day}</Calendar.HeaderCell>}
+            </Calendar.GridHeader>
+            <Calendar.GridBody>
+              {(date) => <Calendar.Cell date={date} />}
+            </Calendar.GridBody>
+          </Calendar.Grid>
+          <Calendar.YearPickerGrid>
+            <Calendar.YearPickerGridBody>
+              {({ year }) => <Calendar.YearPickerCell year={year} />}
+            </Calendar.YearPickerGridBody>
+          </Calendar.YearPickerGrid>
+        </Calendar>
+      </DatePicker.Popover>
+    </DatePicker>
   );
 }
