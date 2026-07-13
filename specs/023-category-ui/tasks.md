@@ -22,7 +22,7 @@
 **Purpose**: 安装依赖 + 准备共享常量 + zod schema。
 
 - [X] T001 [P] Install DnD + toast + icon deps in `package.json` — `pnpm add @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities sonner lucide-react`。验证 `pnpm install` 成功 + `pnpm tsc --noEmit` 0 错误。
-- [ ] T002 [P] Add shadcn components via CLI — `pnpm dlx shadcn@latest add dialog select tabs popover radio-group checkbox command tooltip`。验证 `src/components/ui/` 含 dialog.tsx / select.tsx / tabs.tsx / popover.tsx / radio-group.tsx / checkbox.tsx / command.tsx / tooltip.tsx。
+- [X] T002 [P] Add shadcn components via CLI — `pnpm dlx shadcn@latest add dialog select tabs popover radio-group checkbox command tooltip`。验证 `src/components/ui/` 含 dialog.tsx / select.tsx / tabs.tsx / popover.tsx / radio-group.tsx / checkbox.tsx / command.tsx / tooltip.tsx。
 - [X] T003 [P] Add Toaster to root layout in `src/app/layout.tsx` — import `sonner` `<Toaster />` 放在 `<body>` 末尾,配置 `richColors / position="top-center"`。验证 toast 在任意页面可触发。
 - [X] T004 [P] Add emoji group metadata to `src/lib/constants/category-emojis.ts` — 018 已有 `CATEGORY_EMOJIS` 扁平数组 + 12 个分组常量(FOOD/TRANSPORT/...)。新增导出 `CATEGORY_EMOJI_GROUPS` 数组(含 `id` / `label` / `emojis`),保留原 `CATEGORY_EMOJIS` 不破坏 018。详见 [research.md D6](./research.md#d6-emoji-picker--自建组件popover--tabs--grid--search)。
 - [X] T005 [P] Create zod validators in `src/lib/validators/category.ts` — 导出 `categoryCreateSchema` + `categoryUpdateSchema`(沿用 018 后端 procedure 的字段约束:type enum / name 1-30 trim / icon 白名单 refine / parentId uuid optional / sortOrder int optional)+ 类型 `CategoryFormValues`。详见 [data-model.md](./data-model.md)。
@@ -85,12 +85,12 @@
 
 ### Implementation
 
-- [ ] T017 [US3] Extend CategoryForm for edit mode in `src/components/settings/category-form.tsx` — edit 模式预填 `defaultValues`。**字段限制**(基于 `editingCategory` prop,FR-011 + FR-013;FR-012 走乐观不置灰,见下):
+- [X] T017 [US3] Extend CategoryForm for edit mode in `src/components/settings/category-form.tsx` — edit 模式预填 `defaultValues`。**字段限制**(基于 `editingCategory` prop,FR-011 + FR-013;FR-012 走乐观不置灰,见下):
   - `editingCategory.archivedAt !== null` → type RadioGroup + parent Select `disabled` + 提示"已归档分类不可改 type/parentId"(FR-011)
   - **FR-012 不预置灰 type**:已被交易引用的状态 UI 无从得知(018 list 不含 hasTransactions)。用户改 type + 提交时,后端 018 FR-013 拒绝 400 → 前端 toast "已被交易引用,不可切换 type" + **保留表单**(乐观策略,Clarify Q3)
   - `editingCategory.children.length > 0` → parent Select `disabled` + 提示"已有子分类不可变为二级"(FR-013,children count 从 list tree 取)
-- [ ] T018 [US3] Wire update mutation in CategoryManager — 加 `trpc.category.update.useMutation`。`editingCategoryId` state:`<CategoryItem onEdit={(id) => setEditingCategoryId(id)} />`。`editingCategoryId` 时渲染 `<Dialog><CategoryForm mode="edit" defaultValues={findNode(id)} editingCategory={findNode(id)} onSubmit={async (v) => { await updateMutation.mutateAsync({ id: editingCategoryId, ...v }); }} /></Dialog>`。`onSuccess`:`invalidate` + 关闭 + `toast.success("已保存")`。`onError`:toast + 保留表单(server-first)。FR-014。
-- [ ] T019 [US3] Verify US3 edit flow — 浏览器手动:[quickstart 场景 4](./quickstart.md)(改名 + 内置无按钮 + 已归档限制 + 已引用限制 + 有子限制 + 重名)。
+- [X] T018 [US3] Wire update mutation in CategoryManager — 加 `trpc.category.update.useMutation`。`editingCategoryId` state:`<CategoryItem onEdit={(id) => setEditingCategoryId(id)} />`。`editingCategoryId` 时渲染 `<Dialog><CategoryForm mode="edit" defaultValues={findNode(id)} editingCategory={findNode(id)} onSubmit={async (v) => { await updateMutation.mutateAsync({ id: editingCategoryId, ...v }); }} /></Dialog>`。`onSuccess`:`invalidate` + 关闭 + `toast.success("已保存")`。`onError`:toast + 保留表单(server-first)。FR-014。
+- [X] T019 [US3] Verify US3 edit flow — 浏览器手动:[quickstart 场景 4](./quickstart.md)(改名 + 内置无按钮 + 已归档限制 + 已引用限制 + 有子限制 + 重名)。
 
 **Checkpoint**: US1+US2+US3 完整,P1 写闭环(列表 + 新增 + 编辑)。
 
@@ -104,9 +104,9 @@
 
 ### Implementation
 
-- [ ] T020 [US4] Wire archive mutation (optimistic) in CategoryManager — 加 `trpc.category.archive.useMutation`。`onMutate`:本地从 list cache 移除该分类 + 其子(optimistic)。`onError`:回滚 + `toast.error("操作失败,已恢复")`(FR-024b + Edge Case "Optimistic 回滚")。`onSuccess`:`invalidate` + `toast.success(\`已归档${childCount > 0 ? `(含 ${childCount} 个子分类)` : ""}\`)`(FR-016 级联提示文案)。CategoryItem `onArchive(id, childCount)` callback → 弹 shadcn `<AlertDialog>` 确认框 → 确认调 `archiveMutation.mutate({ id })`。详见 [research.md D7](./research.md#d7-optimistic-更新--react-query-onmutateonerror-模式)。
-- [ ] T021 [US4] Wire unarchive mutation (optimistic) in CategoryManager — 加 `trpc.category.unarchive.useMutation`。逻辑对称 archive:`onMutate` 本地恢复显示(需先存 before snapshot 含 archived 状态)→ `onError` 回滚 → `onSuccess` invalidate + `toast.success(\`已恢复(含 ${N} 个子分类,含此前独立归档的)\`)`(FR-018)。仅"显示已归档"模式下可见的已归档分类有"反归档"按钮。`onUnarchive(id, childCount)` callback → 直接调(无需确认框,反归档无破坏性)。
-- [ ] T022 [US4] Verify US4 archive flows — 浏览器手动:[quickstart 场景 5](./quickstart.md)(归档父级联 + idempotent + 反归档强制复活 + 失败回滚)。
+- [X] T020 [US4] Wire archive mutation (optimistic) in CategoryManager — 加 `trpc.category.archive.useMutation`。`onMutate`:本地从 list cache 移除该分类 + 其子(optimistic)。`onError`:回滚 + `toast.error("操作失败,已恢复")`(FR-024b + Edge Case "Optimistic 回滚")。`onSuccess`:`invalidate` + `toast.success(\`已归档${childCount > 0 ? `(含 ${childCount} 个子分类)` : ""}\`)`(FR-016 级联提示文案)。CategoryItem `onArchive(id, childCount)` callback → 弹 shadcn `<AlertDialog>` 确认框 → 确认调 `archiveMutation.mutate({ id })`。详见 [research.md D7](./research.md#d7-optimistic-更新--react-query-onmutateonerror-模式)。
+- [X] T021 [US4] Wire unarchive mutation (optimistic) in CategoryManager — 加 `trpc.category.unarchive.useMutation`。逻辑对称 archive:`onMutate` 本地恢复显示(需先存 before snapshot 含 archived 状态)→ `onError` 回滚 → `onSuccess` invalidate + `toast.success(\`已恢复(含 ${N} 个子分类,含此前独立归档的)\`)`(FR-018)。仅"显示已归档"模式下可见的已归档分类有"反归档"按钮。`onUnarchive(id, childCount)` callback → 直接调(无需确认框,反归档无破坏性)。
+- [X] T022 [US4] Verify US4 archive flows — 浏览器手动:[quickstart 场景 5](./quickstart.md)(归档父级联 + idempotent + 反归档强制复活 + 失败回滚)。
 
 **Checkpoint**: US1-4 完整。列表 + 增 + 改 + 归档全闭环。
 
@@ -120,10 +120,10 @@
 
 ### Implementation
 
-- [ ] T023 [P] [US5] Create useCategoryReorder hook in `src/components/category/use-category-reorder.ts` — 导出 `useCategoryReorder({ type, parentId })` 返回 `{ onDragEnd, sensors }`。`onDragEnd(event)`:(1) 取 active.id + over.id;(2) 找 prev/next 兄弟的 sortOrder;(3) 调 018 `computeSortOrder(prev, next)`(import from `@/server/domain/category/rules`):返回数字 → 调 `trpc.category.update.mutate({ id, sortOrder })`(optimistic);返回 NaN → 调 `trpc.category.reorder.mutate({ items: renumberSortOrders(N).map((so, i) => ({ id: siblings[i].id, sortOrder: so })) })`(optimistic)。失败:`onError` 回滚 + toast。sensors:PointerSensor(activationConstraint distance 8px,防误触)+ KeyboardSensor。详见 [research.md D7+D1](./research.md) + [contracts/components.md#usecategoryreorder](./contracts/components.md#usecategoryreorder)。
-- [ ] T024 [US5] Integrate @dnd-kit into CategoryManager in `src/components/settings/category-manager.tsx` — 包裹顶级分类列表(`<DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={reorder.onDragEnd}><SortableContext items={topLevelIds} strategy={verticalListSortingStrategy}>{topLevel.map(node => <SortableCategoryItem />)}</SortableContext></DndContext>`)。二级 children 暂不支持拖拽(深度限制,只能重排顶级)。跨 type/cross-level 检查:`onDragEnd` 内若 active.type !== over.type 或 active.parentId !== over.parentId → toast "不能跨 type/级 排序" + return。
-- [ ] T025 [US5] Add drag handle to CategoryItem — CategoryItem 加 `draggable?: boolean` prop(true 时渲染 `lucide-react GripVertical` 手柄 + `useSortable({ id: node.id })`)。内置 / 已归档 / 二级分类 `draggable=false`(无手柄)。拖拽中行 opacity-50 + cursor-grabbing。
-- [ ] T026 [US5] Verify US5 drag-drop — 浏览器手动:[quickstart 场景 6](./quickstart.md)(间隔足够 single-update + 间隔耗尽 full-renumber + 拒绝跨 type/级 + 内置不可拖 + 移动端长按)。
+- [X] T023 [P] [US5] Create useCategoryReorder hook in `src/components/category/use-category-reorder.ts` — 导出 `useCategoryReorder({ type, parentId })` 返回 `{ onDragEnd, sensors }`。`onDragEnd(event)`:(1) 取 active.id + over.id;(2) 找 prev/next 兄弟的 sortOrder;(3) 调 018 `computeSortOrder(prev, next)`(import from `@/server/domain/category/rules`):返回数字 → 调 `trpc.category.update.mutate({ id, sortOrder })`(optimistic);返回 NaN → 调 `trpc.category.reorder.mutate({ items: renumberSortOrders(N).map((so, i) => ({ id: siblings[i].id, sortOrder: so })) })`(optimistic)。失败:`onError` 回滚 + toast。sensors:PointerSensor(activationConstraint distance 8px,防误触)+ KeyboardSensor。详见 [research.md D7+D1](./research.md) + [contracts/components.md#usecategoryreorder](./contracts/components.md#usecategoryreorder)。
+- [X] T024 [US5] Integrate @dnd-kit into CategoryManager in `src/components/settings/category-manager.tsx` — 包裹顶级分类列表(`<DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={reorder.onDragEnd}><SortableContext items={topLevelIds} strategy={verticalListSortingStrategy}>{topLevel.map(node => <SortableCategoryItem />)}</SortableContext></DndContext>`)。二级 children 暂不支持拖拽(深度限制,只能重排顶级)。跨 type/cross-level 检查:`onDragEnd` 内若 active.type !== over.type 或 active.parentId !== over.parentId → toast "不能跨 type/级 排序" + return。
+- [X] T025 [US5] Add drag handle to CategoryItem — CategoryItem 加 `draggable?: boolean` prop(true 时渲染 `lucide-react GripVertical` 手柄 + `useSortable({ id: node.id })`)。内置 / 已归档 / 二级分类 `draggable=false`(无手柄)。拖拽中行 opacity-50 + cursor-grabbing。
+- [X] T026 [US5] Verify US5 drag-drop — 浏览器手动:[quickstart 场景 6](./quickstart.md)(间隔足够 single-update + 间隔耗尽 full-renumber + 拒绝跨 type/级 + 内置不可拖 + 移动端长按)。
 
 **Checkpoint**: US1-5 完整。分类管理全闭环(列表 + 增 + 改 + 归档 + 拖拽)。
 
@@ -150,11 +150,11 @@
 
 **Purpose**: 组件测试 + 响应式/暗色/a11y 验证 + 最终质量门。
 
-- [ ] T031 [P] Write component tests in `src/tests/unit/components/category/` — (a) `emoji-picker.test.tsx`:tab 切换 / 搜索过滤 / 选中高亮 / 白名单限制 / 空结果;(b) `category-form.test.tsx`:create happy / 校验失败(空 name/超长/非白名单 emoji)/ parent 锁 type / 已归档限制 / 重名 toast;(c) `category-select.test.tsx`:分组渲染(内置/自定义)/ 二级缩进 / type 过滤 / 归档隐藏。Vitest + Testing Library,@testing-library/react 已安装。详见 [quickstart.md 组件测试](./quickstart.md)。
-- [ ] T032 [P] Responsive + dark mode verification — Chrome DevTools:(a) iPhone SE 375px 列表单列 + 表单 modal 全屏 + emoji picker bottom sheet;(b) iPad 768px 双列?(若设计);(c) 暗色模式切换(若有 toggle,否则用 `prefers-color-scheme: dark`)→ contrast ≥ WCAG AA 4.5:1。FR-027。
-- [ ] T033 Keyboard navigation + a11y verification — Tab 遍历所有交互元素(新增/编辑/归档/emoji picker/parent select);Enter 提交表单;Esc 关闭 dialog;drag handle 用 @dnd-kit KeyboardSensor 方向键移动。屏幕阅读器(VoiceOver)测试列表结构语义化(ul/li + aria-label)。FR-021 + FR-028。
-- [ ] T034 Run quickstart.md 9 scenarios manually — 浏览器逐场景跑 [quickstart.md](./quickstart.md) 场景 1-9,每场景截图或录屏归档到 PR 描述。覆盖:入口 / 列表 / 新增 / 编辑 / 归档级联 / 拖拽策略 / 交易下拉 / emoji picker / 响应式+暗色+键盘。
-- [ ] T035 Final quality gate — `pnpm tsc --noEmit` 0 错误 / `pnpm lint` 0 errors(allow warnings)/ `pnpm test` 全套绿(含 018 既有 + 008 更新 mock 后 + 023 新组件测试)。审查 SC 性能基线(列表渲染 P95 < 500ms / emoji picker < 100ms / 拖拽 < 300ms < 800ms)。
+- [X] T031 [P] Write component tests in `src/tests/unit/components/category/` — (a) `emoji-picker.test.tsx`:tab 切换 / 搜索过滤 / 选中高亮 / 白名单限制 / 空结果;(b) `category-form.test.tsx`:create happy / 校验失败(空 name/超长/非白名单 emoji)/ parent 锁 type / 已归档限制 / 重名 toast;(c) `category-select.test.tsx`:分组渲染(内置/自定义)/ 二级缩进 / type 过滤 / 归档隐藏。Vitest + Testing Library,@testing-library/react 已安装。详见 [quickstart.md 组件测试](./quickstart.md)。
+- [X] T032 [P] Responsive + dark mode verification — Chrome DevTools:(a) iPhone SE 375px 列表单列 + 表单 modal 全屏 + emoji picker bottom sheet;(b) iPad 768px 双列?(若设计);(c) 暗色模式切换(若有 toggle,否则用 `prefers-color-scheme: dark`)→ contrast ≥ WCAG AA 4.5:1。FR-027。
+- [X] T033 Keyboard navigation + a11y verification — Tab 遍历所有交互元素(新增/编辑/归档/emoji picker/parent select);Enter 提交表单;Esc 关闭 dialog;drag handle 用 @dnd-kit KeyboardSensor 方向键移动。屏幕阅读器(VoiceOver)测试列表结构语义化(ul/li + aria-label)。FR-021 + FR-028。
+- [X] T034 Run quickstart.md 9 scenarios manually — 浏览器逐场景跑 [quickstart.md](./quickstart.md) 场景 1-9,每场景截图或录屏归档到 PR 描述。覆盖:入口 / 列表 / 新增 / 编辑 / 归档级联 / 拖拽策略 / 交易下拉 / emoji picker / 响应式+暗色+键盘。
+- [X] T035 Final quality gate — `pnpm tsc --noEmit` 0 错误 / `pnpm lint` 0 errors(allow warnings)/ `pnpm test` 全套绿(含 018 既有 + 008 更新 mock 后 + 023 新组件测试)。审查 SC 性能基线(列表渲染 P95 < 500ms / emoji picker < 100ms / 拖拽 < 300ms < 800ms)。
 
 ---
 
