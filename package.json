@@ -1,6 +1,6 @@
 {
   "name": "balthasar",
-  "version": "0.2.0",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -22,6 +22,8 @@
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
+    "@heroui/react": "^3.2.2",
+    "@heroui/styles": "^3.2.2",
     "@hookform/resolvers": "^3.9.0",
     "@radix-ui/react-alert-dialog": "^1.1.19",
     "@radix-ui/react-checkbox": "^1.3.7",
@@ -51,6 +53,7 @@
     "sonner": "^2.0.7",
     "superjson": "^2.2.2",
     "tailwind-merge": "^3.6.0",
+    "tailwind-variants": "^3.2.2",
     "tw-animate-css": "^1.4.0",
     "uuid": "^11.0.0",
     "uuidv7": "^1.0.2",
