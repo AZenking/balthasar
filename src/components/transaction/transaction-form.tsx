@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 
 export function TransactionForm({ editId }: { editId?: string }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const utils = trpc.useUtils();
   const [serverError, setServerError] = useState("");
 
@@ -82,18 +83,33 @@ export function TransactionForm({ editId }: { editId?: string }) {
     });
   }, [editData, reset]);
 
+  // ── Build the /transactions URL preserving the original filter string ──
+  // FR-B004: returning from an edit on a filtered list page must keep the
+  // month/type/categoryId query params so the user lands back on the same
+  // filtered view, not a reset list.
+  const transactionsHref = useMemo(() => {
+    const qs = searchParams.toString();
+    return qs ? `/transactions?${qs}` : "/transactions";
+  }, [searchParams]);
+
   const createMutation = trpc.transaction.create.useMutation({
     onSuccess: () => {
+      // FR-B003 / clarify Q5: invalidate the 3 key families so every screen
+      // (dashboard summary + report + transactions list/detail) refetches.
       utils.dashboard.summary.invalidate();
+      utils.dashboard.report.invalidate();
+      utils.transaction.list.invalidate();
       router.push("/dashboard");
     },
   });
 
   const updateMutation = trpc.transaction.update.useMutation({
     onSuccess: () => {
+      // FR-B003 / clarify Q5: same 3-key-family invalidation as create.
       utils.dashboard.summary.invalidate();
+      utils.dashboard.report.invalidate();
       utils.transaction.list.invalidate();
-      router.push("/transactions");
+      router.push(transactionsHref);
     },
   });
 

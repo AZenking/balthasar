@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { TRPCClientError } from "@trpc/client";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc/client";
+import { getUtcMonthRange } from "@/lib/date-ranges";
 import {
   TransactionFilters,
   type FilterValues,
@@ -37,9 +38,51 @@ type TransactionItem = {
 
 export default function TransactionsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const utils = trpc.useUtils();
 
-  // ── Filter state ──
+  // ── URL drill-down params (026 US6 / FR-C006) ──
+  // Dashboard Top 2 category cards and reports page link here with:
+  //   ?month=YYYY-MM&type=expense&categoryId=<uuid>
+  // Invalid / out-of-range values are silently ignored so the page degrades
+  // gracefully to the unfiltered list (FR-C006 acceptance 3).
+  const urlFilters = useMemo(() => {
+    const month = searchParams.get("month"); // "YYYY-MM" | null
+    const type = searchParams.get("type"); // "income" | "expense" | null
+    const categoryId = searchParams.get("categoryId"); // uuid | null
+
+    const parsed = month?.match(/^(\d{4})-(\d{2})$/);
+    let startDate: string | undefined;
+    let endDate: string | undefined;
+    if (parsed) {
+      const y = Number(parsed[1]);
+      const m = Number(parsed[2]);
+      if (y >= 2020 && m >= 1 && m <= 12) {
+        const { start, end } = getUtcMonthRange(y, m);
+        startDate = start.toISOString();
+        endDate = end.toISOString();
+      }
+    }
+
+    // Narrow `type` to the union the procedure accepts.
+    let validType: "income" | "expense" | undefined;
+    if (type === "income" || type === "expense") validType = type;
+    // categoryId: trust server to ignore cross-family ids (FR-C006 acc 3);
+    // we only sanity-check the shape so a malformed value doesn't 400 the query.
+    const validCategoryId =
+      categoryId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(categoryId)
+        ? categoryId
+        : undefined;
+
+    return {
+      type: validType,
+      categoryId: validCategoryId,
+      startDate,
+      endDate,
+    };
+  }, [searchParams]);
+
+  // ── Filter state (in-page dropdown, overrides URL) ──
   const [filters, setFilters] = useState<FilterValues>({
     type: undefined,
     accountId: undefined,
@@ -55,11 +98,16 @@ export default function TransactionsPage() {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  // ── Query: fetches current page based on filters + cursor ──
+  // ── Query: fetches current page based on URL drill-down + in-page filters + cursor ──
+  // URL params seed the initial filter; in-page filter dropdowns layer on top.
+  // Both sources are merged here — `filters` overrides URL values when set so the
+  // user can refine the drill-down result interactively.
   const { data, isLoading, isFetching } = trpc.transaction.list.useQuery({
-    type: filters.type,
+    type: filters.type ?? urlFilters.type,
     accountId: filters.accountId,
-    categoryId: filters.categoryId,
+    categoryId: filters.categoryId ?? urlFilters.categoryId,
+    startDate: urlFilters.startDate,
+    endDate: urlFilters.endDate,
     cursor,
     includeSummary: true,
   });
@@ -108,7 +156,10 @@ export default function TransactionsPage() {
   });
 
   const handleEdit = (id: string) => {
-    router.push(`/transaction/new?id=${id}`);
+    // FR-B004: carry current URL filter params (month/type/categoryId) to the
+    // edit page so transaction-form can restore them on the return navigation.
+    const qs = searchParams.toString();
+    router.push(qs ? `/transaction/new?id=${id}&${qs}` : `/transaction/new?id=${id}`);
   };
 
   // 025: open AlertDialog instead of native browser confirm
@@ -122,7 +173,13 @@ export default function TransactionsPage() {
   };
 
   const summary = data?.summary;
-  const hasFilters = filters.type || filters.accountId || filters.categoryId;
+  const hasFilters =
+    filters.type ||
+    filters.accountId ||
+    filters.categoryId ||
+    urlFilters.type ||
+    urlFilters.categoryId ||
+    urlFilters.startDate;
   const isRefetching = isFetching && cursor === undefined && !isLoading;
 
   // ── First load skeleton ──
