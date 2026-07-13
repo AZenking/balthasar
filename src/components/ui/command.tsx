@@ -1,5 +1,25 @@
 "use client";
 
+/**
+ * Command (cmdk) — RESEARCH OUTCOME for 026 Phase 3 US1.
+ *
+ * Grep results (2026-07-13): `grep -rn "components/ui/command" src/` → **0 callers**.
+ * The file is currently dead code; no page uses CommandDialog / Command palette patterns.
+ *
+ * Decision: KEEP cmdk for now. Reasons:
+ *  1. Zero callers means rewriting to HeroUI Autocomplete would have no ROI in this PR — there is
+ *     nothing to migrate. The migration target would have to be invented.
+ *  2. cmdk is the only non-HeroUI UI primitive (research.md R3). Once a real caller emerges
+ *     (e.g. a Cmd+K palette), it should be rewritten as Modal + Autocomplete per HeroUI v3.
+ *  3. The Switch PR (research.md R6) will delete this file alongside the other shadcn primitives
+ *     and `pnpm remove cmdk`. No interim rewrite is needed.
+ *
+ * TODO(1.0.0-switch): delete this file + `pnpm remove cmdk` when migrating remaining call sites.
+ * TODO(1.1.0): if a command palette feature lands later, implement as HeroUI Modal + Autocomplete.
+ */
+
+// TODO(1.1.0): rewrite as HeroUI Modal + Autocomplete (research.md R3)
+
 import * as React from "react";
 import { Command as CommandPrimitive } from "cmdk";
 import { Search } from "lucide-react";

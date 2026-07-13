@@ -1,21 +1,27 @@
+"use client";
+
 import * as React from "react";
+import { Input as HeroUIInput } from "@heroui/react";
 import { cn } from "@/lib/utils";
 
-const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
-  ({ className, type, ...props }, ref) => {
-    return (
-      <input
-        type={type}
-        className={cn(
-          "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-          className
-        )}
-        ref={ref}
-        {...props}
-      />
-    );
-  }
-);
+/**
+ * `Input` — shadcn 兼容 wrapper,内部基于 HeroUI v3 Input
+ * (react-aria-components/Input)。026-cream-amber-revamp Phase 3 US1。
+ *
+ * shadcn `<Input />` 的所有原生 props(placeholder / value / onChange / type / ref)
+ * 直接透传,className 在 HeroUI 默认样式之上 override。
+ */
+const Input = React.forwardRef<
+  HTMLInputElement,
+  React.InputHTMLAttributes<HTMLInputElement>
+>(({ className, type, ...props }, ref) => (
+  <HeroUIInput
+    ref={ref}
+    type={type}
+    className={cn(className)}
+    {...props}
+  />
+));
 Input.displayName = "Input";
 
 export { Input };

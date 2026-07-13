@@ -114,6 +114,93 @@ export const dashboardRouter = router({
         expenseTrend: trend,
       };
     }),
+
+  /**
+   * `dashboard.report` — 026 Phase 2b Foundational.
+   *
+   * Returns the 6-month trend (target month + 5 preceding) plus target-month
+   * category breakdown. Used by /reports page (US3).
+   *
+   * Contract: specs/026-cream-amber-revamp/contracts/dashboard-report.md
+   */
+  report: protectedProcedure
+    .input(
+      z
+        .object({
+          endYear: z
+            .number()
+            .int()
+            .min(2020)
+            .max(new Date().getUTCFullYear())
+            .optional(),
+          endMonth: z.number().int().min(1).max(12).optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const familyId = await loadFamilyIdByUserId(ctx.session.user.id);
+
+      const now = new Date();
+      const endYear = input?.endYear ?? now.getUTCFullYear();
+      const endMonth = input?.endMonth ?? now.getUTCMonth() + 1;
+
+      // Build 6-month window DESC (end month at index 0).
+      // JS Date auto-handles year rollover when month index is negative.
+      const months = Array.from({ length: 6 }, (_, i) => {
+        const d = new Date(Date.UTC(endYear, endMonth - 1 - i, 1));
+        return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1 };
+      });
+
+      const ranges = months.map((m) => ({
+        ...m,
+        ...getUtcMonthRange(m.year, m.month),
+      }));
+
+      // Parallel: 6× getMonthSummary + 1× getCategoryBreakdown (target month only).
+      const [summaries, breakdown] = await Promise.all([
+        Promise.all(
+          ranges.map((r) =>
+            getMonthSummary({
+              familyId,
+              monthStart: r.start,
+              monthEnd: r.end,
+            }),
+          ),
+        ),
+        getCategoryBreakdown({
+          familyId,
+          monthStart: ranges[0].start,
+          monthEnd: ranges[0].end,
+        }),
+      ]);
+
+      const monthlyTrend = months.map((m, i) => ({
+        year: m.year,
+        month: m.month,
+        label: `${m.year}年${m.month}月`,
+        income: summaries[i].income,
+        expense: summaries[i].expense,
+        net: summaries[i].income - summaries[i].expense,
+      }));
+
+      const targetExpense = summaries[0].expense;
+      const targetMonthCategoryBreakdown =
+        targetExpense > 0
+          ? breakdown.map((c) => ({
+              categoryId: c.categoryId,
+              categoryName: c.categoryName,
+              categoryIcon: c.categoryIcon,
+              amount: c.amount,
+              percentage: Math.round((c.amount / targetExpense) * 1000) / 10,
+            }))
+          : [];
+
+      return {
+        endYearMonth: { year: endYear, month: endMonth },
+        monthlyTrend,
+        targetMonthCategoryBreakdown,
+      };
+    }),
 });
 
 export type DashboardRouter = typeof dashboardRouter;
