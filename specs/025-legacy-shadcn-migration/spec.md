@@ -44,7 +44,21 @@
 ### Session 2026-07-12 (clarify)
 
 - Q: AlertDialog 沉淀位置(回写 024 vs 仅放 025)? → A: **回写 024** —— 把 AlertDialog 加入 024 FR-002 清单(8→9 个原语),025 spec 改为"复用 024 沉淀"。理由:024 是"shadcn 沉淀"主 feature,完整原语清单的单一权威;025 是"消费"feature,不应承担沉淀职责。这样后人单看 024 spec 即可拿到完整清单,不会漏掉 AlertDialog。
-- Q: 全工程 archive/delete UX 一致性? → A: **按操作可逆性语义化统一** —— `归档(可逆)` = server-first mutation + 即时 toast 反馈(UX 感知等价"optimistic",实现不引入 onMutate,research.md R5),无 confirm;`删除(不可逆)` = AlertDialog confirm。具体影响:(a) 010 账户归档的 `window.confirm` **取消**,改为 server-first + toast(与 023 分类归档对齐);(b) 010 账户反归档**补 toast**(当前完全静默);(c) 009 删除交易的 AlertDialog confirm **保留**(删除是不可逆操作);(d) 023 分类归档/反归档维持 024 已锁定的 server-first + toast,不动。理由:UX 一致性应建立在"操作语义"而非"操作类型"上 —— 用户对"能否撤销"的预期决定 confirm 必要性,而非"这是哪个实体的操作"。
+- Q: 全工程 archive/delete UX 一致性? → A: **按"操作可逆性 + 影响范围"双维度语义化统一**(2026-07-13 实施时修正,加入"影响范围"维度,消除原"可逆性"单一维度的盲点):
+  - **删除(不可逆)** = AlertDialog confirm
+  - **归档(可逆 + 单实体)** = 无 confirm + server-first + toast
+  - **归档(可逆 + 级联多实体)** = `window.confirm`(级联影响范围大,需用户明确确认)
+  
+  具体影响:
+  - (a) 010 账户归档 = **单实体** → 取消 `window.confirm`,改 server-first + toast(US3,FR-012)
+  - (b) 010 账户反归档 = **单实体** → 补 toast(US3,FR-013)
+  - (c) 009 删除交易 = **不可逆** → AlertDialog destructive confirm(US2,FR-008)
+  - (d) **023 分类归档 = 级联子分类** → **保留 `window.confirm`**(级联影响多实体,需明确确认;025 不动,FR-018)
+  - (e) 023 分类反归档 = 级联子分类 → 维持现状(025 不动)
+  
+  **理由**:UX 一致性应建立在"可逆性 + 影响范围"两个维度。可逆性决定 confirm **必要性**,影响范围决定 confirm **详细程度**。010 账户归档是单实体操作,无级联,confirm 是过度的;023 分类归档级联子分类,影响多实体,confirm 是必要的(用户需要知道"该操作会影响 N 个子分类")。
+  
+  **修正背景**:原 Q2 决议(2026-07-12)假设"023 archive 已是 optimistic + toast",实际 023 archive 是 `window.confirm + mutate + toast`(因级联)。025 实施时(sub-agent)发现此 spec 盲点,本修正加入"影响范围"维度,让 023 archive 的 confirm 成为**合理保留**而非矛盾。
 - Q: AlertDialog 删除按钮是否使用 destructive 红色样式? → A: **是** —— "确认删除"按钮用 destructive 红色 variant(`AlertDialogAction asChild` + `Button variant="destructive"`),"取消"按钮保持 default。理由:删除是不可逆操作,红色按钮符合用户对"危险操作"的视觉预期;AlertDialog 默认 primary 色不足以传达风险。与 Q2"删除=不可逆"语义呼应。归档场景已移出 AlertDialog,所以 destructive variant 仅用于 009 删除交易一处。
 
 ## User Scenarios & Testing *(mandatory)*
@@ -112,7 +126,8 @@
 - **`window.confirm` 是同步阻塞调用,`AlertDialog` 是 React state 驱动**:迁移意味着把"点删除 → confirm → mutate"改成"点删除 → setState open → 用户确认 → mutate"。需引入每个页面的 confirm state(`confirmingTxId: string | null`),不能复用一个全局 dialog(因为不同交易行的删除目标不同)。
 - **移动端 Select 浮层在长列表场景的可滚动性**:分类列表可能含 ~30 个项(内置 12 + 自定义),shadcn Select 默认 max height 需测试;若超出可视区,需 `className` 控制 + 滚动键盘导航。
 - **迁移后历史 quickstart 截图失效**:既有 quickstart 若含截图展示原生 `<select>` / `window.confirm`,迁移后视觉变化 —— **不**修改 quickstart 截图(它们记录历史状态),只在末尾追加"shadcn 迁移回归验证"小节。
-- **`AlertDialog` 仅用于"删除"场景**(clarify Q2 决议):023 分类归档/反归档 + 010 账户归档/反归档都不用 AlertDialog(归档=可逆,server-first + toast);只有 009 删除交易用 AlertDialog(删除=不可逆,confirm)。原 spec 中"010 归档 → AlertDialog"的提法已废弃。
+- **`AlertDialog` 仅用于"删除"场景**(clarify Q2 决议):023 分类归档/反归档 + 010 账户归档/反归档都不用 AlertDialog(归档=可逆,server-first + toast 或 window.confirm);只有 009 删除交易用 AlertDialog(删除=不可逆,confirm)。原 spec 中"010 归档 → AlertDialog"的提法已废弃。
+- **023 archive 的 window.confirm 是合理保留**(clarify Q2 修正,2026-07-13):023 `category-manager.tsx:218` 的归档 confirm **不是矛盾**,而是"级联多实体归档"的必要保护(单分类归档会级联 N 个子分类)。010 archive 是单实体无级联,无需 confirm。FR-020 grep gate 已为 023 此处加白名单例外。
 - **若 024 US1 沉淀的 `Select` 与历史页面 `<select>` 行为不一致**(如已选值显示格式、占位符):以**历史页面当前外观**为准,通过 `className` 或自定义 `SelectValue` 渲染覆盖 shadcn 默认。锁定"行为零回归,外观零回归"。
 - **AlertDialog 的 i18n**:本 feature 锁定中文文案("确认删除?" / "取消" / "确认"),与现有 `window.confirm("确认删除?")` 文案对齐;i18n 是独立 feature。归档的 toast 文案("已归档" / "已恢复")与 023 现有 toast 文案对齐(FR-012 / FR-013)。
 
@@ -156,7 +171,7 @@
 
 **通用**
 
-- **FR-020**: 本 feature 完成后,`grep -rE '<select|<option|window\.confirm' src/components/ src/app/` MUST 返回 0 个匹配(全工程功能性 UI 不再含裸 select / window.confirm)。
+- **FR-020**: 本 feature 完成后,`grep -rE '<select|<option' src/components/ src/app/` MUST 返回 0 个匹配(全工程功能性 UI 不再含裸 select);`grep -rE 'window\.confirm' src/components/ src/app/` 允许 `src/components/settings/category-manager.tsx:218` 作为**合理例外**(023 分类归档级联子分类的 confirm,clarify Q2 "影响范围"决议保留),其他位置 MUST 0 匹配。
 - **FR-021**: 本 feature 完成后,宪章 v2.0.0 第二章技术栈"UI 组件 | shadcn/ui | Radix + Tailwind"在仓库**所有页面**代码层面 MUST 真实成立。
 
 ### Key Entities *(include if feature involves data)*

@@ -86,7 +86,7 @@
 
 ### Quality Gate
 
-- [ ] T013 Verify FR-020 full-repo grep — 执行 `grep -rE '<select|<option|window\.confirm' src/components/ src/app/`,应返回 **0 匹配**。若发现新遗漏(本 feature scope 外的页面),记入 Complexity Tracking 并扩展迁移。详见 [quickstart.md "Gate A"](./quickstart.md#gate-a-全工程-grep-0-匹配fr-020)。
+- [ ] T013 Verify FR-020 full-repo grep — 执行两步:(a) `grep -rE '<select|<option' src/components/ src/app/` 应返回 **0 匹配**;(b) `grep -rE 'window\.confirm' src/components/ src/app/` 应返回 **仅 1 匹配** `src/components/settings/category-manager.tsx:218`(023 分类归档级联 confirm,Q2"影响范围"决议保留的白名单例外)。若 (a) 非零,或 (b) 含其他位置 → 扩展迁移。详见 [quickstart.md "Gate A"](./quickstart.md#gate-a-全工程-grep-0-匹配fr-020)。
 - [ ] T014 [P] Verify SC-003 a11y + SC-004 cross-platform — (a) macOS VoiceOver 抽查 `/transactions` 删除 AlertDialog 焦点行为;(b) macOS Safari / Windows Chrome / Android Chrome(DevTools 模拟)截图对比 Select 浮层 + AlertDialog 视觉一致。详见 [quickstart.md "Gate B + Gate C"](./quickstart.md#gate-b-跨平台视觉一致性sc-004)。
 - [ ] T015 Final type-check + lint + test — 执行 `pnpm type-check && pnpm lint && pnpm test`,全绿后准备 PR。若 lint/test 失败,**禁止合并**,排查根因。
 - [ ] T016 [P] Verify SC-005 US1 timing — 自我计时(因内部项目无 5 用户样本,research.md R5 区域已降级):迁移前基线 + 迁移后各跑 10 笔交易 `/transaction/new`,计时打开页面到提交的中位数,迁移后 ≤ 迁移前 + 10%(tolerance 放宽因样本量小)。记录在 PR description。详见 [spec.md SC-005](./spec.md#measurable-outcomes)。
