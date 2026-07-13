@@ -6,6 +6,7 @@ import { TRPCClientError } from "@trpc/client";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc/client";
 import { getUtcMonthRange } from "@/lib/date-ranges";
+import { Card } from "@heroui/react";
 import {
   TransactionFilters,
   type FilterValues,
@@ -36,6 +37,100 @@ type TransactionItem = {
   categoryIcon: string | null;
 };
 
+// ── Date grouping for the transaction list (US6 visual upgrade) ──
+//
+// Groups transactions by relative bucket based on `occurredAt` UTC date:
+//   - 今日 (today UTC)
+//   - 昨日 (yesterday UTC)
+//   - 本周 (within last 7 days, excl. today/yesterday)
+//   - 本月 (within last 30 days, excl. above)
+//   - 具体日期 YYYY-MM-DD (older)
+//
+// UTC-aligned to stay consistent with `date-ranges.ts` (R7) and the DB.
+// Same-day transactions land in the same bucket regardless of order.
+
+function startOfUtcDay(d: Date): Date {
+  return new Date(
+    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
+  );
+}
+
+function formatUtcYmd(d: Date): string {
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function groupByDate(
+  items: TransactionItem[]
+): Array<{ label: string; items: TransactionItem[] }> {
+  if (items.length === 0) return [];
+
+  const now = new Date();
+  const todayStart = startOfUtcDay(now).getTime();
+  const oneDayMs = 24 * 60 * 60 * 1000;
+  const yesterdayStart = todayStart - oneDayMs;
+  const weekStart = todayStart - 7 * oneDayMs;
+  const monthStart = todayStart - 30 * oneDayMs;
+
+  const buckets = new Map<string, TransactionItem[]>();
+  const order: string[] = [];
+
+  for (const t of items) {
+    const d = typeof t.occurredAt === "string" ? new Date(t.occurredAt) : t.occurredAt;
+    const ts = startOfUtcDay(d).getTime();
+
+    let label: string;
+    if (ts === todayStart) label = "今日";
+    else if (ts === yesterdayStart) label = "昨日";
+    else if (ts > weekStart) label = "本周";
+    else if (ts > monthStart) label = "本月";
+    else label = formatUtcYmd(d);
+
+    if (!buckets.has(label)) {
+      buckets.set(label, []);
+      order.push(label);
+    }
+    buckets.get(label)!.push(t);
+  }
+
+  return order.map((label) => ({ label, items: buckets.get(label)! }));
+}
+
+// ── Build the human-readable filter description for the Card header ──
+//
+// Priority: month (from URL) > type > categoryId > account > 全部交易.
+// Uses the categories/accounts list to resolve ids to display names.
+function useFilterDescription(
+  urlMonth: string | null,
+  type: "income" | "expense" | undefined,
+  categoryId: string | undefined,
+  accountId: string | undefined
+): string {
+  const { data: categories } = trpc.category.list.useQuery(undefined);
+  const { data: accounts } = trpc.account.list.useQuery();
+
+  const parts: string[] = [];
+  if (urlMonth) {
+    const m = urlMonth.match(/^(\d{4})-(\d{2})$/);
+    if (m) parts.push(`${Number(m[1])}年${Number(m[2])}月`);
+  }
+  if (type === "income") parts.push("仅收入");
+  else if (type === "expense") parts.push("仅支出");
+
+  if (categoryId) {
+    const c = (categories ?? []).find((x) => x.id === categoryId);
+    if (c) parts.push(`${c.icon ?? ""} ${c.name}`.trim());
+  }
+  if (accountId) {
+    const a = (accounts ?? []).find((x) => x.id === accountId);
+    if (a) parts.push(a.name);
+  }
+
+  return parts.length > 0 ? parts.join(" · ") : "全部交易";
+}
+
 export default function TransactionsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -54,6 +149,7 @@ export default function TransactionsPage() {
     const parsed = month?.match(/^(\d{4})-(\d{2})$/);
     let startDate: string | undefined;
     let endDate: string | undefined;
+    let monthRaw: string | null = null;
     if (parsed) {
       const y = Number(parsed[1]);
       const m = Number(parsed[2]);
@@ -61,6 +157,7 @@ export default function TransactionsPage() {
         const { start, end } = getUtcMonthRange(y, m);
         startDate = start.toISOString();
         endDate = end.toISOString();
+        monthRaw = month;
       }
     }
 
@@ -79,6 +176,7 @@ export default function TransactionsPage() {
       categoryId: validCategoryId,
       startDate,
       endDate,
+      monthRaw,
     };
   }, [searchParams]);
 
@@ -180,7 +278,19 @@ export default function TransactionsPage() {
     urlFilters.type ||
     urlFilters.categoryId ||
     urlFilters.startDate;
+
+  // Active filter resolution (in-page overrides URL).
+  const effectiveType = filters.type ?? urlFilters.type;
+  const effectiveCategoryId = filters.categoryId ?? urlFilters.categoryId;
+  const filterDescription = useFilterDescription(
+    urlFilters.monthRaw,
+    effectiveType,
+    effectiveCategoryId,
+    filters.accountId
+  );
+
   const isRefetching = isFetching && cursor === undefined && !isLoading;
+  const grouped = useMemo(() => groupByDate(items), [items]);
 
   // ── First load skeleton ──
   if (isLoading) {
@@ -199,38 +309,60 @@ export default function TransactionsPage() {
 
   return (
     <div className="min-h-screen pb-16">
-      <div className="p-4 pt-6">
-        <h1 className="text-xl font-bold">流水</h1>
-      </div>
+      {/* 026 US6: Header 卡片化,内嵌 summary,显示当前 filter 描述 */}
+      <Card className="mx-4 mt-4">
+        <Card.Header className="flex items-center justify-between">
+          <div>
+            <Card.Title className="text-xl text-[var(--foreground)]">
+              流水
+            </Card.Title>
+            <Card.Description className="text-xs text-[var(--muted-foreground)]">
+              {filterDescription}
+            </Card.Description>
+          </div>
+          <span className="text-xs text-[var(--muted-foreground)]">
+            {items.length} 笔
+          </span>
+        </Card.Header>
+        {summary && (
+          <Card.Content className="pt-0">
+            <TransactionSummary
+              income={summary.income}
+              expense={summary.expense}
+              net={summary.net}
+            />
+          </Card.Content>
+        )}
+      </Card>
 
       <TransactionFilters filters={filters} onChange={handleFiltersChange} />
-
-      {summary && (
-        <div className="px-4 py-2">
-          <TransactionSummary
-            income={summary.income}
-            expense={summary.expense}
-            net={summary.net}
-          />
-        </div>
-      )}
 
       <div className={`px-4 ${isRefetching ? "opacity-50" : ""}`}>
         {items.length === 0 ? (
           <div className="flex min-h-[40vh] items-center justify-center">
-            <p className="text-muted-foreground">
+            <p className="text-[var(--muted-foreground)]">
               {hasFilters ? "无符合条件的交易" : "暂无交易"}
             </p>
           </div>
         ) : (
           <>
-            {items.map((t) => (
-              <TransactionListItem
-                key={t.id}
-                transaction={t}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-              />
+            {/* 026 US6: 列表按日期分组渲染 */}
+            {grouped.map((group) => (
+              <div key={group.label} className="mt-4">
+                <div className="sticky top-0 z-10 bg-[var(--background)]/80 px-4 py-2 text-xs font-medium text-[var(--muted-foreground)] backdrop-blur">
+                  {group.label}
+                </div>
+                <div className="space-y-0">
+                  {group.items.map((t) => (
+                    <TransactionListItem
+                      key={t.id}
+                      transaction={t}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                    />
+                  ))}
+                </div>
+              </div>
             ))}
 
             {nextCursor !== null && (

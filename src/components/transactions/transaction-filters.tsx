@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
-import { cn } from "@/lib/utils";
+import { Chip } from "@heroui/react";
 import {
   Select,
   SelectContent,
@@ -40,12 +40,12 @@ export function TransactionFilters({
     <div className="px-4 py-2">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="flex items-center gap-1 text-sm text-muted-foreground"
+        className="flex items-center gap-1 text-sm text-[var(--muted-foreground)]"
       >
         <span>{expanded ? "▼" : "▶"}</span>
         筛选
         {(filters.type || filters.accountId || filters.categoryId) && (
-          <span className="ml-1 rounded bg-primary/10 px-1.5 text-xs text-primary">
+          <span className="ml-1 rounded bg-[var(--accent-soft)] px-1.5 text-xs text-[var(--accent)]">
             已筛选
           </span>
         )}
@@ -53,35 +53,40 @@ export function TransactionFilters({
 
       {expanded && (
         <div className="mt-2 space-y-3">
-          {/* Type */}
+          {/* Type — ChipGroup(单选)。
+           * HeroUI v3.2.2 Chip 是简单 span,无 .Group 子组件 / selectionMode,
+           * 这里手动用 color + variant 表达 active 态:
+           *   active → variant="primary" color="accent"(实心 accent)
+           *   inactive → 默认(soft default)。
+           * 全部 / 收入 / 支出 三态切换。 */}
           <div className="flex gap-2">
-            <button
-              onClick={() => onChange({ ...filters, type: undefined, categoryId: undefined })}
-              className={cn(
-                "rounded-lg px-3 py-1 text-xs",
-                !filters.type ? "bg-primary text-primary-foreground" : "bg-muted"
-              )}
+            <Chip
+              variant={!filters.type ? "primary" : "secondary"}
+              color={!filters.type ? "accent" : "default"}
+              onClick={() =>
+                onChange({ ...filters, type: undefined, categoryId: undefined })
+              }
             >
               全部
-            </button>
-            <button
-              onClick={() => onChange({ ...filters, type: "expense", categoryId: undefined })}
-              className={cn(
-                "rounded-lg px-3 py-1 text-xs",
-                filters.type === "expense" ? "bg-red-500 text-white" : "bg-muted"
-              )}
+            </Chip>
+            <Chip
+              variant={filters.type === "expense" ? "primary" : "secondary"}
+              color={filters.type === "expense" ? "danger" : "default"}
+              onClick={() =>
+                onChange({ ...filters, type: "expense", categoryId: undefined })
+              }
             >
               支出
-            </button>
-            <button
-              onClick={() => onChange({ ...filters, type: "income", categoryId: undefined })}
-              className={cn(
-                "rounded-lg px-3 py-1 text-xs",
-                filters.type === "income" ? "bg-green-500 text-white" : "bg-muted"
-              )}
+            </Chip>
+            <Chip
+              variant={filters.type === "income" ? "primary" : "secondary"}
+              color={filters.type === "income" ? "success" : "default"}
+              onClick={() =>
+                onChange({ ...filters, type: "income", categoryId: undefined })
+              }
             >
               收入
-            </button>
+            </Chip>
           </div>
 
           {/* Account */}
