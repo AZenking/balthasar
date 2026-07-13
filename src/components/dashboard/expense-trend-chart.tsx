@@ -20,8 +20,9 @@
  */
 
 import {
-  Bar,
-  BarChart,
+  CartesianGrid,
+  Line,
+  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -178,11 +179,15 @@ function DailyView({ buckets }: { buckets: DailyBucket[] }) {
   return (
     <div role="img" aria-label={overallAria}>
       <ResponsiveContainer width="100%" height={200}>
-        <BarChart
+        <LineChart
           data={rows}
-          margin={{ top: 8, right: 0, left: 0, bottom: 0 }}
-          barCategoryGap="20%"
+          margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
         >
+          <CartesianGrid
+            strokeDasharray="3 3"
+            vertical={false}
+            stroke="oklch(0.9 0.004 286.32)"
+          />
           <XAxis
             dataKey="label"
             tickLine={false}
@@ -195,19 +200,20 @@ function DailyView({ buckets }: { buckets: DailyBucket[] }) {
             axisLine={false}
             tick={{ fontSize: 10, fill: "oklch(0.5517 0.0138 285.94)" }}
             width={40}
+            allowDecimals={false}
           />
-          <Tooltip
-            content={<DailyTooltip />}
-            cursor={{ fill: "oklch(0.2103 0.0059 285.89 / 0.05)" }}
-          />
-          <Bar
+          <Tooltip content={<DailyTooltip />} />
+          <Line
+            type="monotone"
             dataKey="amount"
             name="支出"
-            fill="var(--danger)"
-            radius={[3, 3, 0, 0]}
+            stroke="var(--danger)"
+            strokeWidth={2}
+            dot={{ r: 3, fill: "var(--danger)" }}
+            activeDot={{ r: 5 }}
             isAnimationActive={false}
           />
-        </BarChart>
+        </LineChart>
       </ResponsiveContainer>
     </div>
   );
@@ -228,11 +234,15 @@ function WeeklyView({ buckets }: { buckets: WeeklyBucket[] }) {
   return (
     <div role="img" aria-label={overallAria}>
       <ResponsiveContainer width="100%" height={200}>
-        <BarChart
+        <LineChart
           data={rows}
-          margin={{ top: 8, right: 0, left: 0, bottom: 0 }}
-          barCategoryGap="20%"
+          margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
         >
+          <CartesianGrid
+            strokeDasharray="3 3"
+            vertical={false}
+            stroke="oklch(0.9 0.004 286.32)"
+          />
           <XAxis
             dataKey="label"
             tickLine={false}
@@ -246,19 +256,20 @@ function WeeklyView({ buckets }: { buckets: WeeklyBucket[] }) {
             axisLine={false}
             tick={{ fontSize: 10, fill: "oklch(0.5517 0.0138 285.94)" }}
             width={40}
+            allowDecimals={false}
           />
-          <Tooltip
-            content={<WeeklyTooltip />}
-            cursor={{ fill: "oklch(0.2103 0.0059 285.89 / 0.05)" }}
-          />
-          <Bar
+          <Tooltip content={<WeeklyTooltip />} />
+          <Line
+            type="monotone"
             dataKey="amount"
             name="支出"
-            fill="var(--danger)"
-            radius={[3, 3, 0, 0]}
+            stroke="var(--danger)"
+            strokeWidth={2}
+            dot={{ r: 3, fill: "var(--danger)" }}
+            activeDot={{ r: 5 }}
             isAnimationActive={false}
           />
-        </BarChart>
+        </LineChart>
       </ResponsiveContainer>
     </div>
   );

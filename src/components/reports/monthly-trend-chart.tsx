@@ -3,7 +3,8 @@
 /**
  * MonthlyTrendChart (026-cream-amber-revamp, spec US3 / FR-D001-D004).
  *
- * recharts 实现:6 月分组柱状图,收入/支出/结余 3 系列。
+ * recharts 实现:6 月**折线图**,收入/支出/结余 3 系列(2026-07-13 修订:
+ * 趋势语义用折线比柱状更直观)。
  *
  * 数据契约:specs/026-cream-amber-revamp/contracts/dashboard-report.md
  *   monthlyTrend: 6 项,降序(目标月在首位),每项含
@@ -11,25 +12,22 @@
  *
  * 设计要点:
  * - 数据单位为分;recharts 接受任意 number,直接用分绘图,Tooltip/aria 时除以 100。
- * - 颜色映射 HeroUI v3 默认 token(见 globals.css / heroui.min.css):
+ * - 颜色映射 HeroUI v3 默认 token:
  *   收入 → var(--success) 绿 / 支出 → var(--danger) 红 / 结余 → var(--foreground) 灰。
- * - 点击交互:Bar onClick 触发 onMonthClick(year, month)。
- * - 隐私模式:Tooltip 与 SelectedSummary 的金额节点挂 `data-amount`,
- *   globals.css 的 `.privacy-on [data-amount]` 规则自动隐藏并显示 `***`。
- * - 可访问性:ResponsiveContainer 容器 role="img" + aria-label(总览);
- *   Bar 自带 `<title>`(recharts 默认)提供单柱 hover 描述。
+ * - 点击交互:Line onClick / XAxis tick onClick 触发 onMonthClick(year, month)。
+ * - 隐私模式:Tooltip 与 SelectedSummary 的金额节点挂 `data-amount`。
+ * - 可访问性:ResponsiveContainer 容器 role="img" + aria-label。
  * - 金额格式化:> 10000 分(= 100 元)用"万"单位,否则两位小数。
  */
 
 import {
-  Bar,
-  BarChart,
   CartesianGrid,
+  Line,
+  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
-  type BarRectangleItem,
 } from "recharts";
 
 export type MonthlyTrendItem = {
@@ -48,11 +46,11 @@ interface MonthlyTrendChartProps {
   months?: MonthlyTrendItem[];
   /** 高亮当前选中月(目标月) */
   targetYearMonth?: { year: number; month: number };
-  /** 点击月份分组触发;不传则不可点 */
+  /** 点击月份触发;不传则不可点 */
   onMonthClick?: (year: number, month: number) => void;
 }
 
-/** 把分转换为展示字符串;> 10000 分(= 100 元)用万单位(research R4)。 */
+/** 把分转换为展示字符串;> 10000 分(= 100 元)用万单位。 */
 function formatAmount(cents: number): string {
   const yuan = cents / 100;
   if (Math.abs(yuan) >= 10000) {
@@ -78,7 +76,6 @@ interface ChartRow {
   income: number;
   expense: number;
   net: number;
-  absNet: number; // 结余取绝对值绘柱
 }
 
 /** 自定义 Tooltip:挂 data-amount 走隐私模式 CSS。 */
@@ -96,11 +93,7 @@ function CustomTooltip({
     <div className="rounded-md border border-border bg-popover px-3 py-2 text-xs shadow-md">
       <div className="mb-1 font-medium text-foreground">{label}</div>
       {payload.map((p) => (
-        <div
-          key={p.name}
-          className="flex items-center gap-2"
-          data-amount
-        >
+        <div key={p.name} className="flex items-center gap-2" data-amount>
           <span
             className="inline-block h-2 w-2 rounded-sm"
             style={{ backgroundColor: p.color }}
@@ -122,31 +115,31 @@ export function MonthlyTrendChart({
   targetYearMonth,
   onMonthClick,
 }: MonthlyTrendChartProps) {
-  // 兼容 `data` 与 `months` 两种 prop 名(整合 agent 与 spec 样板字段名不同);
-  // 任一存在即取用,以 data 为优先。
   const resolved = data ?? months ?? [];
   const interactive = typeof onMonthClick === "function";
 
-  const rows: ChartRow[] = resolved.map((it) => ({
-    year: it.year,
-    month: it.month,
-    label: it.label,
-    shortLabel: `${it.month}月`,
-    income: it.income,
-    expense: it.expense,
-    net: it.net,
-    absNet: Math.abs(it.net),
-  }));
+  // recharts 折线图数据需按时间**升序**(从远到近),让线从左到右展开。
+  const rows: ChartRow[] = [...resolved]
+    .map((it) => ({
+      year: it.year,
+      month: it.month,
+      label: it.label,
+      shortLabel: `${it.month}月`,
+      income: it.income,
+      expense: it.expense,
+      net: it.net,
+    }))
+    .sort((a, b) => a.year - b.year || a.month - b.month);
 
   const overallAria =
     resolved.length === 0
       ? "近 6 个月无收支数据"
-      : `近 ${resolved.length} 个月收支趋势图,包含收入、支出与结余三列。`;
+      : `近 ${resolved.length} 个月收支趋势图,包含收入、支出与结余三条折线。`;
 
-  // Bar onClick 回调:recharts 第 1 参 BarRectangleItem.payload 含原始 row 数据。
-  const handleBarClick = interactive
-    ? (data: BarRectangleItem) => {
-        const row = data?.payload as ChartRow | undefined;
+  // Line dot onClick:点击月份的数据点触发 onMonthClick。
+  // recharts Line 整体 onClick 不传单点 payload;改用 dot onClick 拿单点 row。
+  const handleDotClick = interactive
+    ? (row: ChartRow) => {
         if (row && typeof row.year === "number" && typeof row.month === "number") {
           onMonthClick?.(row.year, row.month);
         }
@@ -159,7 +152,7 @@ export function MonthlyTrendChart({
       <div className="mb-3 flex items-center justify-end gap-3 text-xs text-muted-foreground">
         <span className="flex items-center gap-1">
           <span
-            className="inline-block h-2 w-2 rounded-sm"
+            className="inline-block h-0.5 w-4 rounded-sm"
             style={{ backgroundColor: "var(--success)" }}
             aria-hidden
           />
@@ -167,7 +160,7 @@ export function MonthlyTrendChart({
         </span>
         <span className="flex items-center gap-1">
           <span
-            className="inline-block h-2 w-2 rounded-sm"
+            className="inline-block h-0.5 w-4 rounded-sm"
             style={{ backgroundColor: "var(--danger)" }}
             aria-hidden
           />
@@ -175,7 +168,7 @@ export function MonthlyTrendChart({
         </span>
         <span className="flex items-center gap-1">
           <span
-            className="inline-block h-2 w-2 rounded-sm"
+            className="inline-block h-0.5 w-4 rounded-sm"
             style={{ backgroundColor: "var(--foreground)" }}
             aria-hidden
           />
@@ -185,12 +178,7 @@ export function MonthlyTrendChart({
 
       <div role="img" aria-label={overallAria}>
         <ResponsiveContainer width="100%" height={260}>
-          <BarChart
-            data={rows}
-            margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
-            barCategoryGap="20%"
-            barGap={2}
-          >
+          <LineChart data={rows} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
             <CartesianGrid
               strokeDasharray="3 3"
               vertical={false}
@@ -209,39 +197,51 @@ export function MonthlyTrendChart({
               tick={{ fontSize: 10, fill: "oklch(0.5517 0.0138 285.94)" }}
               width={48}
             />
-            <Tooltip
-              content={<CustomTooltip />}
-              cursor={{ fill: "oklch(0.2103 0.0059 285.89 / 0.05)" }}
-            />
-            <Bar
+            <Tooltip content={<CustomTooltip />} />
+            <Line
+              type="monotone"
               dataKey="income"
               name="收入"
-              fill="var(--success)"
-              radius={[3, 3, 0, 0]}
-              onClick={handleBarClick}
-              cursor={interactive ? "pointer" : "default"}
+              stroke="var(--success)"
+              strokeWidth={2}
+              dot={
+                interactive
+                  ? { r: 3, fill: "var(--success)", cursor: "pointer", onClick: (data: unknown) => handleDotClick?.((data as { payload?: ChartRow }).payload as ChartRow) }
+                  : { r: 3, fill: "var(--success)" }
+              }
+              activeDot={{ r: 5 }}
               isAnimationActive={false}
             />
-            <Bar
+            <Line
+              type="monotone"
               dataKey="expense"
               name="支出"
-              fill="var(--danger)"
-              radius={[3, 3, 0, 0]}
-              onClick={handleBarClick}
-              cursor={interactive ? "pointer" : "default"}
+              stroke="var(--danger)"
+              strokeWidth={2}
+              dot={
+                interactive
+                  ? { r: 3, fill: "var(--danger)", cursor: "pointer", onClick: (data: unknown) => handleDotClick?.((data as { payload?: ChartRow }).payload as ChartRow) }
+                  : { r: 3, fill: "var(--danger)" }
+              }
+              activeDot={{ r: 5 }}
               isAnimationActive={false}
             />
-            <Bar
-              dataKey="absNet"
+            <Line
+              type="monotone"
+              dataKey="net"
               name="结余"
-              fill="var(--foreground)"
-              fillOpacity={0.7}
-              radius={[3, 3, 0, 0]}
-              onClick={handleBarClick}
-              cursor={interactive ? "pointer" : "default"}
+              stroke="var(--foreground)"
+              strokeWidth={2}
+              strokeDasharray="4 2"
+              dot={
+                interactive
+                  ? { r: 3, fill: "var(--foreground)", cursor: "pointer", onClick: (data: unknown) => handleDotClick?.((data as { payload?: ChartRow }).payload as ChartRow) }
+                  : { r: 3, fill: "var(--foreground)" }
+              }
+              activeDot={{ r: 5 }}
               isAnimationActive={false}
             />
-          </BarChart>
+          </LineChart>
         </ResponsiveContainer>
       </div>
 
@@ -262,8 +262,7 @@ export function MonthlyTrendChart({
 }
 
 /**
- * 选中月的数值摘要(可访问文本版数据,补充柱状图的视觉表达)。
- * 每个金额节点挂 `data-amount` → 全局 CSS `.privacy-on [data-amount]` 自动隐藏。
+ * 选中月的数值摘要(可访问文本版数据,补充折线图的视觉表达)。
  */
 function SelectedSummary({ item }: { item: MonthlyTrendItem }) {
   return (
