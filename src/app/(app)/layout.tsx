@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/server/auth/config";
-import { BottomNav } from "@/components/bottom-nav";
+import { BottomNavigation } from "@/components/bottom-navigation";
 
 export default async function AppLayout({
   children,
@@ -13,9 +13,9 @@ export default async function AppLayout({
     redirect("/login");
   }
   return (
-    <div className="min-h-screen bg-background pb-16">
+    <div className="min-h-screen bg-background pb-20">
       {children}
-      <BottomNav />
+      <BottomNavigation />
     </div>
   );
 }
