@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { cva, type VariantProps } from "class-variance-authority";
 import {
   Button as HeroUIButton,
   type ButtonProps as HeroUIButtonProps,
@@ -9,45 +8,64 @@ import {
 import { cn } from "@/lib/utils";
 
 /**
- * shadcn-style buttonVariants — retained verbatim for backward compatibility.
+ * shadcn-compatible ButtonVariants — static class map (no cva dependency).
  *
+ * Phase 10 cleanup: removed `class-variance-authority` per spec FR-A002.
  * Consumers (e.g. `alert-dialog.tsx`) call `buttonVariants()` /
  * `buttonVariants({ variant: "outline" })` to obtain shadcn Tailwind class
- * strings. The {@link Button} component delegates rendering to HeroUI v3
- * under the hood, but this function still returns shadcn classes so other
- * shadcn primitives that compose `buttonVariants` directly keep working.
+ * strings for raw `<button>` elements. The {@link Button} component delegates
+ * rendering to HeroUI v3 under the hood, but this function still returns
+ * shadcn classes so other primitives that compose `buttonVariants` directly
+ * keep working.
  */
-const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50",
-  {
-    variants: {
-      variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
-        destructive:
-          "bg-destructive text-destructive-foreground hover:bg-destructive/90 focus-visible:ring-destructive",
-        outline:
-          "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
-        secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-      },
-      size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3",
-        lg: "h-11 rounded-md px-8",
-        icon: "h-10 w-10",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
-    },
-  },
-);
+type ShadcnVariant =
+  | "default"
+  | "secondary"
+  | "destructive"
+  | "outline"
+  | "ghost"
+  | "link";
+type ShadcnSize = "default" | "sm" | "lg" | "icon";
 
-type ShadcnVariant = NonNullable<VariantProps<typeof buttonVariants>["variant"]>;
-type ShadcnSize = NonNullable<VariantProps<typeof buttonVariants>["size"]>;
+const BASE_CLASSES =
+  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50";
+
+const VARIANT_CLASSES: Record<ShadcnVariant, string> = {
+  default: "bg-primary text-primary-foreground hover:bg-primary/90",
+  secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+  destructive:
+    "bg-destructive text-destructive-foreground hover:bg-destructive/90 focus-visible:ring-destructive",
+  outline:
+    "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+  ghost: "hover:bg-accent hover:text-accent-foreground",
+  link: "text-primary underline-offset-4 hover:underline",
+};
+
+const SIZE_CLASSES: Record<ShadcnSize, string> = {
+  default: "h-10 px-4 py-2",
+  sm: "h-9 rounded-md px-3",
+  lg: "h-11 rounded-md px-8",
+  icon: "h-10 w-10",
+};
+
+interface ButtonVariantsProps {
+  variant?: ShadcnVariant;
+  size?: ShadcnSize;
+  className?: string;
+}
+
+function buttonVariants({
+  variant = "default",
+  size = "default",
+  className,
+}: ButtonVariantsProps = {}): string {
+  return cn(
+    BASE_CLASSES,
+    VARIANT_CLASSES[variant],
+    SIZE_CLASSES[size],
+    className,
+  );
+}
 
 /**
  * shadcn -> HeroUI v3 variant mapping.
@@ -106,8 +124,11 @@ export interface ButtonProps
       | "isDisabled"
       | "isIconOnly"
       | "children"
-    >,
-    VariantProps<typeof buttonVariants> {
+    > {
+  /** shadcn variant set, mapped to HeroUI internally. */
+  variant?: ShadcnVariant;
+  /** shadcn size set, mapped to HeroUI internally. `icon` enables `isIconOnly`. */
+  size?: ShadcnSize;
   /** shadcn passthrough — accepted for API parity, currently a no-op. */
   asChild?: boolean;
   /** Mirrors the native `disabled` attribute (alias for HeroUI `isDisabled`). */
@@ -156,7 +177,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     return (
       <HeroUIButton
         ref={ref}
-        className={cn(buttonVariants({ variant, size, className }))}
+        className={cn(buttonVariants({ variant, size }), className)}
         variant={heroVariantMap[variant ?? "default"]}
         size={heroSizeMap[size ?? "default"]}
         isIconOnly={size === "icon" ? true : undefined}
