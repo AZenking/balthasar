@@ -9,6 +9,9 @@
  * 业务语义映射(组件层用 HeroUI variant / CSS 变量):
  *   收入 income  → success(绿)
  *   支出 expense → danger(红)
+ *
+ * 2026-07-13 二次修订:固定暗黑主题(`<html class="dark">`),dark token
+ * 在下方 .dark 选择器覆盖。
  * 详见 docs/THEME.md。
  */
 
@@ -27,32 +30,53 @@
   display: none;
 }
 
+/*
+ * Dark theme:覆盖 HeroUI v3 默认 token + 业务语义。
+ * layout.tsx 给 <html> 加 class="dark",本块激活。
+ * 颜色对齐 shadcn dark 调色板 + HeroUI accent/danger/success/warning 保持不变
+ * (亮色 token 在深色背景下也足够对比度)。
+ */
+.dark {
+  --background: oklch(0.18 0.01 285.89);
+  --foreground: oklch(0.97 0 0);
+  --surface: oklch(0.22 0.01 285.89);
+  --surface-foreground: var(--foreground);
+  --surface-secondary: oklch(0.27 0.01 285.89);
+  --surface-secondary-foreground: var(--foreground);
+  --surface-tertiary: oklch(0.32 0.01 285.89);
+  --surface-tertiary-foreground: var(--foreground);
+  --overlay: oklch(0.22 0.01 285.89);
+  --overlay-foreground: var(--foreground);
+  --muted: oklch(0.7 0.01 285.89);
+  --default: oklch(0.27 0.01 285.89);
+  --default-foreground: var(--foreground);
+  --border: oklch(0.3 0.01 285.89);
+  --field-background: oklch(0.22 0.01 285.89);
+  --field-placeholder: oklch(0.6 0.01 285.89);
+}
+
 @theme {
-  /* shadcn legacy tokens remapped to HeroUI v3 default palette (026 Phase 10).
-   * Values copied from node_modules/@heroui/styles/dist/themes/default/variables.css
-   * because Tailwind v4 @theme requires concrete values (no var() refs).
-   * Lets the 14 shadcn adapter components (`bg-primary`, `text-muted-foreground`,
-   * etc.) render in HeroUI's blue accent / surface palette instead of shadcn's
-   * black/gray defaults. */
-  --color-background: oklch(0.9702 0 0);
-  --color-foreground: oklch(0.2103 0.0059 285.89);
+  /* shadcn legacy tokens remapped to dark palette (026 Phase 10 + dark 修订)。
+   * dark mode 下 shadcn `bg-background` / `text-foreground` 等需要 build-time 值。 */
+  --color-background: oklch(0.18 0.01 285.89);
+  --color-foreground: oklch(0.97 0 0);
   --color-primary: oklch(0.6204 0.195 253.83);
   --color-primary-foreground: oklch(0.9911 0 0);
-  --color-muted: oklch(0.9524 0.0013 286.37);
-  --color-muted-foreground: oklch(0.5517 0.0138 285.94);
-  --color-accent: oklch(0.9524 0.0013 286.37);
-  --color-accent-foreground: oklch(0.2103 0.0059 285.89);
-  --color-border: oklch(0.9 0.004 286.32);
-  --color-input: oklch(0.9 0.004 286.32);
+  --color-muted: oklch(0.27 0.01 285.89);
+  --color-muted-foreground: oklch(0.7 0.01 285.89);
+  --color-accent: oklch(0.27 0.01 285.89);
+  --color-accent-foreground: oklch(0.97 0 0);
+  --color-border: oklch(0.3 0.01 285.89);
+  --color-input: oklch(0.3 0.01 285.89);
   --color-ring: oklch(0.6204 0.195 253.83);
-  --color-card: oklch(1 0 0);
-  --color-card-foreground: oklch(0.2103 0.0059 285.89);
+  --color-card: oklch(0.22 0.01 285.89);
+  --color-card-foreground: oklch(0.97 0 0);
   --color-destructive: oklch(0.6532 0.2328 25.74);
   --color-destructive-foreground: oklch(0.9911 0 0);
-  --color-popover: oklch(1 0 0);
-  --color-popover-foreground: oklch(0.2103 0.0059 285.89);
-  --color-secondary: oklch(0.9524 0.0013 286.37);
-  --color-secondary-foreground: oklch(0.2103 0.0059 285.89);
+  --color-popover: oklch(0.22 0.01 285.89);
+  --color-popover-foreground: oklch(0.97 0 0);
+  --color-secondary: oklch(0.27 0.01 285.89);
+  --color-secondary-foreground: oklch(0.97 0 0);
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 

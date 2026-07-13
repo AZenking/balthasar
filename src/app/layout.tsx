@@ -16,7 +16,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="zh-CN" suppressHydrationWarning>
+    <html lang="zh-CN" className="dark" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: PRIVACY_INLINE_SCRIPT }} />
       </head>
