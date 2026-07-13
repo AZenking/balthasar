@@ -1,5 +1,24 @@
 @import "tailwindcss";
+@import "@heroui/styles";
 @import "tw-animate-css";
+
+/*
+ * 配色:HeroUI v3 默认主题(026 范围修订 2026-07-13)
+ * 不再维护奶油琥珀自定义令牌;@heroui/styles 已注入完整默认 token:
+ *   --background / --surface / --accent / --accent-foreground /
+ *   --muted / --default / --success / --warning / --danger / --foreground / ...
+ * 业务语义映射(组件层用 HeroUI variant / CSS 变量):
+ *   收入 income  → success(绿)
+ *   支出 expense → danger(红)
+ * 详见 docs/THEME.md。
+ */
+
+/* 隐私模式(026-cream-amber-revamp, spec FR-C008 / research.md R5)
+ * layout.tsx 在 <head> 注入 inline script,hydration 前读 localStorage
+ * 并给 <html> 加 .privacy-on class。展示页金额元素挂 data-amount 属性。
+ * "记一笔"页金额输入不挂 data-amount(clarify Q1 = A)。 */
+.privacy-on [data-amount] { color: transparent; }
+.privacy-on [data-amount]::after { content: '***'; }
 
 @theme {
   --color-background: oklch(1 0 0);
