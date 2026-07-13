@@ -50,7 +50,7 @@
 
 ### Implementation
 
-- [ ] T004 [P] [US2] Migrate accountId + categoryId filter `<select>` → shadcn `<Select>` in `src/components/transactions/transaction-filters.tsx`(2 处,line 77-100 区域)—— 保留"全部账户/全部分类"`<SelectItem value="">`(R4 sentinel);onValueChange 中 `v || undefined` 转换。详见 [contracts/components.md C2](./contracts/components.md#c2-transaction-filterstsx009-transactions-list-ui)。
+- [ ] T004 [P] [US2] Migrate accountId + categoryId filter `<select>` → shadcn `<Select>` in `src/components/transactions/transaction-filters.tsx`(2 处,line 77-100 区域)—— 保留"全部账户/全部分类"`<SelectItem value="__all__">`(R4 sentinel,024 实测修正:Radix Select 不允许空字符串 value);onValueChange 中 `v === "__all__" ? undefined : v` 转换。详见 [contracts/components.md C2](./contracts/components.md#c2-transaction-filterstsx009-transactions-list-ui)。
 - [ ] T005 [P] [US2] Replace `window.confirm` → shadcn `<AlertDialog>` + destructive + confirm state + toast in `src/app/(app)/transactions/page.tsx`(line 93-96 的 `handleDelete` + 新增 `confirmingTxId` state + import `AlertDialog*` + `Button variant="destructive"` + `toast.success("已删除")` + `toast.error` + mutation `isPending` 时禁用按钮)。详见 [contracts/components.md C4](./contracts/components.md#c4-transactionspagetsx009-删除确认-alertdialog) + [research.md R3](./research.md#r3-alertdialog-destructive-variant--alertdialogaction-aschild--button-variantdestructive) + [R6](./research.md#r6-010-反归档-toast-文案--对齐-023已恢复--恢复失败)。
 - [ ] T006 [US2] Browser verify US2 — 跑 [quickstart.md "验证 US2" 场景 2.1-2.6](./quickstart.md#验证-us2-009-流水筛选--删除确认-alertdialog):2 处 Select 迁移 / AlertDialog 渲染 / Esc+遮罩取消 / 确认路径 + toast / 失败路径 toast / 009 既有 quickstart 回归(FR-010)。**依赖** T004 + T005 完成。
 

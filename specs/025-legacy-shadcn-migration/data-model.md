@@ -108,7 +108,7 @@ archiveMutation.mutate({ id: X })   // server-first,无 onMutate
 | 字段 | 类型 | Select 迁移影响 |
 |---|---|---|
 | accountId | `string`(必填) | 裸 `<select>` → shadcn `Select`,值不变 |
-| categoryId | `string`(可空) | 同上,空值 sentinel `""` |
+| categoryId | `string`(可空) | 同上,sentinel `"__all__"` 表示"全部"(R4 024 实测修正,Radix Select 不允许空字符串 value) |
 | type | `'expense' \| 'income'` | **不迁移**(当前用 Button toggle,非 select) |
 | amount / remark / occurredAt | number / string / Date | **不迁移**(Input / DatePicker 不在 scope) |
 

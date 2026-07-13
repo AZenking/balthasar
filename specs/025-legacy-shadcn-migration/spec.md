@@ -108,7 +108,7 @@
 ### Edge Cases
 
 - **`AlertDialog` 沉淀归 024 承担**(clarify Q1 决议):024 FR-002 清单已扩展为 9 个原语(补 `alert-dialog.tsx`),本 feature 复用 024 沉淀,不独立沉淀。
-- **原生 `<select>` 的"全部账户"占位 vs shadcn Select 的 placeholder**:迁移后"全部账户/全部分类"应作为 Select 的**第一个 SelectItem**(value="" 或特殊 sentinel),而非 placeholder —— 因为用户需要能"显式选择回到全部"。具体 value 在 plan 阶段定(空字符串 vs "all" sentinel)。
+- **原生 `<select>` 的"全部账户"占位 vs shadcn Select 的 placeholder**:迁移后"全部账户/全部分类"应作为 Select 的**第一个 SelectItem**(value=`"__all__"` sentinel,024 实测修正),而非 placeholder —— 因为用户需要能"显式选择回到全部"。Radix Select 实测不允许空字符串 value(024 PR category-form.tsx 已发现并修正为 `__root__` sentinel,本 feature 沿用相同模式用 `__all__`)。
 - **`window.confirm` 是同步阻塞调用,`AlertDialog` 是 React state 驱动**:迁移意味着把"点删除 → confirm → mutate"改成"点删除 → setState open → 用户确认 → mutate"。需引入每个页面的 confirm state(`confirmingTxId: string | null`),不能复用一个全局 dialog(因为不同交易行的删除目标不同)。
 - **移动端 Select 浮层在长列表场景的可滚动性**:分类列表可能含 ~30 个项(内置 12 + 自定义),shadcn Select 默认 max height 需测试;若超出可视区,需 `className` 控制 + 滚动键盘导航。
 - **迁移后历史 quickstart 截图失效**:既有 quickstart 若含截图展示原生 `<select>` / `window.confirm`,迁移后视觉变化 —— **不**修改 quickstart 截图(它们记录历史状态),只在末尾追加"shadcn 迁移回归验证"小节。

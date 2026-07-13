@@ -36,7 +36,7 @@
 <Select value={v ?? ""} onValueChange={setV}>
   <SelectTrigger className="w-full"><SelectValue placeholder="全部账户" /></SelectTrigger>
   <SelectContent>
-    <SelectItem value="">全部账户</SelectItem>
+    <SelectItem value="__all__">全部账户</SelectItem>
     {accounts.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
   </SelectContent>
 </Select>
@@ -44,12 +44,12 @@
 
 **Rationale**:
 - shadcn `Select` 基于 Radix `@radix-ui/react-select`,内置 a11y(`role="listbox"` / `aria-activedescendant` / 键盘 ↓↑ Enter Esc / 焦点陷阱)。
-- `SelectValue` 的 `placeholder` 显示当 value="" 时;若用户主动选"全部"(value=""),需要 `<SelectItem value="">` 作为第一项 —— Radix Select 允许空字符串 value(已验证)。
+- `SelectValue` 的 `placeholder` 显示当 value 为 falsy 时;若用户主动选"全部",需要 `<SelectItem value="__all__">` 作为第一项 —— **Radix Select 不允许空字符串 value(024 实测)**,必须用非空 sentinel(详见 R4)。
 - shadcn Select 在移动端**不**调用原生 picker,而是渲染自定义浮层(通过 Popover 实现),保证跨平台一致。
 
 **已知差异(需在迁移时注意)**:
 - 裸 `<select>` 的 `onChange` event 是 `ChangeEvent<HTMLSelectElement>`;Select 的 `onValueChange` 是 `(value: string) => void`。RHF 的 `Controller` 需要 `onChange={field.onChange}` 适配(`field.value` 是 string)。
-- 裸 `<select>` 的 value 可以 `undefined`;Select 的 value 必须 `string`(用 `""` 或 `undefined` 都可,但 `""` 与 `<SelectItem value="">` 配对更明确)。
+- 裸 `<select>` 的 value 可以 `undefined`;Select 的 value 必须**非空 `string`**(Radix Select 不允许 `""` 空字符串,024 实测;需用 sentinel 如 `"__all__"`,详见 R4)。
 
 **Alternatives Rejected**:
 - ❌ shadcn `Command`(cmdk-based Combobox):更适合"搜索 + 复杂数据结构"场景(如 023 的 CategorySelect);本 feature 的 5 处 select 都是简单列表,Command over-engineering。
@@ -93,17 +93,20 @@
 
 ---
 
-### R4: "全部账户/全部分类" sentinel value —— 空字符串 `""`
+### R4: "全部账户/全部分类" sentinel value —— `"__all__"`(024 实测修正)
 
-**Decision**: 用空字符串 `""` 作为 sentinel,与既有 `filters.accountId === undefined` 语义统一。
+**Decision**: 用字符串 `"__all__"` 作为 sentinel,**onValueChange 中转换为 `undefined`**(024 实测发现 Radix Select 不允许 `<SelectItem value="">` 空字符串 value)。
 
 **Rationale**:
-- 当前 `transaction-filters.tsx` 中 `<option value="">全部账户</option>` 已用 `""`;`<SelectItem value="">` 保持相同 sentinel,FR-007"保留占位项"零行为变化。
-- tRPC procedure 的 input schema(既有)`accountId: z.string().optional()` —— `""` 会被 zod 视为 truthy string,需在调用 procedure 前 filter:`accountId: filters.accountId || undefined`。当前代码已这样做(filter state 中 `undefined` 表示全部)。
-- 备选 `__all__` sentinel 会引入字符串约定,需要全工程感知(`""` 是 JS 自然 falsy 哨兵)。
+- **024 实测**:Radix Select 渲染空字符串 value 时 console 报错且无法稳定选中。024 PR `category-form.tsx` 已用 `PARENT_ROOT_SENTINEL = "__root__"` 修正(双下划线包裹的 sentinel 模式)。
+- 025 沿用相同模式,用 `__all__`(语义:"全部账户/全部分类")。
+- onValueChange: `v === "__all__" ? undefined : v` → 调用既有 procedure 时 `undefined` 表示"不筛选"(与既有 filter state `accountId?: string` 一致)。
+- sentinel 不与现有账户/分类 id 冲突(它们是 uuid/cuid,不含 `__` 前缀)。
+- tRPC procedure 的 input schema(既有)`accountId: z.string().optional()` —— `undefined` 直接通过 zod optional;旧逻辑中"`""` 需 filter 为 undefined"被新 sentinel 转换取代。
 
 **Alternatives Rejected**:
-- ❌ `"__all__"` 字符串 sentinel:需在多处 `if (v === "__all__") v = undefined`,违反 YAGNI。
+- ❌ 空字符串 `""`:Radix Select 不允许(024 实测)。
+- ❌ `"all"`(无双下划线):可能与人名/分类名冲突,弱保护。
 - ❌ `undefined` value:Radix Select 不支持 `<SelectItem value={undefined}>`(必填 string)。
 
 ---
@@ -200,7 +203,7 @@
 | R1 | 024 依赖 gate | 阻塞 until 024 main | Phase 0 启动前验证 |
 | R2 | Select prop 映射 | 标准 shadcn Select API | 5 处 `<select>` 迁移基础 |
 | R3 | AlertDialog destructive | `AlertDialogAction asChild` + destructive Button | 009 删除视觉 |
-| R4 | "全部" sentinel | 空字符串 `""` | 与既有代码一致 |
+| R4 | "全部" sentinel | `"__all__"`(024 实测修正)| Radix Select 不允许空字符串 value |
 | R5 | 010 mutation 模式 | server-first + toast(不引入 onMutate) | YAGNI |
 | R6 | toast 文案 | 对齐 023 | 全工程文案一致 |
 | R7 | quickstart 追加格式 | Checklist 表格 + 链接 spec | 易验证 + 可追溯 |

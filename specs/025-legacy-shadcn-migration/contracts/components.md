@@ -88,25 +88,25 @@
 
 **After**:
 ```tsx
-<Select value={filters.accountId ?? ""} onValueChange={v => onFilterChange({ accountId: v || undefined })}>
+<Select value={filters.accountId ?? "__all__"} onValueChange={v => onFilterChange({ accountId: v === "__all__" ? undefined : v })}>
   <SelectTrigger><SelectValue placeholder="全部账户" /></SelectTrigger>
   <SelectContent>
-    <SelectItem value="">全部账户</SelectItem>
+    <SelectItem value="__all__">全部账户</SelectItem>
     {accounts.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
   </SelectContent>
 </Select>
-<!-- 分类筛选同结构 -->
+<!-- 分类筛选同结构,sentinel 同 __all__ -->
 ```
 
 **Behavior diff**:
-- ✅ `filters.accountId === undefined`(全部)状态:Select 显示 placeholder"全部账户"或选中第一个 SelectItem(空 sentinel)
-- ✅ 切换 filter 触发 `onFilterChange` 不变
+- ✅ `filters.accountId === undefined`(全部)状态:Select 选中第一项 `<SelectItem value="__all__">全部账户</SelectItem>`(R4 024 实测修正,Radix Select 不允许空字符串 value)
+- ✅ 切换 filter 触发 `onFilterChange` 不变(`v === "__all__" ? undefined : v` 转换)
 - ✅ 跨页面 reset filter 不变
-- ⚠️ 占位项必须用 `<SelectItem value="">`(R4 决议),不能用 placeholder 替代 —— 因为用户需要能"显式回到全部"
+- ⚠️ 占位项必须用 `<SelectItem value="__all__">`(R4 决议),不能用 placeholder 替代 —— 因为用户需要能"显式回到全部"
 
 **a11y lift**: 同 C1。
 
-**Test selectors**: 同 C1。注意 sentinel value="" 的 SelectItem 需 `await userEvent.click()` 后才能 query。
+**Test selectors**: 同 C1。注意 sentinel value="__all__" 的 SelectItem 需 `await userEvent.click()` 后才能 query。
 
 ---
 

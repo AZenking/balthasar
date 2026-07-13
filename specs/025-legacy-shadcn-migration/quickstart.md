@@ -78,7 +78,7 @@ pnpm type-check && pnpm lint && pnpm test
 
 1. 打开 `/transactions`
 2. 点击"账户筛选"字段
-3. **预期**:shadcn `Select` 浮层,首项为"全部账户"(value=`""`)+ 各 active 账户
+3. **预期**:shadcn `Select` 浮层,首项为"全部账户"(value=`__all__` sentinel)+ 各 active 账户
 4. 选某个账户 → 列表过滤
 5. 重新打开,看到该账户被 `✓` 标记(选中状态)
 6. 选"全部账户" → 列表恢复全量
