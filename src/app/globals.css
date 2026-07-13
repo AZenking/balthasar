@@ -20,26 +20,31 @@
 .privacy-on [data-amount]::after { content: '***'; }
 
 @theme {
-  --color-background: oklch(1 0 0);
-  --color-foreground: oklch(0.145 0 0);
-  --color-primary: oklch(0.205 0 0);
-  --color-primary-foreground: oklch(0.985 0 0);
-  --color-muted: oklch(0.97 0 0);
-  --color-muted-foreground: oklch(0.556 0 0);
-  --color-accent: oklch(0.97 0 0);
-  --color-accent-foreground: oklch(0.205 0 0);
-  --color-border: oklch(0.922 0 0);
-  --color-input: oklch(0.922 0 0);
-  --color-ring: oklch(0.708 0 0);
+  /* shadcn legacy tokens remapped to HeroUI v3 default palette (026 Phase 10).
+   * Values copied from node_modules/@heroui/styles/dist/themes/default/variables.css
+   * because Tailwind v4 @theme requires concrete values (no var() refs).
+   * Lets the 14 shadcn adapter components (`bg-primary`, `text-muted-foreground`,
+   * etc.) render in HeroUI's blue accent / surface palette instead of shadcn's
+   * black/gray defaults. */
+  --color-background: oklch(0.9702 0 0);
+  --color-foreground: oklch(0.2103 0.0059 285.89);
+  --color-primary: oklch(0.6204 0.195 253.83);
+  --color-primary-foreground: oklch(0.9911 0 0);
+  --color-muted: oklch(0.9524 0.0013 286.37);
+  --color-muted-foreground: oklch(0.5517 0.0138 285.94);
+  --color-accent: oklch(0.9524 0.0013 286.37);
+  --color-accent-foreground: oklch(0.2103 0.0059 285.89);
+  --color-border: oklch(0.9 0.004 286.32);
+  --color-input: oklch(0.9 0.004 286.32);
+  --color-ring: oklch(0.6204 0.195 253.83);
   --color-card: oklch(1 0 0);
-  --color-card-foreground: oklch(0.145 0 0);
-  --color-destructive: oklch(0.577 0.245 27.325);
-  --color-destructive-foreground: oklch(0.985 0 0);
-  /* 024-ui-consistency US1: shadcn primitives (Dialog/Popover/Tooltip/Select/Tabs) reference these tokens */
+  --color-card-foreground: oklch(0.2103 0.0059 285.89);
+  --color-destructive: oklch(0.6532 0.2328 25.74);
+  --color-destructive-foreground: oklch(0.9911 0 0);
   --color-popover: oklch(1 0 0);
-  --color-popover-foreground: oklch(0.145 0 0);
-  --color-secondary: oklch(0.97 0 0);
-  --color-secondary-foreground: oklch(0.205 0 0);
+  --color-popover-foreground: oklch(0.2103 0.0059 285.89);
+  --color-secondary: oklch(0.9524 0.0013 286.37);
+  --color-secondary-foreground: oklch(0.2103 0.0059 285.89);
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
