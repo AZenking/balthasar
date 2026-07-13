@@ -91,3 +91,45 @@ curl -b cookies.txt -X POST http://localhost:3000/api/trpc/account.unarchive \
   -H "Content-Type: application/json" \
   -d '{"json":{"id":"<account-uuid>"}}'
 ```
+
+---
+
+## shadcn 迁移回归验证 (025-legacy-shadcn-migration)
+
+> 本节由 [025-legacy-shadcn-migration](../025-legacy-shadcn-migration/spec.md) 追加(2026-07-13),用于验证 shadcn 原语迁移后行为零回归。
+> 既有验收场景保持不变;本节仅追加迁移相关检查项。
+
+### 迁移点
+
+| 控件 | 迁移前 | 迁移后 | 验证点 |
+|---|---|---|---|
+| 币种字段 | 裸 `<select>` + `useState` | shadcn `<Select>` + `onValueChange={setCurrency}` | 浮层渲染 / 预填 / 候选清单 |
+| 账户归档 | `window.confirm("确认归档?")` + 静默 onSuccess | **取消 confirm**(Q2)+ `toast.success("已归档")` + dashboard invalidate + onError toast | 立即归档 / 无 confirm / 成功 toast / 失败 toast |
+| 账户反归档 | 完全静默(无 confirm / 无 toast) | `toast.success("已恢复")` + dashboard invalidate + onError toast | 立即恢复 / 成功 toast / 失败 toast |
+
+### 归档 / 反归档 UX 关键变化(clarify Q2 + R5 + R6)
+
+迁移后归档 = 可逆操作,与 023 分类归档 UX 对齐:**无 confirm + server-first + toast**。
+反归档补齐 toast 反馈(既有完全静默)。
+
+| 维度 | 迁移前 | 迁移后 |
+|---|---|---|
+| 归档 confirm | `window.confirm("确认归档?...")` | 无 |
+| 归档成功反馈 | 静默 | `toast.success("已归档")` |
+| 归档失败反馈 | 静默(账户可能停留原位) | `toast.error(err.message)` + 账户保持原位 |
+| 反归档成功反馈 | 静默 | `toast.success("已恢复")` |
+| 反归档失败反馈 | 静默 | `toast.error(err.message)` |
+| dashboard 影响 | 不 invalidate(既有遗漏) | `utils.dashboard.summary.invalidate()` 补齐 |
+
+### 验证 Checklist
+
+- [ ] `/settings` → "新建账户" → 币种字段为 shadcn Select(占位"选择币种"),含 CNY / USD / EUR 等候选
+- [ ] 点币种字段 → 浮层弹出(非原生 picker);选 CNY → 提交 → 列表新增
+- [ ] 点既有账户"编辑" → 币种 Select 预填当前账户币种
+- [ ] 点 active 账户"归档" → **无 confirm 弹出**,账户立即从"活跃"区移到"已归档"区,toast"已归档"
+- [ ] 同时 `/dashboard` 该账户余额仍计入总资产(归档不删除)
+- [ ] 点"已归档"区账户"反归档" → 立即移回"活跃"区,toast"已恢复"
+- [ ] 失败路径(mock 后端 400 / server validation):账户保持原位 + toast.error 显示后端错误(不出现"半归档"中间态)
+- [ ] macOS Safari / Chrome / iPhone 13 DevTools 三平台币种 Select 视觉一致
+- [ ] macOS VoiceOver 抽查币种 Select 角色(listbox / option)正确读出
+- [ ] 既有 quickstart 全部场景**除"确认归档? dialog"相关步骤外** 100% 通过;归档步骤按本节更新为"点归档立即归档 + toast"(FR-014)

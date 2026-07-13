@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   transactionFormSchema,
@@ -14,6 +14,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { CategorySelect } from "@/components/category/category-select";
 import { cn } from "@/lib/utils";
 
@@ -49,6 +56,7 @@ export function TransactionForm({ editId }: { editId?: string }) {
     watch,
     setValue,
     reset,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<TransactionFormValues>({
     resolver: zodResolver(transactionFormSchema),
@@ -92,6 +100,18 @@ export function TransactionForm({ editId }: { editId?: string }) {
   const unarchivedAccounts = (accounts ?? []).filter(
     (a) => a.archivedAt === null
   );
+
+  // ── Default accountId to first unarchived account (create mode only) ──
+  // 025: For shadcn Select we must set the form value explicitly (no
+  // native defaultValue on the original element). Run once accounts arrive.
+  // Deps intentionally limited: watch/setValue are RHF-stable refs.
+  useEffect(() => {
+    if (isEditMode) return;
+    if (unarchivedAccounts.length === 0) return;
+    if (!watch("accountId")) {
+      setValue("accountId", unarchivedAccounts[0]!.id);
+    }
+  }, [unarchivedAccounts, isEditMode, watch, setValue]);
 
   // No accounts → prompt
   if (unarchivedAccounts.length === 0) {
@@ -201,18 +221,27 @@ export function TransactionForm({ editId }: { editId?: string }) {
       {/* Account */}
       <div className="space-y-2">
         <Label htmlFor="accountId">账户</Label>
-        <select
-          id="accountId"
-          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-          {...register("accountId")}
-          defaultValue={unarchivedAccounts[0]?.id}
-        >
-          {unarchivedAccounts.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.name} (¥{(a.initialBalance / 100).toFixed(2)})
-            </option>
-          ))}
-        </select>
+        <Controller
+          control={control}
+          name="accountId"
+          render={({ field }) => (
+            <Select
+              value={field.value ?? ""}
+              onValueChange={field.onChange}
+            >
+              <SelectTrigger id="accountId">
+                <SelectValue placeholder="选择账户" />
+              </SelectTrigger>
+              <SelectContent>
+                {unarchivedAccounts.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>
+                    {a.name} (¥{(a.initialBalance / 100).toFixed(2)})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        />
         {errors.accountId && (
           <p className="text-xs text-destructive">
             {errors.accountId.message}

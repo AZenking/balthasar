@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { TRPCClientError } from "@trpc/client";
+import { toast } from "sonner";
 import { trpc } from "@/lib/trpc/client";
 import {
   TransactionFilters,
@@ -11,6 +13,16 @@ import { TransactionSummary } from "@/components/transactions/transaction-summar
 import { TransactionListItem } from "@/components/transactions/transaction-list-item";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type TransactionItem = {
   id: string;
@@ -33,6 +45,9 @@ export default function TransactionsPage() {
     accountId: undefined,
     categoryId: undefined,
   });
+
+  // ── Delete confirm state (025: AlertDialog state-driven, replaces native confirm) ──
+  const [confirmingTxId, setConfirmingTxId] = useState<string | null>(null);
 
   // ── Pagination state ──
   const [cursor, setCursor] = useState<string | undefined>(undefined);
@@ -78,22 +93,32 @@ export default function TransactionsPage() {
     }
   };
 
-  // ── Delete mutation ──
+  // ── Delete mutation (025: toast feedback added, AlertDialog-driven) ──
   const deleteMutation = trpc.transaction.delete.useMutation({
     onSuccess: () => {
       utils.transaction.list.invalidate();
       utils.dashboard.summary.invalidate();
+      toast.success("已删除");
+      setConfirmingTxId(null);
     },
+    onError: (err) =>
+      toast.error(
+        err instanceof TRPCClientError ? err.message : "删除失败"
+      ),
   });
 
   const handleEdit = (id: string) => {
     router.push(`/transaction/new?id=${id}`);
   };
 
+  // 025: open AlertDialog instead of native browser confirm
   const handleDelete = (id: string) => {
-    if (window.confirm("确认删除?")) {
-      deleteMutation.mutate({ id });
-    }
+    setConfirmingTxId(id);
+  };
+
+  const confirmDelete = () => {
+    if (!confirmingTxId) return;
+    deleteMutation.mutate({ id: confirmingTxId });
   };
 
   const summary = data?.summary;
@@ -166,6 +191,35 @@ export default function TransactionsPage() {
           </>
         )}
       </div>
+
+      {/* 025: shadcn AlertDialog destructive — replaces native browser confirm */}
+      <AlertDialog
+        open={confirmingTxId !== null}
+        onOpenChange={(o) => !o && setConfirmingTxId(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除?</AlertDialogTitle>
+            <AlertDialogDescription>
+              此操作不可撤销,该交易记录将被永久删除。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>
+              取消
+            </AlertDialogCancel>
+            <AlertDialogAction asChild>
+              <Button
+                variant="destructive"
+                disabled={deleteMutation.isPending}
+                onClick={confirmDelete}
+              >
+                {deleteMutation.isPending ? "删除中..." : "确认删除"}
+              </Button>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

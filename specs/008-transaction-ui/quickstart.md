@@ -46,3 +46,28 @@
 | SC-004 (数字键盘) | 移动端测试 | ⏳ |
 | SC-005 (Dashboard 刷新) | 记账后检查首页 | ⏳ |
 | SC-006 (分类联动 ≤ 200ms) | 切类型观察 | ⏳ |
+
+---
+
+## shadcn 迁移回归验证 (025-legacy-shadcn-migration)
+
+> 本节由 [025-legacy-shadcn-migration](../025-legacy-shadcn-migration/spec.md) 追加(2026-07-13),用于验证 shadcn 原语迁移后行为零回归。
+> 既有验收场景保持不变;本节仅追加迁移相关检查项。
+
+### 迁移点
+
+| 控件 | 迁移前 | 迁移后 | 验证点 |
+|---|---|---|---|
+| 账户选择(accountId) | 裸 `<select>` + `register("accountId")` | shadcn `<Select>` + RHF `<Controller>` | 浮层渲染 / 键盘导航 / 预填 / 校验失败保留值 |
+| 分类选择(categoryId) | 已由 023 `CategorySelect` 接管(024 US6) | 不变(FR-018 锁定) | 不在 025 scope |
+
+### 验证 Checklist
+
+- [ ] 打开 `/transaction/new`,点账户字段 → 弹出 shadcn Select 浮层(非原生 picker)
+- [ ] 按 ↓↑ 高亮在账户列表间移动;Enter 选中并关闭;Esc 关闭不修改
+- [ ] 新建模式默认选中第一个未归档账户(由 useEffect 注入,等价迁移前 `defaultValue`)
+- [ ] 编辑模式(`/transaction/new?id=xxx`)进入后账户 Select 预填正确
+- [ ] 选择账户 + 分类,不填金额,点"确认记账" → 金额红字错误,账户 Select 保留已选值
+- [ ] macOS Safari / Chrome / iPhone 13 DevTools 模拟三平台视觉一致(浮层无 OS 原生 picker)
+- [ ] macOS VoiceOver 抽查账户 Select 角色(listbox / option)正确读出
+- [ ] 既有 quickstart 全部场景(除原生 select picker 相关步骤)100% 通过(FR-006)

@@ -47,3 +47,33 @@
 | SC-004 (小计准确) | type=expense → income=0/expense=5800/net=-5800; type=income → income=15000/expense=0/net=15000 | ✅ PASS |
 | SC-005 (删除刷新) | 创建测试交易 → 删除 → 列表 4→3, 小计恢复 | ✅ PASS |
 | SC-006 (分页连续) | API cursor 逻辑正确 (nextCursor=null 当 <50 条); useEffect 追加 items | ✅ PASS |
+
+---
+
+## shadcn 迁移回归验证 (025-legacy-shadcn-migration)
+
+> 本节由 [025-legacy-shadcn-migration](../025-legacy-shadcn-migration/spec.md) 追加(2026-07-13),用于验证 shadcn 原语迁移后行为零回归。
+> 既有验收场景保持不变;本节仅追加迁移相关检查项。
+
+### 迁移点
+
+| 控件 | 迁移前 | 迁移后 | 验证点 |
+|---|---|---|---|
+| 账户筛选 | 裸 `<select>` + `<option value="">全部账户</option>` | shadcn `<Select>` + `<SelectItem value="__all__">全部账户</SelectItem>`(R4 sentinel) | 浮层渲染 / sentinel 切换 / 跨页 reset |
+| 分类筛选 | 裸 `<select>` + `<option value="">全部分类</option>` | shadcn `<Select>` + sentinel `__all__` | 同上 |
+| 删除确认 | `window.confirm("确认删除?")` 同步阻塞 | shadcn `<AlertDialog>` + state-driven + destructive 红色 variant | 默认焦点在"取消" / Esc / 遮罩关闭 / 确认 + toast / 失败 toast |
+
+### 验证 Checklist
+
+- [ ] 打开 `/transactions` 展开"筛选" → 点账户字段 → 弹 shadcn Select,首项为"全部账户"(sentinel)
+- [ ] 选某账户 → 列表过滤;重新打开 Select,该账户有选中标记
+- [ ] 显式选回"全部账户" → 列表恢复全量(accountId 转回 undefined)
+- [ ] 分类筛选同上(仅在选了类型后出现)
+- [ ] 点交易行"删除"按钮 → 弹 shadcn AlertDialog(非浏览器 confirm),标题"确认删除?"
+- [ ] AlertDialog 默认 Tab 焦点在"取消"按钮(防误触 Enter 删除)
+- [ ] "确认删除"按钮视觉为 destructive 红色(`AlertDialogAction asChild` + `Button variant="destructive"`)
+- [ ] 按 Esc / 点遮罩 → 关闭 dialog,无 mutation 触发
+- [ ] 点"确认删除" → 按钮文案"删除中..." + disabled,"取消"同时 disabled;mutation 成功后 dialog 自动关闭 + toast"已删除" + 列表减少一条
+- [ ] 失败路径(mock 后端 500):mutation 失败 → dialog 保持打开 + "确认删除"恢复可点击 + toast.error 显示错误
+- [ ] macOS VoiceOver 抽查:AlertDialog 打开后焦点移入 dialog,Tab 在 dialog 内循环,读出"对话框 / 确认删除?"
+- [ ] 既有 quickstart 全部场景(除 window.confirm 相关步骤按本节更新)100% 通过(FR-010)
