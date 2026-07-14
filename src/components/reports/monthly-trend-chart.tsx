@@ -29,6 +29,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { cn } from "@/lib/utils";
 
 export type MonthlyTrendItem = {
   year: number;
@@ -93,14 +94,17 @@ function CustomTooltip({
     <div className="rounded-md border border-border bg-popover px-3 py-2 text-xs shadow-md">
       <div className="mb-1 font-medium text-foreground">{label}</div>
       {payload.map((p) => (
-        <div key={p.name} className="flex items-center gap-2" data-amount>
+        <div key={p.name} className="flex items-center gap-2">
           <span
             className="inline-block h-2 w-2 rounded-sm"
             style={{ backgroundColor: p.color }}
             aria-hidden
           />
           <span className="text-muted-foreground">{p.name}</span>
-          <span className="ml-auto font-medium text-foreground">
+          <span
+            data-amount
+            className="ml-auto font-medium text-foreground"
+          >
             {formatAmount(p.value)}
           </span>
         </div>
@@ -195,19 +199,19 @@ export function MonthlyTrendChart({
             <CartesianGrid
               strokeDasharray="3 3"
               vertical={false}
-              stroke="oklch(0.9 0.004 286.32)"
+              stroke="var(--border)"
             />
             <XAxis
               dataKey="shortLabel"
               tickLine={false}
-              axisLine={{ stroke: "oklch(0.9 0.004 286.32)" }}
-              tick={{ fontSize: 11, fill: "oklch(0.5517 0.0138 285.94)" }}
+              axisLine={{ stroke: "var(--border)" }}
+              tick={{ fontSize: 11, fill: "var(--muted)" }}
             />
             <YAxis
               tickFormatter={formatYuanTick}
               tickLine={false}
               axisLine={false}
-              tick={{ fontSize: 10, fill: "oklch(0.5517 0.0138 285.94)" }}
+              tick={{ fontSize: 10, fill: "var(--muted)" }}
               width={48}
             />
             <Tooltip content={<CustomTooltip />} />
@@ -349,12 +353,12 @@ function MonthButtonRow({
             type="button"
             onClick={() => onMonthClick?.(row.year, row.month)}
             aria-pressed={isSelected}
-            className={
-              "flex min-h-[44px] min-w-[64px] shrink-0 items-center justify-center rounded-md border px-3 text-xs font-medium transition-colors " +
-              (isSelected
+            className={cn(
+              "flex min-h-[44px] min-w-[64px] shrink-0 items-center justify-center rounded-md border px-3 text-xs font-medium transition-colors",
+              isSelected
                 ? "border-primary bg-primary text-primary-foreground"
-                : "border-border bg-background text-foreground hover:bg-accent hover:text-accent-foreground")
-            }
+                : "border-border bg-background text-foreground hover:bg-accent hover:text-accent-foreground",
+            )}
           >
             {row.shortLabel}
           </button>

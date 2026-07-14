@@ -151,7 +151,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="mx-auto max-w-[720px] space-y-5">
       <PageHeader title="我的" />
 
       {/* ── 1. 主题(026-switch 第一期 4:三选主题系统) ── */}

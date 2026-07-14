@@ -7,6 +7,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 import type { Category } from "@/server/db/schema";
 
 /**
@@ -51,9 +52,12 @@ export function CategoryItem({
   const childCount = node.children.length;
 
   return (
-    <div className={isArchived ? "opacity-50" : ""}>
+    <div className={cn(isArchived && "opacity-50")}>
       <div
-        className={`flex items-center justify-between py-2 ${isChild ? "pl-8" : "pl-2"}`}
+        className={cn(
+          "flex items-center justify-between py-2",
+          isChild ? "pl-8" : "pl-2",
+        )}
       >
         <div className="flex min-w-0 items-center gap-2">
           {dragHandle}

@@ -14,7 +14,7 @@ import { PageHeader } from "@/components/layout/page-header";
  */
 export default function CategoriesSettingsPage() {
   return (
-    <div>
+    <div className="mx-auto max-w-[720px]">
       <PageHeader
         title="分类管理"
         actions={

@@ -13,6 +13,8 @@
  *   - 标题用 foreground(默认正文色),描述用 muted-foreground
  *   - 全部走 HeroUI CSS 变量,自动适配 dark / light
  */
+import { cn } from "@/lib/utils";
+
 interface EmptyStateProps {
   /** 可选 lucide-react 图标组件(如 ReceiptIcon)。 */
   icon?: React.ComponentType<{ className?: string }>;
@@ -35,7 +37,10 @@ export function EmptyState({
 }: EmptyStateProps) {
   return (
     <div
-      className={`flex min-h-[40vh] flex-col items-center justify-center gap-3 p-6 text-center ${className ?? ""}`}
+      className={cn(
+        "flex min-h-[40vh] flex-col items-center justify-center gap-3 p-6 text-center",
+        className,
+      )}
     >
       {Icon && (
         <Icon

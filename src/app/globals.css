@@ -51,7 +51,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--muted-foreground);
+  color: var(--muted);
 }
 
 /*
@@ -202,7 +202,7 @@ html, body {
   .text-caption {
     font-size: 0.75rem;
     line-height: 1rem;
-    color: var(--muted-foreground);
+    color: var(--muted);
   }
   .text-amount {
     font-size: 1.5rem;

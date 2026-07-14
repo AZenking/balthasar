@@ -66,9 +66,12 @@ function CustomTooltip({
   return (
     <div className="rounded-md border border-border bg-popover px-3 py-2 text-xs shadow-md">
       <div className="font-medium text-foreground">{item.name}</div>
-      <div className="mt-1 flex items-center gap-3" data-amount>
+      <div className="mt-1 flex items-center gap-3">
         <span className="text-muted-foreground">金额</span>
-        <span className="ml-auto font-medium text-foreground">
+        <span
+          data-amount
+          className="ml-auto font-medium text-foreground"
+        >
           {formatAmount(item.value)}
         </span>
       </div>

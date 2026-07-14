@@ -9,8 +9,8 @@
  *
  * - 读取 `useTheme()` 当前 `theme`,作为 `selectedKey`
  * - 点击 → `setTheme(next)`,ThemeProvider 同步 localStorage + `<html>.dark`
- * - 在 ThemeProvider hydration 完成(theme 仍为默认 "system")前,UI 与
- *   inline script 设置的 `<html>.dark` 一致(默认 system = 跟随系统)
+ * - hydration-safe:在 ThemeProvider `mounted=false` 时渲染骨架占位,
+ *   避免首帧"跟随系统"被选中、hydration 后跳到"浅色 / 深色"的闪烁。
  */
 
 import { Tabs } from "@heroui/react";
@@ -23,7 +23,18 @@ const THEME_OPTIONS: { id: ThemePreference; label: string }[] = [
 ];
 
 export function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, mounted } = useTheme();
+
+  // 首帧(未 hydration)渲染骨架,避免 selectedKey 在 system → 实际偏好之间跳变。
+  if (!mounted) {
+    return (
+      <div
+        className="h-10 w-full rounded-md bg-muted animate-pulse"
+        aria-label="主题加载中"
+      />
+    );
+  }
+
   return (
     <Tabs
       aria-label="主题切换"

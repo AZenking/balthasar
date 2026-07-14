@@ -113,9 +113,12 @@ function DailyTooltip({
       <div className="font-medium text-foreground">
         {row ? `${row.label} ${row.subLabel}` : ""}
       </div>
-      <div className="mt-1 flex items-center gap-3" data-amount>
+      <div className="mt-1 flex items-center gap-3">
         <span className="text-muted-foreground">支出</span>
-        <span className="ml-auto font-medium text-foreground">
+        <span
+          data-amount
+          className="ml-auto font-medium text-foreground"
+        >
           {formatAmount(item.value)}
         </span>
       </div>
@@ -136,9 +139,12 @@ function WeeklyTooltip({
   return (
     <div className="rounded-md border border-border bg-popover px-3 py-2 text-xs shadow-md">
       <div className="font-medium text-foreground">{row?.label ?? ""}</div>
-      <div className="mt-1 flex items-center gap-3" data-amount>
+      <div className="mt-1 flex items-center gap-3">
         <span className="text-muted-foreground">支出</span>
-        <span className="ml-auto font-medium text-foreground">
+        <span
+          data-amount
+          className="ml-auto font-medium text-foreground"
+        >
           {formatAmount(item.value)}
         </span>
       </div>
@@ -186,19 +192,19 @@ function DailyView({ buckets }: { buckets: DailyBucket[] }) {
           <CartesianGrid
             strokeDasharray="3 3"
             vertical={false}
-            stroke="oklch(0.9 0.004 286.32)"
+            stroke="var(--border)"
           />
           <XAxis
             dataKey="label"
             tickLine={false}
-            axisLine={{ stroke: "oklch(0.9 0.004 286.32)" }}
-            tick={{ fontSize: 11, fill: "oklch(0.5517 0.0138 285.94)" }}
+            axisLine={{ stroke: "var(--border)" }}
+            tick={{ fontSize: 11, fill: "var(--muted)" }}
           />
           <YAxis
             tickFormatter={formatYuanTick}
             tickLine={false}
             axisLine={false}
-            tick={{ fontSize: 10, fill: "oklch(0.5517 0.0138 285.94)" }}
+            tick={{ fontSize: 10, fill: "var(--muted)" }}
             width={40}
             allowDecimals={false}
           />
@@ -241,20 +247,20 @@ function WeeklyView({ buckets }: { buckets: WeeklyBucket[] }) {
           <CartesianGrid
             strokeDasharray="3 3"
             vertical={false}
-            stroke="oklch(0.9 0.004 286.32)"
+            stroke="var(--border)"
           />
           <XAxis
             dataKey="label"
             tickLine={false}
-            axisLine={{ stroke: "oklch(0.9 0.004 286.32)" }}
-            tick={{ fontSize: 9, fill: "oklch(0.5517 0.0138 285.94)" }}
+            axisLine={{ stroke: "var(--border)" }}
+            tick={{ fontSize: 9, fill: "var(--muted)" }}
             interval={0}
           />
           <YAxis
             tickFormatter={formatYuanTick}
             tickLine={false}
             axisLine={false}
-            tick={{ fontSize: 10, fill: "oklch(0.5517 0.0138 285.94)" }}
+            tick={{ fontSize: 10, fill: "var(--muted)" }}
             width={40}
             allowDecimals={false}
           />

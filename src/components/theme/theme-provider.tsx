@@ -29,6 +29,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from "react";
 
@@ -44,12 +45,15 @@ type ThemeContextValue = {
   resolvedTheme: ResolvedTheme;
   /** 修改偏好并持久化。 */
   setTheme: (t: ThemePreference) => void;
+  /** 是否已 hydration 完成(消费方据此避免首帧选中态闪烁)。 */
+  mounted: boolean;
 };
 
 const ThemeContext = createContext<ThemeContextValue>({
   theme: "system",
   resolvedTheme: "dark",
   setTheme: () => {},
+  mounted: false,
 });
 
 function applyHtmlClass(resolved: ResolvedTheme) {
@@ -62,8 +66,9 @@ function applyHtmlClass(resolved: ResolvedTheme) {
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<ThemePreference>("system");
   const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>("dark");
+  const [mounted, setMounted] = useState(false);
 
-  // hydration 后读 localStorage(避免 SSR/CSR mismatch)
+  // hydration 后读 localStorage(避免 SSR/CSR mismatch) + 标记 mounted。
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -73,6 +78,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // localStorage 不可用(隐私模式),保持 system 默认。
     }
+    setMounted(true);
   }, []);
 
   // 监听 system preference 变化(若 theme=system)。
@@ -102,8 +108,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setThemeState(t);
   }, []);
 
+  const contextValue = useMemo(
+    () => ({ theme, resolvedTheme, setTheme, mounted }),
+    [theme, resolvedTheme, setTheme, mounted],
+  );
+
   return (
-    <ThemeContext.Provider value={{ theme, resolvedTheme, setTheme }}>
+    <ThemeContext.Provider value={contextValue}>
       {children}
     </ThemeContext.Provider>
   );
