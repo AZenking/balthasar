@@ -1,8 +1,12 @@
 name: Deploy
 
+# spec-015 FR-019 双触发器分流:
+#   push to main    → 滚动镜像(<short-sha> / edge)
+#   push of tag v*  → version 镜像(X.Y.Z / X.Y / X / latest)
 on:
   push:
     branches: [main]
+    tags: ['v*']
   workflow_dispatch:
 
 env:
@@ -15,7 +19,8 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    # 仅在 main push 或 tag push 时跑(workflow_dispatch 也允许)
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
     permissions:
       packages: write
 
@@ -35,6 +40,12 @@ jobs:
           echo "short_sha=${short_sha}" >> "$GITHUB_OUTPUT"
           echo "major=${major}" >> "$GITHUB_OUTPUT"
           echo "major_minor=${major_minor}" >> "$GITHUB_OUTPUT"
+          # is_tag: 'true' / 'false'(决定推送 version 还是 rolling tags)
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            echo "is_tag=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_tag=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Set up QEMU (for arm64 cross-build)
         uses: docker/setup-qemu-action@v3
@@ -49,19 +60,39 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push multi-arch image
+      - name: Build and push multi-arch image (version tags)
+        if: steps.image.outputs.is_tag == 'true'
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
+          # tag push → X.Y.Z / X.Y / X / latest(从 package.json 读 version)
           tags: |
             ${{ steps.image.outputs.registry }}/app:${{ steps.image.outputs.version }}
             ${{ steps.image.outputs.registry }}/app:${{ steps.image.outputs.major_minor }}
             ${{ steps.image.outputs.registry }}/app:${{ steps.image.outputs.major }}
             ${{ steps.image.outputs.registry }}/app:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BETTER_AUTH_SECRET=${{ env.BETTER_AUTH_SECRET }}
+            BETTER_AUTH_URL=${{ env.BETTER_AUTH_URL }}
+            DATABASE_URL=${{ env.DATABASE_URL }}
+
+      - name: Build and push multi-arch image (rolling tags)
+        if: steps.image.outputs.is_tag != 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          # main push / dispatch → <short-sha> / edge 滚动镜像
+          tags: |
             ${{ steps.image.outputs.registry }}/app:${{ steps.image.outputs.short_sha }}
+            ${{ steps.image.outputs.registry }}/app:edge
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
