@@ -63,7 +63,7 @@ export const dashboardRouter = router({
 
       const [summary, recent, breakdown, trend] = await Promise.all([
         getMonthSummary({ familyId, monthStart, monthEnd }),
-        getRecentTransactions({ familyId, limit: 4 }),
+        getRecentTransactions({ familyId, limit: 5 }),
         getCategoryBreakdown({ familyId, monthStart, monthEnd }),
         isCurrentMonth
           ? getDailyTrend({ familyId, weekStart, weekEnd }).then((buckets) => ({
@@ -85,14 +85,15 @@ export const dashboardRouter = router({
       const monthNet = summary.income - summary.expense;
       const monthExpense = summary.expense;
 
-      // Top 2 categories. getCategoryBreakdown already orders by amount DESC;
-      // we add a tie-breaker on categoryName ASC (stable) before slicing.
+      // Top 4 categories (027-mobile-home-revamp FR-004; was Top 2 in 026).
+      // getCategoryBreakdown already orders by amount DESC; we add a
+      // tie-breaker on categoryName ASC (stable) before slicing.
       const topExpenseCategories = [...breakdown]
         .sort((a, b) => {
           if (b.amount !== a.amount) return b.amount - a.amount;
           return a.categoryName.localeCompare(b.categoryName);
         })
-        .slice(0, 2)
+        .slice(0, 4)
         .map((c) => ({
           categoryId: c.categoryId,
           categoryName: c.categoryName,

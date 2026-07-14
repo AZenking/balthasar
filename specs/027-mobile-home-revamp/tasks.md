@@ -61,29 +61,29 @@
 
 ### Tests for US2 (TDD — 先红)
 
-- [ ] T007 [P] [US2] 单元测试 `computeExpenseTrendPercent` 扩展:本月 vs 上月对比在 `src/tests/unit/domain/dashboard/trend-comparison.test.ts`(断言 comparisonPercent 计算 + 上月无数据返回 null)
-- [ ] T008 [P] [US2] 组件测试:隐私模式遮蔽 recharts YAxis 刻度在 `src/tests/unit/components/expense-trend-chart-privacy.test.tsx`(断言 privacy-on 时 tickFormatter 返回 `••`)
-- [ ] T009 [P] [US2] 集成测试:dashboard.summary 返回 Top4 分类 + recentTransactions 长度 5 在 `src/tests/integration/dashboard/summary-top4.test.ts`
+- [X] T007 [P] [US2] 单元测试 `computeExpenseTrendPercent` 扩展:本月 vs 上月对比在 `src/tests/unit/domain/dashboard/trend-comparison.test.ts`(断言 comparisonPercent 计算 + 上月无数据返回 null)
+- [X] T008 [P] [US2] 组件测试:隐私模式遮蔽 recharts YAxis 刻度在 `src/tests/unit/components/expense-trend-chart-privacy.test.tsx`(断言 privacy-on 时 tickFormatter 返回 `••`)
+- [X] T009 [P] [US2] 集成测试:dashboard.summary 返回 Top4 分类 + recentTransactions 长度 5 在 `src/tests/integration/dashboard/summary-top4.test.ts`
 
 ### Implementation for US2
 
-- [ ] T010 [US2] 扩展 `src/server/db/queries/dashboard.ts` `getCategoryBreakdown`:slice 改为前 4(026 是前 2);确认 `getRecentTransactions` limit 改 5(026 是 4)
-- [ ] T011 [US2] 重做 `src/components/dashboard/expense-trend-chart.tsx`:① YAxis `tickFormatter` 接收 isPrivacy prop,隐私态返回 `••`(research R3);② daily 视图改"本月每日"(非 026 的本周),接收 current + previous 两系列数据(research R6);③ **FR-005"点击数据点查看金额"= recharts Tooltip**(已挂 `data-amount`,隐私态自动遮蔽,research R6),无需独立弹层。**执行前 `/heroui-react` 查 recharts 集成与 HeroUI 主题 token**
-- [ ] T012 [US2] 重做 `src/components/dashboard/summary-hero-card`(或新建 `src/components/dashboard/summary-hero-card.tsx`):主数字从 monthNet 改为 **monthExpense**(FR-001),收入/结余为辅。**执行前 `/heroui-react` 查 Card 组合式 API**
-- [ ] T013 [US2] 新建 `src/components/dashboard/category-top-list.tsx`:Top4 分类横向进度条(替代下架的 Top2 卡),点击进 `/transactions?month=&type=expense&categoryId=`。**执行前 `/heroui-react`**
-- [ ] T014 [US2] 扩展 `src/components/dashboard/recent-transactions.tsx`:加左滑删除(research R7;`/heroui-react` 查 Swipeable 组件,无则轻量自定义 translateX)+ sonner toast 撤销。**撤销语义(H3 收敛)**:删除是 hard delete(026 FR-013),撤销 = 用原 tx 全字段(type/accountId/categoryId/amount/remark/occurredAt)**重新 create** —— 会生成新 id(接受);前端 optimistic 回滚 + React Query 用新行替换旧 key;审计链断开(transaction_events 旧 transaction_id 失效,FK ON DELETE SET NULL 已保留旧审计)属可接受代价
-- [ ] T015 [US2] 重做 `src/components/bottom-navigation.tsx`:5 入口含 Drawer → **4 入口 + 独立上凸圆形 FAB**(FR-007;FAB 直进 TransactionDrawer 默认支出,不弹二级层,research R8)。**执行前 `/heroui-react` 查 FAB/Button 绝对定位**
-- [ ] T016 [US2] 更新 `src/app/(app)/dashboard/page.tsx`:装配 DashboardTopNav(T066)+ 新 SummaryHeroCard + CategoryTopList + 重做的 ExpenseTrendChart + RecentTransactions;DashboardBody 传入新数据形状
-- [ ] T017 [US2] 更新 `src/app/globals.css`:若 recharts YAxis 用 CSS 兜底(非 tickFormatter 方案),补 `.privacy-on` 选择器(research R3 选 tickFormatter 方案则本任务可跳过)
+- [X] T010 [US2] 扩展 `src/server/db/queries/dashboard.ts` `getCategoryBreakdown`:slice 改为前 4(026 是前 2);确认 `getRecentTransactions` limit 改 5(026 是 4)
+- [X] T011 [US2] 重做 `src/components/dashboard/expense-trend-chart.tsx`:① YAxis `tickFormatter` 接收 isPrivacy prop,隐私态返回 `••`(research R3);② daily 视图改"本月每日"(非 026 的本周),接收 current + previous 两系列数据(research R6);③ **FR-005"点击数据点查看金额"= recharts Tooltip**(已挂 `data-amount`,隐私态自动遮蔽,research R6),无需独立弹层。**执行前 `/heroui-react` 查 recharts 集成与 HeroUI 主题 token**
+- [X] T012 [US2] 重做 `src/components/dashboard/summary-hero-card`(或新建 `src/components/dashboard/summary-hero-card.tsx`):主数字从 monthNet 改为 **monthExpense**(FR-001),收入/结余为辅。**执行前 `/heroui-react` 查 Card 组合式 API**
+- [X] T013 [US2] 新建 `src/components/dashboard/category-top-list.tsx`:Top4 分类横向进度条(替代下架的 Top2 卡),点击进 `/transactions?month=&type=expense&categoryId=`。**执行前 `/heroui-react`**
+- [X] T014 [US2] 扩展 `src/components/dashboard/recent-transactions.tsx`:加左滑删除(research R7;`/heroui-react` 查 Swipeable 组件,无则轻量自定义 translateX)+ sonner toast 撤销。**撤销语义(H3 收敛)**:删除是 hard delete(026 FR-013),撤销 = 用原 tx 全字段(type/accountId/categoryId/amount/remark/occurredAt)**重新 create** —— 会生成新 id(接受);前端 optimistic 回滚 + React Query 用新行替换旧 key;审计链断开(transaction_events 旧 transaction_id 失效,FK ON DELETE SET NULL 已保留旧审计)属可接受代价
+- [X] T015 [US2] 重做 `src/components/bottom-navigation.tsx`:5 入口含 Drawer → **4 入口 + 独立上凸圆形 FAB**(FR-007;FAB 直进 TransactionDrawer 默认支出,不弹二级层,research R8)。**执行前 `/heroui-react` 查 FAB/Button 绝对定位**
+- [X] T016 [US2] 更新 `src/app/(app)/dashboard/page.tsx`:装配 DashboardTopNav(T066)+ 新 SummaryHeroCard + CategoryTopList + 重做的 ExpenseTrendChart + RecentTransactions;DashboardBody 传入新数据形状
+- [X] T017 [US2] 更新 `src/app/globals.css`:若 recharts YAxis 用 CSS 兜底(非 tickFormatter 方案),补 `.privacy-on` 选择器(research R3 选 tickFormatter 方案则本任务可跳过)
 - [ ] T018 [US2] 验证 320px 响应式:首页各模块无横向滚动/重叠/截断(SC-003);手动 + 视口测试
 
 #### FR-002 顶部导航与月份切换(H1 补充,在 T016 装配前完成)
 
 > spec FR-002 要求顶部导航含"账本名称 + 年月 + 上月/下月切换 + 消息入口",切换支持箭头点击与**左右滑动**。当前 026 用 `MonthSelect`(Calendar Drawer),与本 FR 的"箭头+滑动"形态不同,需改造或新建。
 
-- [ ] T066 [US2] 重做首页顶部导航:新建 `src/components/dashboard/dashboard-top-nav.tsx`,含账本名称(取 family/默认"我的账本")+ 年月显示 + 上月/下月箭头按钮 + 左右滑动手势切月(FR-002)。评估:复用 `MonthSelect` 内部 state 还是新建 MonthNav —— 因 MonthSelect 是 Calendar Drawer 形态,与"箭头+滑动"不匹配,**新建 MonthNav**。**执行前 `/heroui-react` 查 Button/手势**
-- [ ] T067 [US2] 月份切换未来月份限制:箭头/滑动到未来月时禁用(FR-002"未来月份不可选");边界 = 当前 UTC 月
-- [ ] T068 [US2] 消息入口(FR-002):顶部导航右侧放 bell 图标占位按钮;**当前无通知系统后端**,本任务仅做 UI 占位(点击 toast"暂无消息"),功能留 V2。在 spec FR-002 注明"消息功能 V2"
+- [X] T066 [US2] 重做首页顶部导航:新建 `src/components/dashboard/dashboard-top-nav.tsx`,含账本名称(取 family/默认"我的账本")+ 年月显示 + 上月/下月箭头按钮 + 左右滑动手势切月(FR-002)。评估:复用 `MonthSelect` 内部 state 还是新建 MonthNav —— 因 MonthSelect 是 Calendar Drawer 形态,与"箭头+滑动"不匹配,**新建 MonthNav**。**执行前 `/heroui-react` 查 Button/手势**
+- [X] T067 [US2] 月份切换未来月份限制:箭头/滑动到未来月时禁用(FR-002"未来月份不可选");边界 = 当前 UTC 月
+- [X] T068 [US2] 消息入口(FR-002):顶部导航右侧放 bell 图标占位按钮;**当前无通知系统后端**,本任务仅做 UI 占位(点击 toast"暂无消息"),功能留 V2。在 spec FR-002 注明"消息功能 V2"
 
 **Checkpoint**: 首页 MVP 内重做完成,可独立交付(预算/资产区显示引导态)。
 

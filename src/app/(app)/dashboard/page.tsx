@@ -1,94 +1,69 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { Card, Skeleton } from "@heroui/react";
-import { MonthSelect } from "@/components/shared/month-select";
+import { DashboardTopNav } from "@/components/dashboard/dashboard-top-nav";
+import { SummaryHeroCard } from "@/components/dashboard/summary-hero-card";
+import { CategoryTopList } from "@/components/dashboard/category-top-list";
 import { ExpenseTrendChart } from "@/components/dashboard/expense-trend-chart";
-import { TopCategoryCard } from "@/components/dashboard/top-category-card";
-import { PrivacyToggle } from "@/components/privacy-toggle";
 import { RecentTransactions } from "@/components/dashboard/recent-transactions";
-import { PageHeader } from "@/components/layout/page-header";
+import { isPrivacyOn } from "@/lib/privacy";
 
 /**
- * DashboardPage (026-cream-amber-revamp + 026-switch 第一期 3:PageHeader)。
+ * DashboardPage (027-mobile-home-revamp US2)。
  *
- * 026-switch 调整:
- *   - 整页 padding 由 AppShell 注入(去掉 px-4 自包,直接用 PageHeader 标题行)
- *   - `<h1>轻记</h1>` 自定义实现替换为 PageHeader(title="首页" + 问候描述)
- *   - PrivacyToggle 进 PageHeader.actions
+ * 按《手机端首页设计》(2026-07-14) + 线稿"首页"屏重做。
  *
- * 整合 Phase 4-9 落地的所有子组件到一个连续滚动的移动端首页:
+ * ┌ DashboardTopNav:账本名 + 年月箭头/滑动 + 消息占位 + 隐私开关
+ * ├ SummaryHeroCard:本月支出(主数字) + 收入/结余(辅)   [FR-001]
+ * ├ CategoryTopList:支出 Top4 横向进度条(点击下钻)    [FR-004]
+ * ├ TrendSection:本月每日趋势 + 隐私遮蔽刻度          [FR-005/FR-008]
+ * └ RecentSection:最近 5 条(左滑/点编辑/删除+撤销)    [FR-006]
  *
- * ┌ PageHeader:首页 / 问候+昵称 · PrivacyToggle
- * ├       MonthSelect (最近 24 个月,与报表页共用)
- * ├ 主卡:本月结余(monthNet 大字 + 收入/支出)
- * ├ 支出趋势:ExpenseTrendChart (daily 当前月 / weekly 历史月)
- * ├ Top 2 分类:TopCategoryCard (点击下钻 /transactions?month=…&type=expense&categoryId=…)
- * └ 最近流水:RecentTransactions (最新 4 条,不受月份影响)
+ * 026 → 027 关键变化:
+ * - 主数字 结余 → 支出(FR-001)
+ * - Top2 卡 → Top4 列表(FR-004)
+ * - PageHeader+MonthSelect → DashboardTopNav(箭头+滑动,FR-002)
+ * - 趋势隐私补强(YAxis tickFormatter,FR-008)
+ * - recent 4 → 5 条(后端 limit)
  *
- * 数据契约:specs/026-cream-amber-revamp/contracts/dashboard-summary.md
- *
- * 关键约束:
- * - MonthSelect 必须显式传 {year, month}(FR-C002);缺省虽然后端也工作,
- *   但本页受 picker 控制,显式参数让缓存 key 稳定 + URL 可推断。
- * - 隐私模式:PrivacyToggle 在 PageHeader 右上,所有金额通过 `[data-amount]`
- *   被 globals.css 的 `.privacy-on [data-amount]` 规则统一遮蔽(FR-C008/C009)。
- * - 最近流水独立于月份(FR-C007):recentTransactions 来自 dashboard.summary,
- *   后端返回最新 4 条,与 yearMonth 无关。
+ * 数据契约:specs/027-mobile-home-revamp/contracts/dashboard-summary.md
  */
 
-// ─── 工具 ──────────────────────────────────────────────────────────────
-
-/** 把分(整数)转成"¥X.XX"展示串。 */
-function formatCents(cents: number): string {
-  return `¥${(cents / 100).toFixed(2)}`;
-}
-
-/**
- * 按 UTC 小时切片返回中文问候(FR-C001):
- * - 6-12 "早上好"
- * - 12-18 "下午好"
- * - 18-6 "晚上好"
- */
-function greetingByUtcHour(hour: number): string {
-  if (hour >= 6 && hour < 12) return "早上好";
-  if (hour >= 12 && hour < 18) return "下午好";
-  return "晚上好";
-}
-
-/** 返回当前 UTC 年月(用于 MonthSelect 初始值)。 */
+/** 返回当前 UTC 年月(初始值)。 */
 function currentUtcYearMonth(): { year: number; month: number } {
   const now = new Date();
   return { year: now.getUTCFullYear(), month: now.getUTCMonth() + 1 };
 }
 
-// ─── 页面 ──────────────────────────────────────────────────────────────
-
 export default function DashboardPage() {
   const [yearMonth, setYearMonth] = useState(currentUtcYearMonth);
 
-  // auth.me 提供当前 member.displayName 用于问候(FR-C001)。
-  // dashboard.summary 受 yearMonth 控制,显示对应月份汇总 + 4 条最新流水。
-  const meQuery = trpc.auth.me.useQuery();
   const summaryQuery = trpc.dashboard.summary.useQuery({
     year: yearMonth.year,
     month: yearMonth.month,
   });
 
-  // 问候切片用客户端 UTC 小时(SSR 与客户端 UTC 一致,无 hydration mismatch)。
-  const displayName = meQuery.data?.member?.displayName ?? "";
+  // 隐私态:读 localStorage(客户端)。SSR 默认 false,hydration 后真实。
+  // 趋势图 isPrivacy prop 控制刻度遮蔽;文本金额由全局 .privacy-on CSS 遮蔽。
+  // 全局 <html>.classList('privacy-on') 由 PrivacyToggle 维护;此处只在
+  // mount 时同步一次初始值(切换时 CSS 已即时遮蔽文本,刻度由本 state 驱动
+  // 重渲染——为捕捉切换,监听 storage 事件)。
+  const [isPrivacy, setIsPrivacy] = useState(false);
+  useEffect(() => {
+    setIsPrivacy(isPrivacyOn());
+    const onStorage = () => setIsPrivacy(isPrivacyOn());
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
   const isLoading = summaryQuery.isLoading || !summaryQuery.data;
 
   return (
     <div>
-      <PageHeader
-        title="首页"
-        description={<Greeting displayName={displayName} />}
-        actions={<PrivacyToggle />}
-      />
-      <MonthSelect
-        value={yearMonth}
+      <DashboardTopNav
+        yearMonth={yearMonth}
         onChange={(year, month) => setYearMonth({ year, month })}
       />
 
@@ -103,6 +78,7 @@ export default function DashboardPage() {
           topExpenseCategories={summaryQuery.data.topExpenseCategories}
           recentTransactions={summaryQuery.data.recentTransactions}
           yearMonth={yearMonth}
+          isPrivacy={isPrivacy}
         />
       )}
     </div>
@@ -111,117 +87,40 @@ export default function DashboardPage() {
 
 // ─── 子组件 ────────────────────────────────────────────────────────────
 
-/**
- * 问候切片:用当前 UTC 小时动态决定。
- *
- * SSR 与客户端的 UTC 小时相同(UTC 是绝对时间,不随时区变),所以
- * 服务端与客户端渲染结果一致,无 hydration mismatch。直接读
- * `new Date().getUTCHours()` 即可。
- */
-function Greeting({ displayName }: { displayName: string }) {
-  const hour = new Date().getUTCHours();
-  const text = displayName ? `${greetingByUtcHour(hour)} ${displayName}` : greetingByUtcHour(hour);
-  return <>{text}</>;
-}
-
-/** 主卡:本月结余(FR-C005)。monthNet 大字号,收入/支出作为辅信息。 */
-function SummaryHeroCard({
-  monthIncome,
-  monthExpense,
-  monthNet,
-}: {
-  monthIncome: number;
-  monthExpense: number;
-  monthNet: number;
-}) {
-  const netColor = monthNet >= 0 ? "text-[var(--success)]" : "text-[var(--danger)]";
-  return (
-    <section aria-label="本月结余" className="pt-4">
-      <Card>
-        <Card.Content className="p-4">
-          <p className="text-xs text-muted-foreground">本月结余</p>
-          <p
-            data-amount
-            className={`mt-1 text-amount ${netColor}`}
-          >
-            {formatCents(monthNet)}
-          </p>
-          <div className="mt-3 flex gap-4 text-sm">
-            <div className="flex items-center gap-1">
-              <span className="text-muted-foreground">收入</span>
-              <span
-                data-amount
-                className="font-semibold tabular-nums text-[var(--success)]"
-              >
-                {formatCents(monthIncome)}
-              </span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="text-muted-foreground">支出</span>
-              <span
-                data-amount
-                className="font-semibold tabular-nums text-[var(--danger)]"
-              >
-                {formatCents(monthExpense)}
-              </span>
-            </div>
-          </div>
-        </Card.Content>
-      </Card>
-    </section>
-  );
-}
-
-/** 支出趋势区块(FR-C003 + FR-C004)。 */
+/** 支出趋势区块(FR-005 + FR-008 隐私遮蔽)。 */
 function TrendSection({
   trend,
+  isPrivacy,
 }: {
   trend: React.ComponentProps<typeof ExpenseTrendChart>["trend"];
+  isPrivacy: boolean;
 }) {
   const isDaily = trend.granularity === "daily";
   return (
     <section aria-label="支出趋势" className="pt-4">
       <Card>
-        <Card.Content className="p-4">
-          <h2 className="mb-3 text-sm font-medium text-foreground">
-            {isDaily ? "本周支出趋势" : "本月支出趋势(按周)"}
-          </h2>
-          <ExpenseTrendChart trend={trend} />
+        <Card.Header>
+          <Card.Title>
+            {isDaily ? "本月支出趋势" : "本月支出趋势(按周)"}
+          </Card.Title>
+        </Card.Header>
+        <Card.Content className="p-4 pt-0">
+          <ExpenseTrendChart trend={trend} isPrivacy={isPrivacy} />
         </Card.Content>
       </Card>
     </section>
   );
 }
 
-/** Top 2 分类卡(FR-C006)。下钻由 TopCategoryCard 内部 router.push 处理。 */
-function TopCategoriesSection({
-  items,
-  yearMonth,
-}: {
-  items: React.ComponentProps<typeof TopCategoryCard>["items"];
-  yearMonth: { year: number; month: number };
-}) {
-  return (
-    <section aria-label="支出 Top 2 分类">
-      <h2 className="pt-4 pb-1 text-sm font-medium text-foreground">
-        支出 Top 2 分类
-      </h2>
-      <TopCategoryCard items={items} yearMonth={yearMonth} />
-    </section>
-  );
-}
-
-/** 最近流水(FR-C007)。固定最新 4 条,不受月份影响。 */
+/** 最近流水(FR-006)。固定最新 5 条,不受月份影响(FR-003)。 */
 function RecentSection({
   transactions,
 }: {
   transactions: React.ComponentProps<typeof RecentTransactions>["transactions"];
 }) {
   return (
-    <section aria-label="最近流水" className="pt-2">
-      <h2 className="pt-2 pb-1 text-sm font-medium text-foreground">
-        最近流水
-      </h2>
+    <section aria-label="最近账单" className="pt-2">
+      <h2 className="pb-1 pt-2 text-sm font-medium text-foreground">最近账单</h2>
       <RecentTransactions transactions={transactions} isLoading={false} />
     </section>
   );
@@ -231,24 +130,12 @@ function RecentSection({
 function DashboardSkeleton() {
   return (
     <div className="space-y-3">
-      {/* 主卡 */}
       <div className="pt-4">
         <Skeleton className="h-28 w-full rounded-2xl" />
       </div>
-      {/* 趋势 */}
-      <div>
-        <Skeleton className="h-44 w-full rounded-2xl" />
-      </div>
-      {/* Top 分类 */}
-      <div>
-        <div className="grid grid-cols-2 gap-2">
-          <Skeleton className="h-24 w-full rounded-2xl" />
-          <Skeleton className="h-24 w-full rounded-2xl" />
-        </div>
-      </div>
-      {/* 最近流水 */}
+      <Skeleton className="h-32 w-full rounded-2xl" />
+      <Skeleton className="h-44 w-full rounded-2xl" />
       <div className="space-y-2">
-        <Skeleton className="h-14 w-full" />
         <Skeleton className="h-14 w-full" />
         <Skeleton className="h-14 w-full" />
         <Skeleton className="h-14 w-full" />
@@ -267,14 +154,16 @@ function DashboardBody({
   topExpenseCategories,
   recentTransactions,
   yearMonth,
+  isPrivacy,
 }: {
   monthIncome: number;
   monthExpense: number;
   monthNet: number;
   expenseTrend: React.ComponentProps<typeof ExpenseTrendChart>["trend"];
-  topExpenseCategories: React.ComponentProps<typeof TopCategoryCard>["items"];
+  topExpenseCategories: React.ComponentProps<typeof CategoryTopList>["items"];
   recentTransactions: React.ComponentProps<typeof RecentTransactions>["transactions"];
   yearMonth: { year: number; month: number };
+  isPrivacy: boolean;
 }) {
   return (
     <>
@@ -283,8 +172,8 @@ function DashboardBody({
         monthExpense={monthExpense}
         monthNet={monthNet}
       />
-      <TrendSection trend={expenseTrend} />
-      <TopCategoriesSection items={topExpenseCategories} yearMonth={yearMonth} />
+      <CategoryTopList items={topExpenseCategories} yearMonth={yearMonth} />
+      <TrendSection trend={expenseTrend} isPrivacy={isPrivacy} />
       <RecentSection transactions={recentTransactions} />
     </>
   );

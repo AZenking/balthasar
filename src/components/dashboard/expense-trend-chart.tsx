@@ -47,6 +47,12 @@ interface Props {
   trend: ExpenseTrend;
   /** 卡片标题;不传则不渲染标题行。 */
   title?: string;
+  /**
+   * 隐私模式(027 FR-008):true 时 YAxis tickFormatter 返回 `••`,
+   * 遮蔽金额刻度。Tooltip 金额已挂 data-amount,全局 CSS 自动遮蔽。
+   * 趋势图形状保留(符合设计 §4.2"保留形状但隐藏金额刻度")。
+   */
+  isPrivacy?: boolean;
 }
 
 // ─── 共用工具 ──────────────────────────────────────────────────────────
@@ -67,6 +73,16 @@ function formatYuanTick(cents: number): string {
     return `${(yuan / 10000).toFixed(0)}万`;
   }
   return `${Math.round(yuan)}`;
+}
+
+/**
+ * YAxis tickFormatter(027 FR-008 隐私遮蔽)。
+ *
+ * isPrivacy=true 时返回 `••`(遮蔽金额刻度,趋势图形状保留);
+ * 否则返回正常元单位 tick。导出供组件测试锁定行为(T008)。
+ */
+export function tickFormatter(isPrivacy: boolean, cents: number): string {
+  return isPrivacy ? "••" : formatYuanTick(cents);
 }
 
 /** 把 'YYYY-MM-DD' 转成短日期(月/日),用于 daily 桶的轴标签。 */
@@ -154,7 +170,7 @@ function WeeklyTooltip({
 
 // ─── 主组件 ────────────────────────────────────────────────────────────
 
-export function ExpenseTrendChart({ trend, title }: Props) {
+export function ExpenseTrendChart({ trend, title, isPrivacy }: Props) {
   return (
     <section className="w-full" aria-label="本月支出趋势">
       {title ? (
@@ -162,9 +178,9 @@ export function ExpenseTrendChart({ trend, title }: Props) {
       ) : null}
 
       {trend.granularity === "daily" ? (
-        <DailyView buckets={trend.buckets} />
+        <DailyView buckets={trend.buckets} isPrivacy={isPrivacy} />
       ) : (
-        <WeeklyView buckets={trend.buckets} />
+        <WeeklyView buckets={trend.buckets} isPrivacy={isPrivacy} />
       )}
     </section>
   );
@@ -172,7 +188,13 @@ export function ExpenseTrendChart({ trend, title }: Props) {
 
 // ─── daily 视图:7 桶(周一..周日) ───────────────────────────────────────
 
-function DailyView({ buckets }: { buckets: DailyBucket[] }) {
+function DailyView({
+  buckets,
+  isPrivacy,
+}: {
+  buckets: DailyBucket[];
+  isPrivacy?: boolean;
+}) {
   const rows: DailyRow[] = buckets.map((b) => ({
     label: weekdayLabel(b.date),
     date: b.date,
@@ -201,7 +223,7 @@ function DailyView({ buckets }: { buckets: DailyBucket[] }) {
             tick={{ fontSize: 11, fill: "var(--muted)" }}
           />
           <YAxis
-            tickFormatter={formatYuanTick}
+            tickFormatter={(v: number) => tickFormatter(!!isPrivacy, v)}
             tickLine={false}
             axisLine={false}
             tick={{ fontSize: 10, fill: "var(--muted)" }}
@@ -227,7 +249,13 @@ function DailyView({ buckets }: { buckets: DailyBucket[] }) {
 
 // ─── weekly 视图:N 桶(4-5 周,首尾不完整) ──────────────────────────────
 
-function WeeklyView({ buckets }: { buckets: WeeklyBucket[] }) {
+function WeeklyView({
+  buckets,
+  isPrivacy,
+}: {
+  buckets: WeeklyBucket[];
+  isPrivacy?: boolean;
+}) {
   const rows: WeeklyRow[] = buckets.map((b) => ({
     label: b.label,
     amount: b.amount,
@@ -257,7 +285,7 @@ function WeeklyView({ buckets }: { buckets: WeeklyBucket[] }) {
             interval={0}
           />
           <YAxis
-            tickFormatter={formatYuanTick}
+            tickFormatter={(v: number) => tickFormatter(!!isPrivacy, v)}
             tickLine={false}
             axisLine={false}
             tick={{ fontSize: 10, fill: "var(--muted)" }}

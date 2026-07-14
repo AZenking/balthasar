@@ -13,44 +13,36 @@ import { TransactionDrawer } from "@/components/transaction/transaction-drawer";
 import { cn } from "@/lib/utils";
 
 /**
- * BottomNavigation (026-cream-amber-revamp US2 + 026-switch 第一期 1)。
+ * BottomNavigation (027-mobile-home-revamp FR-007).
  *
- * Fixed 5-entry bottom nav: 首页 / 账单 / 记一笔(prominent Drawer) / 报表 / 我的.
- * - Active entry highlights by comparing `usePathname()` against each href
- *   (exact match for the 4 leaf routes).
- * - 中间"记一笔"用 TransactionDrawer(底部弹出 sheet),不再跳 /transaction/new
- *   页面。理由:记账是高频操作,Drawer 无页面跳转,更接近主流记账 App UX。
- * - /transaction/new 路由保留(可深链),但 BottomNavigation 不再用它。
- * - 026-switch:由 AppShell 在 mobile 分支渲染(md:hidden),safe-area
- *   通过 `env(safe-area-inset-bottom)` 注入到 nav 自身底部 padding,确保
- *   iPhone home indicator 不挡按钮。
- * - 高度策略(2026-07-14 修订):`h-16`(64px 固定)在 border-box 下加
- *   `paddingBottom: env(safe-area-inset-bottom)` 会压缩内容区。改用
- *   `minHeight: calc(4rem + env(safe-area-inset-bottom))`,内部按钮容器
- *   固定 h-16,确保 iPhone 全面屏 home indicator 不挤压按钮命中区。
+ * 4 个一级页面(首页 / 明细 / 统计 / 我的)+ 中央上凸圆形 FAB(记一笔)。
+ * FAB 独立悬浮在导航中央上方,不作为第 5 个普通导航项(设计 §3.3)。
+ *
+ * 026 是 5 入口(首页/账单/[记一笔 Drawer]/报表/我的);027 改为 4 入口
+ * + 独立 FAB,文案对齐设计(账单→明细、报表→统计)。
+ *
+ * FAB 点击直接打开 TransactionDrawer(默认支出,不弹二级选项层 ——
+ * clarify Q2 Option A;类型切换在表单内 mode-row)。
+ *
+ * 高度策略(沿用 026):minHeight = calc(4rem + env(safe-area-inset-bottom)),
+ * 内部按钮容器固定 h-16。
+ *
+ * HeroUI v3:无原生 FAB/BottomNav;FAB 由 TransactionDrawer 内部渲染
+ * (上凸圆形按钮),本组件只负责 4 个导航入口 + 中央 FAB 占位。
  */
 type Entry = {
   href: string;
   label: string;
   Icon: LucideIcon;
-  isDrawer?: boolean; // 中间"记一笔"开 Drawer,不用 Link
 };
 
 const ENTRIES: readonly Entry[] = [
   { href: "/dashboard", label: "首页", Icon: Home },
-  { href: "/transactions", label: "账单", Icon: Receipt },
-  { href: "#drawer", label: "记一笔", Icon: Home, isDrawer: true }, // href 仅作 key,isDrawer=true 时不用 Link
-  { href: "/reports", label: "报表", Icon: BarChart3 },
+  { href: "/transactions", label: "明细", Icon: Receipt },
+  { href: "/reports", label: "统计", Icon: BarChart3 },
   { href: "/settings", label: "我的", Icon: User },
 ] as const;
 
-/**
- * 嵌套路由前缀匹配(2026-07-14)。
- * - /dashboard:精确(避免 /dashboard/... 误命中,目前无子路由但语义保底)
- * - /transactions:前缀匹配,覆盖 /transactions/[id] 详情
- * - /reports:前缀匹配(预留 /reports/... 下钻)
- * - /settings:前缀匹配,覆盖 /settings/categories 等子页
- */
 function isEntryActive(pathname: string, href: string): boolean {
   if (href === "/dashboard") return pathname === "/dashboard";
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -68,33 +60,46 @@ export function BottomNavigation() {
         paddingBottom: "env(safe-area-inset-bottom)",
       }}
     >
-      {/* 按钮容器固定 h-16(64px),safe-area 由外层 nav padding 吸收 */}
-      <div className="flex h-16 w-full items-end">
-        {ENTRIES.map(({ href, label, Icon, isDrawer }) => {
-          // 中间"记一笔":渲染 Drawer 触发器(替代 Link)
-          if (isDrawer) {
-            return <TransactionDrawer key={href} />;
-          }
+      <div className="relative flex h-16 w-full items-end">
+        {/* 前 2 个入口(首页 / 明细) */}
+        <NavEntry entry={ENTRIES[0]!} active={isEntryActive(pathname, ENTRIES[0]!.href)} />
+        <NavEntry entry={ENTRIES[1]!} active={isEntryActive(pathname, ENTRIES[1]!.href)} />
 
-          const active = isEntryActive(pathname, href);
-          return (
-            <Link
-              key={href}
-              href={href}
-              aria-current={active ? "page" : undefined}
-              className={cn(
-                "flex h-16 flex-1 flex-col items-center justify-center gap-1 text-xs transition-colors",
-                active
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              <Icon className="h-5 w-5" aria-hidden />
-              <span>{label}</span>
-            </Link>
-          );
-        })}
+        {/* 中央 FAB 占位(等宽 flex,内容为 FAB) */}
+        <div className="flex h-16 flex-1 items-start justify-center">
+          <TransactionDrawer />
+        </div>
+
+        {/* 后 2 个入口(统计 / 我的) */}
+        <NavEntry entry={ENTRIES[2]!} active={isEntryActive(pathname, ENTRIES[2]!.href)} />
+        <NavEntry entry={ENTRIES[3]!} active={isEntryActive(pathname, ENTRIES[3]!.href)} />
       </div>
     </nav>
+  );
+}
+
+function NavEntry({ entry, active }: { entry: Entry; active: boolean }) {
+  const { href, label, Icon } = entry;
+  return (
+    <Link
+      href={href}
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        "relative flex h-16 flex-1 flex-col items-center justify-center gap-1 text-xs transition-colors",
+        active
+          ? "text-primary"
+          : "text-muted-foreground hover:text-foreground",
+      )}
+    >
+      {active && (
+        <span
+          aria-hidden
+          className="absolute top-0 left-1/2 h-1 w-8 -translate-x-1/2 rounded-full"
+          style={{ backgroundColor: "var(--accent)" }}
+        />
+      )}
+      <Icon className="h-5 w-5" aria-hidden />
+      <span>{label}</span>
+    </Link>
   );
 }

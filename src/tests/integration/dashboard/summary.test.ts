@@ -133,8 +133,8 @@ describe("[T005] month summary accuracy (SC-003)", () => {
   });
 });
 
-describe("[T006] recentTransactions ≤ 4 (026 FR-C007)", () => {
-  it("returns at most 4 with JOIN fields", async () => {
+describe("[T006] recentTransactions ≤ 5 (027 FR-006; was ≤ 4 in 026)", () => {
+  it("returns at most 5 with JOIN fields", async () => {
     const email = `t006-${Date.now()}@example.com`;
     const s = await seedSetup(email);
     const c = caller(s.userId);
@@ -145,7 +145,7 @@ describe("[T006] recentTransactions ≤ 4 (026 FR-C007)", () => {
     }
 
     const result = await c.dashboard.summary();
-    expect(result.recentTransactions.length).toBe(4);
+    expect(result.recentTransactions.length).toBe(5);
     expect(result.recentTransactions[0]!.accountName).toBe("测试账户");
     expect(result.recentTransactions[0]!.categoryName).toBeTruthy();
     expect(result.recentTransactions[0]!.categoryIcon).toBeTruthy();
