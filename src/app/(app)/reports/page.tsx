@@ -1,17 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/lib/trpc/client";
-import { getLast24Months } from "@/lib/date-ranges";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { MonthSelect } from "@/components/shared/month-select";
 import { MonthlyTrendChart } from "@/components/reports/monthly-trend-chart";
 import { CategoryDonut } from "@/components/reports/category-donut";
 import { CategoryBreakdownCard } from "@/components/reports/category-breakdown-card";
@@ -36,11 +29,6 @@ import { PageHeader } from "@/components/layout/page-header";
 const monthKey = (year: number, month: number) =>
   `${year}-${String(month).padStart(2, "0")}`;
 
-const parseMonthKey = (key: string): { year: number; month: number } => {
-  const [y, m] = key.split("-");
-  return { year: Number(y), month: Number(m) };
-};
-
 export default function ReportsPage() {
   const router = useRouter();
 
@@ -49,8 +37,6 @@ export default function ReportsPage() {
     const now = new Date();
     return { year: now.getUTCFullYear(), month: now.getUTCMonth() + 1 };
   });
-
-  const months = useMemo(() => getLast24Months(), []);
 
   const { data, isLoading } = trpc.dashboard.report.useQuery({
     endYear: endYearMonth.year,
@@ -70,26 +56,15 @@ export default function ReportsPage() {
     router.push(`/transactions?month=${m}&type=expense&categoryId=${categoryId}`);
   };
 
-  // 目标月 Select 作为 PageHeader 的 action(右侧 max-w-[180px])。
+  // 目标月 MonthSelect 作为 PageHeader 的 action(右侧 max-w-[180px])。
+  // 与 dashboard 共用同一组件,接口 {value, onChange}。
   const monthSelect = (
-    <Select
-      aria-label="选择目标月份"
-      value={monthKey(endYearMonth.year, endYearMonth.month)}
-      onValueChange={(v) => {
-        if (v) setEndYearMonth(parseMonthKey(v));
-      }}
-    >
-      <SelectTrigger className="h-9 w-[180px]">
-        <SelectValue placeholder="选择月份" />
-      </SelectTrigger>
-      <SelectContent>
-        {months.map((m) => (
-          <SelectItem key={monthKey(m.year, m.month)} value={monthKey(m.year, m.month)}>
-            {m.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <MonthSelect
+      value={endYearMonth}
+      onChange={(y, m) => setEndYearMonth({ year: y, month: m })}
+      ariaLabel="选择目标月份"
+      className="max-w-[180px]"
+    />
   );
 
   return (

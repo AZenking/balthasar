@@ -1,3 +1,12 @@
+"use client";
+
+import { Pencil, Archive, ArchiveRestore } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { formatBalance } from "@/server/domain/account/currency";
 import { cn } from "@/lib/utils";
 
@@ -24,37 +33,61 @@ export function AccountItem({
       "flex items-center justify-between border-b py-3",
       isArchived && "opacity-50"
     )}>
-      <div>
-        <p className="text-sm font-medium">{account.name}</p>
-        <p className="text-xs text-muted-foreground">
+      <div className="min-w-0">
+        <p className="truncate text-sm font-medium">{account.name}</p>
+        <p className="text-xs text-muted-foreground tabular-nums">
           {account.currency} · {formatBalance(account.initialBalance, account.currency as any)}
         </p>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex shrink-0 items-center gap-2">
         {isArchived ? (
           <>
             <span className="text-xs text-muted-foreground">已归档</span>
-            <button
-              onClick={() => onUnarchive(account.id)}
-              className="text-xs text-[var(--accent)] hover:underline"
-            >
-              取消归档
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="min-h-[44px] min-w-[44px]"
+                  onClick={() => onUnarchive(account.id)}
+                  aria-label={`取消归档 ${account.name}`}
+                >
+                  <ArchiveRestore className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>取消归档</TooltipContent>
+            </Tooltip>
           </>
         ) : (
           <>
-            <button
-              onClick={() => onEdit(account.id)}
-              className="text-xs text-[var(--accent)] hover:underline"
-            >
-              编辑
-            </button>
-            <button
-              onClick={() => onArchive(account.id)}
-              className="text-xs text-destructive hover:underline"
-            >
-              归档
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="min-h-[44px] min-w-[44px]"
+                  onClick={() => onEdit(account.id)}
+                  aria-label={`编辑 ${account.name}`}
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>编辑</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="destructive"
+                  size="icon"
+                  className="min-h-[44px] min-w-[44px]"
+                  onClick={() => onArchive(account.id)}
+                  aria-label={`归档 ${account.name}`}
+                >
+                  <Archive className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>归档</TooltipContent>
+            </Tooltip>
           </>
         )}
       </div>

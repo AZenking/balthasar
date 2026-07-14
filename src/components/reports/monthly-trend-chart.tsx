@@ -138,6 +138,9 @@ export function MonthlyTrendChart({
 
   // Line dot onClick:点击月份的数据点触发 onMonthClick。
   // recharts Line 整体 onClick 不传单点 payload;改用 dot onClick 拿单点 row。
+  // 但 dot 默认半径 3px 太小(spec 026-switch 第一期 5:关键交互修复),
+  // 移动端几乎无法命中。主交互改为图上方的"月份按钮行"(见 MonthButtonRow),
+  // dot 仅作为视觉锚点 + 辅助点击(r=6 + activeDot r=8 扩大命中区)。
   const handleDotClick = interactive
     ? (row: ChartRow) => {
         if (row && typeof row.year === "number" && typeof row.month === "number") {
@@ -148,6 +151,16 @@ export function MonthlyTrendChart({
 
   return (
     <section className="w-full" aria-label="近 6 个月收支趋势">
+      {/* 月份选择入口:整月可点(≥ 44px 命中),高亮目标月。
+          替代仅靠 dot 点击的不可用方案(dot 3px 太小)。 */}
+      {interactive && rows.length > 0 && (
+        <MonthButtonRow
+          rows={rows}
+          targetYearMonth={targetYearMonth}
+          onMonthClick={onMonthClick}
+        />
+      )}
+
       {/* 图例 */}
       <div className="mb-3 flex items-center justify-end gap-3 text-xs text-muted-foreground">
         <span className="flex items-center gap-1">
@@ -206,10 +219,10 @@ export function MonthlyTrendChart({
               strokeWidth={2}
               dot={
                 interactive
-                  ? { r: 3, fill: "var(--success)", cursor: "pointer", onClick: (data: unknown) => handleDotClick?.((data as { payload?: ChartRow }).payload as ChartRow) }
+                  ? { r: 6, fill: "var(--success)", cursor: "pointer", onClick: (data: unknown) => handleDotClick?.((data as { payload?: ChartRow }).payload as ChartRow) }
                   : { r: 3, fill: "var(--success)" }
               }
-              activeDot={{ r: 5 }}
+              activeDot={{ r: 8 }}
               isAnimationActive={false}
             />
             <Line
@@ -220,10 +233,10 @@ export function MonthlyTrendChart({
               strokeWidth={2}
               dot={
                 interactive
-                  ? { r: 3, fill: "var(--danger)", cursor: "pointer", onClick: (data: unknown) => handleDotClick?.((data as { payload?: ChartRow }).payload as ChartRow) }
+                  ? { r: 6, fill: "var(--danger)", cursor: "pointer", onClick: (data: unknown) => handleDotClick?.((data as { payload?: ChartRow }).payload as ChartRow) }
                   : { r: 3, fill: "var(--danger)" }
               }
-              activeDot={{ r: 5 }}
+              activeDot={{ r: 8 }}
               isAnimationActive={false}
             />
             <Line
@@ -235,10 +248,10 @@ export function MonthlyTrendChart({
               strokeDasharray="4 2"
               dot={
                 interactive
-                  ? { r: 3, fill: "var(--foreground)", cursor: "pointer", onClick: (data: unknown) => handleDotClick?.((data as { payload?: ChartRow }).payload as ChartRow) }
+                  ? { r: 6, fill: "var(--foreground)", cursor: "pointer", onClick: (data: unknown) => handleDotClick?.((data as { payload?: ChartRow }).payload as ChartRow) }
                   : { r: 3, fill: "var(--foreground)" }
               }
-              activeDot={{ r: 5 }}
+              activeDot={{ r: 8 }}
               isAnimationActive={false}
             />
           </LineChart>
@@ -298,5 +311,55 @@ function SelectedSummary({ item }: { item: MonthlyTrendItem }) {
         </dd>
       </div>
     </dl>
+  );
+}
+
+/**
+ * 月份按钮行(026-switch 第一期 5:折线图交互修复)。
+ *
+ * 原方案靠 recharts Line dot(r=3px)onClick 触发月份切换,命中区极小、
+ * 几乎不可用。这里在折线图上方加一行可点月份按钮,每个按钮 min-h/min-w
+ * ≥ 44px,作为主交互入口;dot 仍保留 onClick 作为辅助(半径已加大到 6)。
+ *
+ * 布局:水平滚动容器,避免月份过多换行;每个按钮等宽(min-w-[64px])。
+ * 选中月(targetYearMonth)高亮 primary 背景 + ring。
+ */
+function MonthButtonRow({
+  rows,
+  targetYearMonth,
+  onMonthClick,
+}: {
+  rows: ChartRow[];
+  targetYearMonth?: { year: number; month: number };
+  onMonthClick?: (year: number, month: number) => void;
+}) {
+  return (
+    <div
+      className="mb-3 flex gap-2 overflow-x-auto pb-1"
+      role="group"
+      aria-label="选择月份查看详情"
+    >
+      {rows.map((row) => {
+        const isSelected =
+          targetYearMonth?.year === row.year &&
+          targetYearMonth?.month === row.month;
+        return (
+          <button
+            key={`${row.year}-${row.month}`}
+            type="button"
+            onClick={() => onMonthClick?.(row.year, row.month)}
+            aria-pressed={isSelected}
+            className={
+              "flex min-h-[44px] min-w-[64px] shrink-0 items-center justify-center rounded-md border px-3 text-xs font-medium transition-colors " +
+              (isSelected
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border bg-background text-foreground hover:bg-accent hover:text-accent-foreground")
+            }
+          >
+            {row.shortLabel}
+          </button>
+        );
+      })}
+    </div>
   );
 }

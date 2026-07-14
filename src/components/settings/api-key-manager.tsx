@@ -1,8 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { Trash2 } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -76,18 +82,26 @@ export function ApiKeyManager() {
 
       {(activeKeys ?? []).map((k) => (
         <div key={k.id} className="flex items-center justify-between border-b py-2">
-          <div>
-            <p className="text-sm font-medium">{k.name}</p>
-            <p className="font-mono text-xs text-muted-foreground">{k.keyPrefix}...</p>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium">{k.name}</p>
+            <p className="truncate font-mono text-xs text-muted-foreground">{k.keyPrefix}...</p>
           </div>
-          <button
-            onClick={() => {
-              if (confirm("确认吊销此 Key?")) revokeMutation.mutate({ id: k.id });
-            }}
-            className="text-xs text-destructive hover:underline"
-          >
-            吊销
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="destructive"
+                size="icon"
+                className="min-h-[44px] min-w-[44px]"
+                onClick={() => {
+                  if (confirm("确认吊销此 Key?")) revokeMutation.mutate({ id: k.id });
+                }}
+                aria-label={`吊销 ${k.name}`}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>吊销</TooltipContent>
+          </Tooltip>
         </div>
       ))}
 

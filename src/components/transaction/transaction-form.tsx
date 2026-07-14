@@ -12,6 +12,11 @@ import {
 } from "@/lib/validators/transaction";
 import { trpc } from "@/lib/trpc/client";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -393,14 +398,19 @@ export function TransactionForm({
         // 独立 page 模式:/transaction/new / /transaction/[id]/edit
         <Card className="mx-4 mt-4">
           <Card.Header className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => router.back()}
-              aria-label="返回"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => router.back()}
+                  aria-label="返回"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>返回</TooltipContent>
+            </Tooltip>
             <Card.Title>{isEditMode ? "编辑交易" : "记一笔"}</Card.Title>
           </Card.Header>
           <Card.Content className="space-y-4">{formFields}</Card.Content>

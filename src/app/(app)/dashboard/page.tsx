@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { Card, Skeleton } from "@heroui/react";
-import { MonthPicker } from "@/components/dashboard/month-picker";
+import { MonthSelect } from "@/components/shared/month-select";
 import { ExpenseTrendChart } from "@/components/dashboard/expense-trend-chart";
 import { TopCategoryCard } from "@/components/dashboard/top-category-card";
 import { PrivacyToggle } from "@/components/privacy-toggle";
@@ -21,7 +21,7 @@ import { PageHeader } from "@/components/layout/page-header";
  * 整合 Phase 4-9 落地的所有子组件到一个连续滚动的移动端首页:
  *
  * ┌ PageHeader:首页 / 问候+昵称 · PrivacyToggle
- * ├       MonthPicker (最近 24 个月)
+ * ├       MonthSelect (最近 24 个月,与报表页共用)
  * ├ 主卡:本月结余(monthNet 大字 + 收入/支出)
  * ├ 支出趋势:ExpenseTrendChart (daily 当前月 / weekly 历史月)
  * ├ Top 2 分类:TopCategoryCard (点击下钻 /transactions?month=…&type=expense&categoryId=…)
@@ -30,7 +30,7 @@ import { PageHeader } from "@/components/layout/page-header";
  * 数据契约:specs/026-cream-amber-revamp/contracts/dashboard-summary.md
  *
  * 关键约束:
- * - MonthPicker 必须显式传 {year, month}(FR-C002);缺省虽然后端也工作,
+ * - MonthSelect 必须显式传 {year, month}(FR-C002);缺省虽然后端也工作,
  *   但本页受 picker 控制,显式参数让缓存 key 稳定 + URL 可推断。
  * - 隐私模式:PrivacyToggle 在 PageHeader 右上,所有金额通过 `[data-amount]`
  *   被 globals.css 的 `.privacy-on [data-amount]` 规则统一遮蔽(FR-C008/C009)。
@@ -57,7 +57,7 @@ function greetingByUtcHour(hour: number): string {
   return "晚上好";
 }
 
-/** 返回当前 UTC 年月(用于 MonthPicker 初始值)。 */
+/** 返回当前 UTC 年月(用于 MonthSelect 初始值)。 */
 function currentUtcYearMonth(): { year: number; month: number } {
   const now = new Date();
   return { year: now.getUTCFullYear(), month: now.getUTCMonth() + 1 };
@@ -87,7 +87,7 @@ export default function DashboardPage() {
         description={<Greeting displayName={displayName} />}
         actions={<PrivacyToggle />}
       />
-      <MonthPicker
+      <MonthSelect
         value={yearMonth}
         onChange={(year, month) => setYearMonth({ year, month })}
       />

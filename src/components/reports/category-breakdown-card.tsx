@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Card } from "@heroui/react";
 import type { CategoryItem } from "./category-donut";
+import { categoryColor } from "./palette";
 
 /**
  * CategoryBreakdownCard — 分类分析列表卡(spec US3 / FR-D002 / FR-D003)。
@@ -39,7 +40,7 @@ export function CategoryBreakdownCard({ items, onCategoryClick }: Props) {
           </p>
         ) : (
           <ul className="divide-y divide-border">
-            {items.map((item) => (
+            {items.map((item, index) => (
               <li key={item.categoryId}>
                 <button
                   type="button"
@@ -54,6 +55,12 @@ export function CategoryBreakdownCard({ items, onCategoryClick }: Props) {
                   aria-label={`${item.categoryName} 支出 ${formatAmount(item.amount)} 占比百分之 ${item.percentage}${clickable ? ",点击查看明细" : ""}`}
                 >
                   <span className="flex min-w-0 items-center gap-2 text-sm">
+                    {/* 同色 dot:与环形图段一一对应(共享 ./palette)。 */}
+                    <span
+                      className="inline-block h-2 w-2 shrink-0 rounded-sm"
+                      style={{ backgroundColor: categoryColor(index) }}
+                      aria-hidden="true"
+                    />
                     {item.categoryIcon ? (
                       <span
                         className="text-lg leading-none"

@@ -16,6 +16,7 @@
 
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import type { PieSectorDataItem } from "recharts";
+import { categoryColor } from "./palette";
 
 export type CategoryItem = {
   categoryId: string;
@@ -31,16 +32,7 @@ interface Props {
 }
 
 // 固定调色板(8 色),分类多时循环。色相分布均匀,色盲友好度尚可。
-const PALETTE = [
-  "#C79032", // 琥珀(主色)
-  "#3B9B74", // 绿(收入色,此处作次色)
-  "#D76555", // 红(支出色)
-  "#5B8DEF", // 蓝
-  "#9B6BBF", // 紫
-  "#E0A458", // 浅琥珀
-  "#4AA8A8", // 青
-  "#B07B5E", // 棕
-];
+// 抽到 ./palette.ts 与 CategoryBreakdownCard 共享(明细同色标记)。
 
 const INNER_RADIUS = 60;
 const OUTER_RADIUS = 80;
@@ -151,7 +143,7 @@ export function CategoryDonut({ items, onCategoryClick }: Props) {
             cursor={clickable ? "pointer" : "default"}
           >
             {slices.map((slice, index) => (
-              <Cell key={slice.categoryId} fill={PALETTE[index % PALETTE.length]} />
+              <Cell key={slice.categoryId} fill={categoryColor(index)} />
             ))}
           </Pie>
           <Tooltip content={<CustomTooltip />} />

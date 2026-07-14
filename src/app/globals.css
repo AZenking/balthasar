@@ -25,19 +25,33 @@
  *   支出 expense → danger(红)
  */
 
-/* 隐私模式(026-cream-amber-revamp, spec FR-C008 / research.md R5):
+/* 隐私模式(026-cream-amber-revamp, spec FR-C008 / research.md R5;
+ * 026-switch 第一期 7:修复位移)。
+ *
  * layout.tsx 在 <head> 注入 inline script,hydration 前读 localStorage
  * 并给 <html> 加 .privacy-on class。展示页金额元素挂 data-amount 属性。
- * "记一笔"页金额输入不挂 data-amount(clarify Q1 = A)。 */
-.privacy-on [data-amount] { color: transparent; }
-.privacy-on [data-amount]::after { content: '***'; }
-
-/* MonthPicker(026-cream-amber-revamp):用 HeroUI DatePicker 选日期但语义是选月,
- * 隐藏 DateField 的 day segment(只显示 YYYY/MM)。react-aria DateField 的
- * segment 暴露 data-type 属性(year/month/day/hour 等),用属性选择器精准隐藏。 */
-.month-picker-no-day [data-type="day"],
-.month-picker-no-day [data-type="literal"] {
-  display: none;
+ * "记一笔"页金额输入不挂 data-amount(clarify Q1 = A)。
+ *
+ * 实现策略(2026-07-13 修订,消除位移):
+ * - 原方案 `color: transparent` + `::after { content: '***' }` 让 *** 追加
+ *   在原文字后,*** 宽度 ≠ 原金额宽度,导致整行 reflow / 抖动。
+ * - 新方案:元素 `position: relative` 保留原盒模型宽度;文字 `color:
+ *   transparent` 仍占位(布局稳定);`::after` absolute inset:0 居中
+ *   渲染 ***,不破坏宽度。
+ * - *** 用 `--muted-foreground` token,与上下文 muted 文字协调,不写死色。
+ */
+.privacy-on [data-amount] {
+  position: relative;
+  color: transparent;
+}
+.privacy-on [data-amount]::after {
+  content: '***';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted-foreground);
 }
 
 /*
