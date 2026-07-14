@@ -20,9 +20,9 @@
  */
 
 import {
+  Area,
+  AreaChart,
   CartesianGrid,
-  Line,
-  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -185,10 +185,16 @@ function DailyView({ buckets }: { buckets: DailyBucket[] }) {
   return (
     <div role="img" aria-label={overallAria}>
       <ResponsiveContainer width="100%" height={200}>
-        <LineChart
+        <AreaChart
           data={rows}
           margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
         >
+          <defs>
+            <linearGradient id="expenseAreaDaily" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--danger)" stopOpacity={0.4} />
+              <stop offset="95%" stopColor="var(--danger)" stopOpacity={0.05} />
+            </linearGradient>
+          </defs>
           <CartesianGrid
             strokeDasharray="3 3"
             vertical={false}
@@ -209,17 +215,23 @@ function DailyView({ buckets }: { buckets: DailyBucket[] }) {
             allowDecimals={false}
           />
           <Tooltip content={<DailyTooltip />} />
-          <Line
+          <Area
             type="monotone"
             dataKey="amount"
             name="支出"
             stroke="var(--danger)"
             strokeWidth={2}
+            fill="url(#expenseAreaDaily)"
             dot={{ r: 3, fill: "var(--danger)" }}
-            activeDot={{ r: 5 }}
+            activeDot={{
+              r: 6,
+              strokeWidth: 2,
+              stroke: "var(--background)",
+              fill: "var(--danger)",
+            }}
             isAnimationActive={false}
           />
-        </LineChart>
+        </AreaChart>
       </ResponsiveContainer>
     </div>
   );
@@ -240,10 +252,16 @@ function WeeklyView({ buckets }: { buckets: WeeklyBucket[] }) {
   return (
     <div role="img" aria-label={overallAria}>
       <ResponsiveContainer width="100%" height={200}>
-        <LineChart
+        <AreaChart
           data={rows}
           margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
         >
+          <defs>
+            <linearGradient id="expenseAreaWeekly" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--danger)" stopOpacity={0.4} />
+              <stop offset="95%" stopColor="var(--danger)" stopOpacity={0.05} />
+            </linearGradient>
+          </defs>
           <CartesianGrid
             strokeDasharray="3 3"
             vertical={false}
@@ -265,21 +283,27 @@ function WeeklyView({ buckets }: { buckets: WeeklyBucket[] }) {
             allowDecimals={false}
           />
           <Tooltip content={<WeeklyTooltip />} />
-          <Line
+          <Area
             type="monotone"
             dataKey="amount"
             name="支出"
             stroke="var(--danger)"
             strokeWidth={2}
+            fill="url(#expenseAreaWeekly)"
             dot={{ r: 3, fill: "var(--danger)" }}
-            activeDot={{ r: 5 }}
+            activeDot={{
+              r: 6,
+              strokeWidth: 2,
+              stroke: "var(--background)",
+              fill: "var(--danger)",
+            }}
             isAnimationActive={false}
           />
-        </LineChart>
+        </AreaChart>
       </ResponsiveContainer>
     </div>
   );
 }
 
-// 注:daily/weekly 当前均不可点击,Bar 不挂 onClick。如后续需要点击下钻,
-// 可参考 reports/monthly-trend-chart.tsx 中 handleBarClick 的实现。
+// 注:daily/weekly 当前均不可点击,Area 不挂 onClick。如后续需要点击下钻,
+// 可参考 reports/monthly-trend-chart.tsx 中 handleDotClick 的实现。

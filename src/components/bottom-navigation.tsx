@@ -83,12 +83,21 @@ export function BottomNavigation() {
               href={href}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "flex h-16 flex-1 flex-col items-center justify-center gap-1 text-xs transition-colors",
+                "relative flex h-16 flex-1 flex-col items-center justify-center gap-1 text-xs transition-colors",
                 active
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
+              {/* 026-dashboard-ui-refinement:active 入口顶部 4px accent 横条,
+                  强化"当前在哪个 tab"的视觉反馈。 */}
+              {active && (
+                <span
+                  aria-hidden
+                  className="absolute top-0 left-1/2 h-1 w-8 -translate-x-1/2 rounded-full"
+                  style={{ backgroundColor: "var(--accent)" }}
+                />
+              )}
               <Icon className="h-5 w-5" aria-hidden />
               <span>{label}</span>
             </Link>

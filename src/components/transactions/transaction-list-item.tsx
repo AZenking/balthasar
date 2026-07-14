@@ -2,6 +2,7 @@
 
 import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CategoryIcon } from "@/components/ui/category-icon";
 import {
   Tooltip,
   TooltipContent,
@@ -36,7 +37,11 @@ export function TransactionListItem({
   return (
     <div className="flex items-center justify-between border-b border-[var(--border)] py-3">
       <div className="flex min-w-0 items-center gap-2">
-        <span className="text-xl">{transaction.categoryIcon}</span>
+        <CategoryIcon
+          emoji={transaction.categoryIcon}
+          seed={transaction.categoryName ?? transaction.id}
+          size={36}
+        />
         <div className="min-w-0">
           <p className="truncate text-sm font-medium text-[var(--foreground)]">
             {transaction.categoryName || "?"}

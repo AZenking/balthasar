@@ -3,8 +3,9 @@
 /**
  * MonthlyTrendChart (026-cream-amber-revamp, spec US3 / FR-D001-D004).
  *
- * recharts 实现:6 月**折线图**,收入/支出/结余 3 系列(2026-07-13 修订:
- * 趋势语义用折线比柱状更直观)。
+ * recharts 实现:6 月**面积图**(AreaChart + 渐变填充),收入/支出/结余 3 系列。
+ * (2026-07-13 初版用 LineChart;2026-07-14 dashboard-ui-refinement 改 AreaChart,
+ * 渐变填充让趋势走向更直观,3 系列半透明叠加仍可读。)
  *
  * 数据契约:specs/026-cream-amber-revamp/contracts/dashboard-report.md
  *   monthlyTrend: 6 项,降序(目标月在首位),每项含
@@ -14,16 +15,17 @@
  * - 数据单位为分;recharts 接受任意 number,直接用分绘图,Tooltip/aria 时除以 100。
  * - 颜色映射 HeroUI v3 默认 token:
  *   收入 → var(--success) 绿 / 支出 → var(--danger) 红 / 结余 → var(--foreground) 灰。
- * - 点击交互:Line onClick / XAxis tick onClick 触发 onMonthClick(year, month)。
+ * - 渐变填充:每系列用 SVG <defs><linearGradient> 从顶部 35% 不透明衰减到底部 ~3%。
+ * - 点击交互:Area dot onClick / XAxis tick onClick 触发 onMonthClick(year, month)。
  * - 隐私模式:Tooltip 与 SelectedSummary 的金额节点挂 `data-amount`。
  * - 可访问性:ResponsiveContainer 容器 role="img" + aria-label。
  * - 金额格式化:> 10000 分(= 100 元)用"万"单位,否则两位小数。
  */
 
 import {
+  Area,
+  AreaChart,
   CartesianGrid,
-  Line,
-  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -169,7 +171,7 @@ export function MonthlyTrendChart({
       <div className="mb-3 flex items-center justify-end gap-3 text-xs text-muted-foreground">
         <span className="flex items-center gap-1">
           <span
-            className="inline-block h-0.5 w-4 rounded-sm"
+            className="inline-block h-2 w-2 rounded-sm"
             style={{ backgroundColor: "var(--success)" }}
             aria-hidden
           />
@@ -177,7 +179,7 @@ export function MonthlyTrendChart({
         </span>
         <span className="flex items-center gap-1">
           <span
-            className="inline-block h-0.5 w-4 rounded-sm"
+            className="inline-block h-2 w-2 rounded-sm"
             style={{ backgroundColor: "var(--danger)" }}
             aria-hidden
           />
@@ -185,7 +187,7 @@ export function MonthlyTrendChart({
         </span>
         <span className="flex items-center gap-1">
           <span
-            className="inline-block h-0.5 w-4 rounded-sm"
+            className="inline-block h-2 w-2 rounded-sm"
             style={{ backgroundColor: "var(--foreground)" }}
             aria-hidden
           />
@@ -195,7 +197,21 @@ export function MonthlyTrendChart({
 
       <div role="img" aria-label={overallAria}>
         <ResponsiveContainer width="100%" height={260}>
-          <LineChart data={rows} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+          <AreaChart data={rows} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id="incomeArea" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="var(--success)" stopOpacity={0.35} />
+                <stop offset="95%" stopColor="var(--success)" stopOpacity={0.03} />
+              </linearGradient>
+              <linearGradient id="expenseArea" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="var(--danger)" stopOpacity={0.35} />
+                <stop offset="95%" stopColor="var(--danger)" stopOpacity={0.03} />
+              </linearGradient>
+              <linearGradient id="netArea" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="var(--foreground)" stopOpacity={0.25} />
+                <stop offset="95%" stopColor="var(--foreground)" stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
             <CartesianGrid
               strokeDasharray="3 3"
               vertical={false}
@@ -215,50 +231,68 @@ export function MonthlyTrendChart({
               width={48}
             />
             <Tooltip content={<CustomTooltip />} />
-            <Line
+            <Area
               type="monotone"
               dataKey="income"
               name="收入"
               stroke="var(--success)"
               strokeWidth={2}
+              fill="url(#incomeArea)"
               dot={
                 interactive
                   ? { r: 6, fill: "var(--success)", cursor: "pointer", onClick: (data: unknown) => handleDotClick?.((data as { payload?: ChartRow }).payload as ChartRow) }
                   : { r: 3, fill: "var(--success)" }
               }
-              activeDot={{ r: 8 }}
+              activeDot={{
+                r: 8,
+                strokeWidth: 2,
+                stroke: "var(--background)",
+                fill: "var(--success)",
+              }}
               isAnimationActive={false}
             />
-            <Line
+            <Area
               type="monotone"
               dataKey="expense"
               name="支出"
               stroke="var(--danger)"
               strokeWidth={2}
+              fill="url(#expenseArea)"
               dot={
                 interactive
                   ? { r: 6, fill: "var(--danger)", cursor: "pointer", onClick: (data: unknown) => handleDotClick?.((data as { payload?: ChartRow }).payload as ChartRow) }
                   : { r: 3, fill: "var(--danger)" }
               }
-              activeDot={{ r: 8 }}
+              activeDot={{
+                r: 8,
+                strokeWidth: 2,
+                stroke: "var(--background)",
+                fill: "var(--danger)",
+              }}
               isAnimationActive={false}
             />
-            <Line
+            <Area
               type="monotone"
               dataKey="net"
               name="结余"
               stroke="var(--foreground)"
               strokeWidth={2}
               strokeDasharray="4 2"
+              fill="url(#netArea)"
               dot={
                 interactive
                   ? { r: 6, fill: "var(--foreground)", cursor: "pointer", onClick: (data: unknown) => handleDotClick?.((data as { payload?: ChartRow }).payload as ChartRow) }
                   : { r: 3, fill: "var(--foreground)" }
               }
-              activeDot={{ r: 8 }}
+              activeDot={{
+                r: 8,
+                strokeWidth: 2,
+                stroke: "var(--background)",
+                fill: "var(--foreground)",
+              }}
               isAnimationActive={false}
             />
-          </LineChart>
+          </AreaChart>
         </ResponsiveContainer>
       </div>
 

@@ -50,7 +50,11 @@ export function TransactionDrawer() {
               size: "lg",
               isIconOnly: true,
             }),
-            "h-14 w-14 rounded-full shadow-lg",
+            // 026-dashboard-ui-refinement:
+            //   - shadow-xl shadow-black/30:更立体的浮起感
+            //   - ring-4 ring-background:FAB 与底栏视觉分离
+            //   - hover/active scale 微动画
+            "h-14 w-14 rounded-full shadow-xl shadow-black/30 ring-4 ring-[var(--background)] transition-transform hover:scale-105 active:scale-95",
           )}
         >
           <Plus className="h-6 w-6" aria-hidden />

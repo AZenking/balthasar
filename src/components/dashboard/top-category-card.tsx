@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
+import { CategoryIcon } from "@/components/ui/category-icon";
 import { cn } from "@/lib/utils";
 
 /**
@@ -120,11 +121,7 @@ export function TopCategoryCard({
         >
           <CardContent className="p-3">
             <div className="flex items-center gap-1.5 text-sm">
-              {c.categoryIcon ? (
-                <span aria-hidden="true" className="text-base leading-none">
-                  {c.categoryIcon}
-                </span>
-              ) : null}
+              <CategoryIcon emoji={c.categoryIcon} seed={c.categoryId} size={24} />
               <span className="truncate font-medium">{c.categoryName}</span>
             </div>
             <p

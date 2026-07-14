@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Card } from "@heroui/react";
+import { CategoryIcon } from "@/components/ui/category-icon";
 import type { CategoryItem } from "./category-donut";
 import { categoryColor } from "./palette";
 
@@ -61,14 +62,11 @@ export function CategoryBreakdownCard({ items, onCategoryClick }: Props) {
                       style={{ backgroundColor: categoryColor(index) }}
                       aria-hidden="true"
                     />
-                    {item.categoryIcon ? (
-                      <span
-                        className="text-lg leading-none"
-                        aria-hidden="true"
-                      >
-                        {item.categoryIcon}
-                      </span>
-                    ) : null}
+                    <CategoryIcon
+                      emoji={item.categoryIcon}
+                      seed={item.categoryId}
+                      size={28}
+                    />
                     <span className="truncate text-foreground">
                       {item.categoryName}
                     </span>

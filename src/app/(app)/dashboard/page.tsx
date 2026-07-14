@@ -124,29 +124,48 @@ function Greeting({ displayName }: { displayName: string }) {
   return <>{text}</>;
 }
 
-/** 主卡:本月结余(FR-C005)。monthNet 大字号,收入/支出作为辅信息。 */
+/**
+ * 主卡:本月结余(FR-C005)。
+ *
+ * 026-dashboard-ui-refinement 改造:
+ * - 大金额 .text-amount(24px)→ 36px(inline override;移动端 375px 友好,
+ *   不超过 40px 避免挤压;tabular-nums 已由 .text-amount utility 提供)。
+ * - 标签 "本月结余" → "本月结余 · 2026年7月"(更紧凑、带时间上下文)。
+ * - 加趋势指示器(进阶方案,基于 expenseTrend):
+ *     - daily(当前月):今日 vs 昨日 支出变化 %
+ *     - weekly(历史月):最后一周 vs 倒数第二周 支出变化 %
+ *   支出↓ = 好 = var(--success) 绿 / 支出↑ = 坏 = var(--danger) 红。
+ */
 function SummaryHeroCard({
   monthIncome,
   monthExpense,
   monthNet,
+  trend,
+  yearMonth,
 }: {
   monthIncome: number;
   monthExpense: number;
   monthNet: number;
+  trend: React.ComponentProps<typeof ExpenseTrendChart>["trend"];
+  yearMonth: { year: number; month: number };
 }) {
   const netColor = monthNet >= 0 ? "text-[var(--success)]" : "text-[var(--danger)]";
+  const trendPct = computeExpenseTrendPercent(trend);
   return (
     <section aria-label="本月结余" className="pt-4">
       <Card>
         <Card.Content className="p-4">
-          <p className="text-xs text-muted-foreground">本月结余</p>
+          <p className="text-xs text-muted-foreground">
+            本月结余 · {yearMonth.year}年{yearMonth.month}月
+          </p>
           <p
             data-amount
             className={`mt-1 text-amount ${netColor}`}
+            style={{ fontSize: "2.25rem", lineHeight: "2.75rem" }}
           >
             {formatCents(monthNet)}
           </p>
-          <div className="mt-3 flex gap-4 text-sm">
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
             <div className="flex items-center gap-1">
               <span className="text-muted-foreground">收入</span>
               <span
@@ -165,10 +184,70 @@ function SummaryHeroCard({
                 {formatCents(monthExpense)}
               </span>
             </div>
+            {trendPct !== null && <TrendBadge percent={trendPct} />}
           </div>
         </Card.Content>
       </Card>
     </section>
+  );
+}
+
+/**
+ * 从 expenseTrend 派生"支出变化百分比"。
+ *
+ * - daily(本周 7 桶,周一..周日):用"最后一个有数据的桶" vs "它前一个桶"。
+ *   后端按周一..周日补零,所以末桶=今日所在周几;但若今日非周日,后续桶为 0,
+ *   取"末位非零桶 vs 前一桶"更稳健。
+ * - weekly(4-5 周桶):"最后一桶 vs 倒数第二桶"。
+ *
+ * 返回 signed 百分比(正=支出增加,负=支出减少)。无足够数据返回 null。
+ */
+function computeExpenseTrendPercent(
+  trend: React.ComponentProps<typeof ExpenseTrendChart>["trend"],
+): number | null {
+  const amounts =
+    trend.granularity === "daily"
+      ? trend.buckets.map((b) => b.amount)
+      : trend.buckets.map((b) => b.amount);
+  if (amounts.length < 2) return null;
+  const last = amounts[amounts.length - 1];
+  const prev = amounts[amounts.length - 2];
+  if (prev === 0) {
+    // 前值 0:若 last 也是 0 → 无变化;若 last>0 → 视为 +100%(新增支出)
+    if (last === 0) return null;
+    return 100;
+  }
+  return ((last - prev) / prev) * 100;
+}
+
+/**
+ * 趋势小徽章:`↑ 12.5%` 或 `↓ 8.3%`。
+ *
+ * 语义:这是**支出**趋势,所以支出减少(负%)→ 绿(好);支出增加(正%)
+ * → 红(坏)。颜色编码与方向感刚好与"结余"相反,故不直接复用 netColor。
+ */
+function TrendBadge({ percent }: { percent: number }) {
+  const isUp = percent > 0; // 支出增加
+  const isFlat = Math.abs(percent) < 0.05;
+  const color = isFlat
+    ? "var(--muted)"
+    : isUp
+      ? "var(--danger)" // 支出↑ 坏
+      : "var(--success)"; // 支出↓ 好
+  const arrow = isFlat ? "→" : isUp ? "↑" : "↓";
+  const label = isFlat ? "持平" : `${arrow} ${Math.abs(percent).toFixed(1)}%`;
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium tabular-nums"
+      style={{
+        color,
+        backgroundColor: `color-mix(in oklch, ${color} 15%, transparent)`,
+      }}
+      aria-label={`支出环比${isFlat ? "持平" : isUp ? `增加 ${Math.abs(percent).toFixed(1)}%` : `减少 ${Math.abs(percent).toFixed(1)}%`}`}
+      data-trend={percent.toFixed(2)}
+    >
+      <span aria-hidden>{label}</span>
+    </span>
   );
 }
 
@@ -282,6 +361,8 @@ function DashboardBody({
         monthIncome={monthIncome}
         monthExpense={monthExpense}
         monthNet={monthNet}
+        trend={expenseTrend}
+        yearMonth={yearMonth}
       />
       <TrendSection trend={expenseTrend} />
       <TopCategoriesSection items={topExpenseCategories} yearMonth={yearMonth} />
