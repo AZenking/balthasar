@@ -307,6 +307,73 @@ gh auth status && \
 
 ---
 
+## 阶段 4:BALTHASAR 整体改造验证(2026-07-14 新增)
+
+**目标**: 验证 1.0.0-rc.1 前后追加的 13 项 BALTHASAR 改造(Phase 11 / spec §I 系列 FR)。所有场景在 `pnpm dev` 本地启动后人工执行。
+
+### 场景 4.1:响应式(AppShell)
+
+**步骤**:
+1. Chrome DevTools Device Toolbar 切到 375×812(iPhone 13 mini)
+2. 浏览 `/dashboard` / `/transactions` / `/reports` / `/settings`
+3. 切到 768×1024(iPad)
+4. 切到 1280×800(桌面)
+
+**期望结果**:
+- ✅ 375×812:底部 5 入口导航可见;`env(safe-area-inset-bottom)` 注入到 mobile 底栏外层,iPhone 全面屏 home indicator 不压住底栏按钮
+- ✅ 768×1024:左侧 240px 栏显示(`md:flex`),底栏隐藏(`md:hidden`)
+- ✅ 1280×800:同上,内容居中 `max-w-[1120px]`,左侧栏 fixed
+- ✅ 各页面 `<h1>` 替换为统一 PageHeader(title + description + actions 三件套)
+
+### 场景 4.2:三主题切换(system/light/dark)
+
+**步骤**:
+1. 进入 `/settings`,找到主题切换器(HeroUI Tabs 三选)
+2. 默认 `system`:跟随 OS 偏好(macOS 系统设置切换 dark/light 验证)
+3. 点选 `light`:刷新页面
+4. 点选 `dark`:刷新页面
+5. DevTools Application → Local Storage 查看 `balthasar.theme` 值
+
+**期望结果**:
+- ✅ `system`:实时跟随 OS(`prefers-color-scheme: dark` 媒体查询),无需刷新
+- ✅ `light`:刷新**无 FOUC**(flash of unstyled content),页面浅色,DevTools 看到 `<html>` 无 dark class
+- ✅ `dark`:刷新无 FOUC,页面深色,DevTools 看到 `<html class="dark">`
+- ✅ localStorage `balthasar.theme` 持久化正确值
+- ✅ 图表坐标轴 / 网格线 / tick 文字在 dark 下也清晰(用 `var(--border)` + `var(--muted)`)
+
+### 场景 4.3:隐私模式无位移
+
+**步骤**:
+1. `/dashboard` 关闭隐私模式,观察主卡金额布局
+2. 点击隐私按钮(`balthasar.privacy.enabled = true`)
+3. 观察 *** 显示位置
+4. 切换 `/reports`,悬停图表 Tooltip
+5. DevTools Elements 检查金额 span 是否挂 `data-amount`(而非父 div)
+
+**期望结果**:
+- ✅ 金额切换前后布局**零跳动**(position: relative + ::after absolute 居中,*** 宽度变化不影响布局)
+- ✅ *** 居中显示在原金额 span 的盒模型内,颜色为 `var(--muted)`
+- ✅ 图表 Tooltip 内金额也遮蔽:`data-amount` 精准挂在金额 span,不挂父 div 避免子 span `text-foreground` 泄漏
+- ✅ `/transaction/new` 记账页金额输入**未**挂 `data-amount`(clarify Q1 = A),正常显示
+
+### 场景 4.4:其它(品牌 + 字体 + 空态 + 视觉细节)
+
+**步骤**:
+1. 进入 `/login` / `/register`,查看顶部 BALTHASAR 品牌 + 中文价值说明 "10 秒记账,每天坚持"
+2. 进入 `/settings`,底部查看 BALTHASAR 署名 + 版本号
+3. `/reports` 切换月,观察图表数字是否 `tabular-nums`(无跳动)
+4. 创建空分类的月份,查看 EmptyState 组件(icon + title + description + action)
+5. 视觉细节:卡片圆角 / 阴影 / 间距 / 图标尺寸 走 HeroUI 默认
+
+**期望结果**:
+- ✅ 登录/注册页 BALTHASAR 品牌显示,中文价值说明出现
+- ✅ settings 页 max-w-[720px] 桌面居中,底部 BALTHASAR + version 正确(从 `package.json` 读)
+- ✅ 关键金额用 `.text-amount`(tabular-nums),无宽度跳动
+- ✅ 空状态统一(EmptyState 组件 6 处替换)
+- ✅ 圆角/阴影/间距/图标统一走 HeroUI Card/Button 默认 token
+
+---
+
 ## 验收检查表
 
 完成所有场景后,逐项确认:
@@ -333,5 +400,11 @@ gh auth status && \
 - [ ] 场景 3.2:Lighthouse a11y ≥ 90(4 页)
 - [ ] 场景 3.3:隐私闪现 = 0
 - [ ] 场景 3.4:tag + Release + GHCR 镜像
+
+**BALTHASAR 改造阶段(2026-07-14 新增)**:
+- [ ] 场景 4.1:响应式 AppShell(375 / 768 / 1280 + safe-area)
+- [ ] 场景 4.2:三主题切换(system/light/dark,无 FOUC,localStorage 持久化)
+- [ ] 场景 4.3:隐私模式无位移 + Tooltip data-amount 精准挂金额 span
+- [ ] 场景 4.4:品牌 + 字体规范 + 空态 + 视觉细节
 
 全部勾选 → 1.0.0 改版完整,可关闭 feature。

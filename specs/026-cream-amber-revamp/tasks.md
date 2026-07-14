@@ -1,9 +1,9 @@
 ---
 
-description: "Task list for 1.0.0 cream-amber full-site revamp"
+description: "Task list for 1.0.0 cream-amber full-site revamp (reconciled 2026-07-14, reflects 1.0.0-rc.1)"
 ---
 
-# Tasks: 1.0.0 奶油琥珀全站改版
+# Tasks: 1.0.0 全站改版(Reconciled 2026-07-14)
 
 **Input**: Design documents from `/specs/026-cream-amber-revamp/`(spec.md / plan.md / research.md / data-model.md / contracts/ / quickstart.md)
 
@@ -11,7 +11,12 @@ description: "Task list for 1.0.0 cream-amber full-site revamp"
 
 **Tests**: ✅ Include test tasks (spec FR-G004/G005 + 宪章四 Test-First 要求)
 
-**Organization**: 按 8 个 User Story 分阶段;Spike PR = Phase 1,Switch PR = Phase 2-10。
+**Organization**: 按 8 个 User Story 分阶段;Spike PR = Phase 1,Switch PR = Phase 2-10,BALTHASAR 改造 = Phase 11。
+
+> **Revision Note (2026-07-14)**: Phase 1-10 任务全部已完成(在 v1.0.0-rc.1 之前)。
+> 实施期间决策变更见 spec.md Clarifications Q8-Q13(配色 / 暗色 / Drawer / recharts / 13 项 UI 改造 / shadcn 适配层保留)。
+> Phase 11 为 1.0.0-rc.1 前后追加的 13 项 BALTHASAR 整体 UI 改造,全部已 commit。
+
 
 ## Format: `[ID] [P?] [Story?] Description`
 
@@ -246,6 +251,48 @@ description: "Task list for 1.0.0 cream-amber full-site revamp"
 
 ---
 
+## Phase 11: BALTHASAR 整体 UI 改造(2026-07-14 新增)
+
+**Goal**: 用户在 1.0.0-rc.1 前后追加的 13 项 UI 改造,响应式 / 三主题 / 品牌精修。
+
+**Spec reference**: 见 spec.md §I 系列 FR(FR-I001 ~ FR-I013)与 Clarifications Q12。
+
+### 第一期(已 commit 710dab9 + 98fb45a):
+- [x] T086 [P] 新建 `src/components/layout/app-shell.tsx`(mobile 底栏 / md+ 侧栏,max-w-1120 居中,safe-area-inset-bottom)
+- [x] T087 [P] 新建 `src/components/layout/sidebar.tsx`(240px 左侧栏 + BALTHASAR 品牌)
+- [x] T086b [P] 新建 `src/components/layout/page-header.tsx`(`{title, description, actions}`)
+- [x] T088 [P] 新建 `src/components/theme/theme-provider.tsx`(三选 system/light/dark,localStorage `balthasar.theme`,matchMedia 监听,mounted 防 FOUC)
+- [x] T089 [P] 新建 `src/components/theme/theme-toggle.tsx`(HeroUI Tabs 三选 UI)
+- [x] T090 全仓 grep 硬编码颜色 → `var(--danger)` / `var(--success)` / `var(--accent)` / `var(--muted)` 替换
+- [x] T091 [P] 新建 `src/components/shared/month-select.tsx`(替代 MonthPicker + 删除 DatePicker 隐藏 day hack;接口 `{value, onChange, months?, ariaLabel?}`)
+- [x] T092 `globals.css` 隐私规则改 position: relative + ::after absolute 居中(消除位移)
+- [x] T093 流水/账户/分类按钮 ghost/danger + ≥44px 热区 + Tooltip + aria-label
+- [x] T094 图表 dot onClick + MonthButtonRow 主入口 + 同色 PALETTE 标记
+
+### 第二期(已 commit 8591154):
+- [x] T095 [P] 新建 `src/components/layout/brand-header.tsx`(登录/注册 + 中文价值说明 "10 秒记账,每天坚持")
+- [x] T096 `settings/page.tsx` 底部署名 BALTHASAR + version(从 `package.json` 读);sidebar 同步
+- [x] T097 `globals.css` @layer utilities 5 级字体规范(text-display/heading/body/caption/amount/chart)+ tabular-nums
+- [x] T098 Skeleton 尺寸统一对齐真实内容
+- [x] T099 [P] 新建 `src/components/feedback/empty-state.tsx`(icon/title/description/action)+ 替换 6 处
+- [x] T100 视觉细节复核(圆角/阴影/间距走 HeroUI 默认)
+
+### review 修复(已 commit 9475831):
+- [x] T101 `globals.css` 未定义令牌修复(`--muted-foreground` → `--muted`)
+- [x] T102 3 charts Tooltip `data-amount` 精准挂金额 span(避免子 span text-foreground 泄漏)
+- [x] T103 `bottom-navigation` 安全区 calc 高度(home indicator 不压住)
+- [x] T104 图表坐标 `var(--border)` 网格 + `var(--muted)` tick 替换 12 处 oklch(适配 light/dark)
+- [x] T105 `cn()` 替代模板字符串 4 处
+- [x] T106 `ThemeContext` useMemo + mounted(避免首帧选中态闪烁 + 重渲染优化)
+- [x] T107 `settings/categories` max-w-[720px](桌面端居中)
+- [x] T108 sidebar/bottom-nav 嵌套路由前缀匹配(子路由也高亮父入口)
+- [x] T109 sidebar 版本号从 `package.json` 读(与 settings 一致)
+- [x] T110 theme-toggle `!mounted` 骨架避免首帧错位
+
+**Checkpoint**: 13 项改造全部完成,1.0.0-rc.1 已发布(d675230)。
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -260,6 +307,7 @@ description: "Task list for 1.0.0 cream-amber full-site revamp"
 - **Phase 8 (US6 下钻)**:依赖 Phase 6(月份状态)+ Phase 3(首页 Top 2 卡)
 - **Phase 9 (US7 昵称)**:依赖 Phase 2(`auth.updateNickname`)+ Phase 3(settings 页骨架)
 - **Phase 10 (Polish)**:依赖所有 US 完成;含 Switch PR 合并 + 1.0.0 release
+- **Phase 11 (BALTHASAR 改造)**:依赖 Phase 1-10 已合并(1.0.0-rc.1 基础);3 个 commit 覆盖第一期/第二期/review 修复
 
 ### Within Switch PR (Phase 2-9)
 
