@@ -129,7 +129,7 @@ export function TopCategoryCard({
             </div>
             <p
               data-amount
-              className="mt-1 text-base font-bold text-red-500"
+              className="mt-1 text-base font-bold text-[var(--danger)]"
             >
               {formatAmount(c.amount)}
             </p>

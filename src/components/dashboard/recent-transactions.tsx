@@ -53,7 +53,7 @@ export function RecentTransactions({
               </p>
             </div>
           </div>
-          <p className={`text-sm font-semibold ${t.type === "income" ? "text-green-600" : "text-red-500"}`}>
+          <p className={`text-sm font-semibold ${t.type === "income" ? "text-[var(--success)]" : "text-[var(--danger)]"}`}>
             {t.type === "income" ? "+" : "-"}
             {formatAmount(t.amount)}
           </p>

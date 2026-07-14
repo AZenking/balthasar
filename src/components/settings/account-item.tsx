@@ -36,7 +36,7 @@ export function AccountItem({
             <span className="text-xs text-muted-foreground">已归档</span>
             <button
               onClick={() => onUnarchive(account.id)}
-              className="text-xs text-blue-500 hover:underline"
+              className="text-xs text-[var(--accent)] hover:underline"
             >
               取消归档
             </button>
@@ -45,7 +45,7 @@ export function AccountItem({
           <>
             <button
               onClick={() => onEdit(account.id)}
-              className="text-xs text-blue-500 hover:underline"
+              className="text-xs text-[var(--accent)] hover:underline"
             >
               编辑
             </button>

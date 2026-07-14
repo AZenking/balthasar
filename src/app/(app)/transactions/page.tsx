@@ -15,6 +15,7 @@ import { TransactionSummary } from "@/components/transactions/transaction-summar
 import { TransactionListItem } from "@/components/transactions/transaction-list-item";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/layout/page-header";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -295,7 +296,7 @@ export default function TransactionsPage() {
   // ── First load skeleton ──
   if (isLoading) {
     return (
-      <div className="space-y-4 p-4 pt-6">
+      <div className="space-y-4">
         <Skeleton className="h-8 w-24" />
         <Skeleton className="h-10 w-full" />
         <div className="space-y-3">
@@ -308,36 +309,31 @@ export default function TransactionsPage() {
   }
 
   return (
-    <div className="min-h-screen pb-16">
-      {/* 026 US6: Header 卡片化,内嵌 summary,显示当前 filter 描述 */}
-      <Card className="mx-4 mt-4">
-        <Card.Header className="flex items-center justify-between">
-          <div>
-            <Card.Title className="text-xl text-[var(--foreground)]">
-              流水
-            </Card.Title>
-            <Card.Description className="text-xs text-[var(--muted-foreground)]">
-              {filterDescription}
-            </Card.Description>
-          </div>
-          <span className="text-xs text-[var(--muted-foreground)]">
-            {items.length} 笔
-          </span>
-        </Card.Header>
-        {summary && (
-          <Card.Content className="pt-0">
+    <div>
+      {/* 026 US6 + 026-switch:Header 用 PageHeader,Card 仅承载 summary */}
+      <PageHeader
+        title="流水"
+        description={filterDescription}
+        actions={
+          <span className="text-xs text-muted-foreground">{items.length} 笔</span>
+        }
+      />
+
+      {summary && (
+        <Card className="mt-2">
+          <Card.Content className="p-4">
             <TransactionSummary
               income={summary.income}
               expense={summary.expense}
               net={summary.net}
             />
           </Card.Content>
-        )}
-      </Card>
+        </Card>
+      )}
 
       <TransactionFilters filters={filters} onChange={handleFiltersChange} />
 
-      <div className={`px-4 ${isRefetching ? "opacity-50" : ""}`}>
+      <div className={`${isRefetching ? "opacity-50" : ""}`}>
         {items.length === 0 ? (
           <div className="flex min-h-[40vh] items-center justify-center">
             <p className="text-[var(--muted-foreground)]">
@@ -349,7 +345,7 @@ export default function TransactionsPage() {
             {/* 026 US6: 列表按日期分组渲染 */}
             {grouped.map((group) => (
               <div key={group.label} className="mt-4">
-                <div className="sticky top-0 z-10 bg-[var(--background)]/80 px-4 py-2 text-xs font-medium text-[var(--muted-foreground)] backdrop-blur">
+                <div className="sticky top-0 z-10 bg-[var(--background)]/80 py-2 text-xs font-medium text-[var(--muted-foreground)] backdrop-blur">
                   {group.label}
                 </div>
                 <div className="space-y-0">

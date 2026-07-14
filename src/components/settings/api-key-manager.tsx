@@ -40,9 +40,9 @@ export function ApiKeyManager() {
       </div>
 
       {newKey && (
-        <div className="mb-4 rounded-lg border border-yellow-300 bg-yellow-50 p-3 text-sm">
-          <p className="font-semibold text-yellow-800">⚠️ 请保存你的 API Key (仅显示一次)</p>
-          <code className="mt-1 block break-all rounded bg-white p-2 text-xs">{newKey}</code>
+        <div className="mb-4 rounded-lg border border-[var(--warning)] bg-[var(--warning)]/10 p-3 text-sm">
+          <p className="font-semibold text-[var(--warning)]">⚠️ 请保存你的 API Key (仅显示一次)</p>
+          <code className="mt-1 block break-all rounded bg-[var(--surface-secondary)] p-2 text-xs">{newKey}</code>
           <Button size="sm" variant="outline" className="mt-2" onClick={() => setNewKey(null)}>
             我已保存
           </Button>

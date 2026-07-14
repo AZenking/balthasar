@@ -12,7 +12,7 @@ import {
 import { TransactionDrawer } from "@/components/transaction/transaction-drawer";
 
 /**
- * BottomNavigation (026-cream-amber-revamp US2).
+ * BottomNavigation (026-cream-amber-revamp US2 + 026-switch 第一期 1)。
  *
  * Fixed 5-entry bottom nav: 首页 / 账单 / 记一笔(prominent Drawer) / 报表 / 我的.
  * - Active entry highlights by comparing `usePathname()` against each href
@@ -20,6 +20,9 @@ import { TransactionDrawer } from "@/components/transaction/transaction-drawer";
  * - 中间"记一笔"用 TransactionDrawer(底部弹出 sheet),不再跳 /transaction/new
  *   页面。理由:记账是高频操作,Drawer 无页面跳转,更接近主流记账 App UX。
  * - /transaction/new 路由保留(可深链),但 BottomNavigation 不再用它。
+ * - 026-switch:由 AppShell 在 mobile 分支渲染(md:hidden),safe-area
+ *   通过 `env(safe-area-inset-bottom)` 注入到 nav 自身底部 padding,确保
+ *   iPhone home indicator 不挡按钮。
  */
 type Entry = {
   href: string;
@@ -43,6 +46,7 @@ export function BottomNavigation() {
     <nav
       aria-label="主导航"
       className="fixed inset-x-0 bottom-0 z-50 flex h-16 items-end border-t bg-background"
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       {ENTRIES.map(({ href, label, Icon, isDrawer }) => {
         // 中间"记一笔":渲染 Drawer 触发器(替代 Link)

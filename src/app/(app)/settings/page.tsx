@@ -20,7 +20,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Tags, ChevronRight, LogOut, User, KeyRound, Wallet, Package } from "lucide-react";
+import { Tags, ChevronRight, LogOut, User, KeyRound, Wallet, Palette, Package } from "lucide-react";
 import { TRPCClientError } from "@trpc/client";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc/client";
@@ -47,6 +47,8 @@ import { NicknameEditor } from "@/components/settings/nickname-editor";
 import { AccountItem } from "@/components/settings/account-item";
 import { AccountForm, type AccountFormValues } from "@/components/settings/account-form";
 import { ApiKeyManager } from "@/components/settings/api-key-manager";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { PageHeader } from "@/components/layout/page-header";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -145,10 +147,23 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="space-y-5 p-4 pb-8 pt-6">
-      <h1 className="text-xl font-bold">我的</h1>
+    <div className="space-y-5">
+      <PageHeader title="我的" />
 
-      {/* ── 1. 个人信息 (FR-E001/FR-E002) ── */}
+      {/* ── 1. 主题(026-switch 第一期 4:三选主题系统) ── */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Palette className="h-4 w-4 text-muted-foreground" />
+            主题
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <ThemeToggle />
+        </CardContent>
+      </Card>
+
+      {/* ── 2. 个人信息 (FR-E001/FR-E002,前 1.) ── */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-base">

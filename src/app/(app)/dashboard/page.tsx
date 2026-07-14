@@ -8,13 +8,19 @@ import { ExpenseTrendChart } from "@/components/dashboard/expense-trend-chart";
 import { TopCategoryCard } from "@/components/dashboard/top-category-card";
 import { PrivacyToggle } from "@/components/privacy-toggle";
 import { RecentTransactions } from "@/components/dashboard/recent-transactions";
+import { PageHeader } from "@/components/layout/page-header";
 
 /**
- * DashboardPage (026-cream-amber-revamp, spec US4 + US5 + US6 + FR-C001..C009).
+ * DashboardPage (026-cream-amber-revamp + 026-switch 第一期 3:PageHeader)。
+ *
+ * 026-switch 调整:
+ *   - 整页 padding 由 AppShell 注入(去掉 px-4 自包,直接用 PageHeader 标题行)
+ *   - `<h1>轻记</h1>` 自定义实现替换为 PageHeader(title="首页" + 问候描述)
+ *   - PrivacyToggle 进 PageHeader.actions
  *
  * 整合 Phase 4-9 落地的所有子组件到一个连续滚动的移动端首页:
  *
- * ┌ Header:轻记 / 问候 / 昵称 · PrivacyToggle
+ * ┌ PageHeader:首页 / 问候+昵称 · PrivacyToggle
  * ├       MonthPicker (最近 24 个月)
  * ├ 主卡:本月结余(monthNet 大字 + 收入/支出)
  * ├ 支出趋势:ExpenseTrendChart (daily 当前月 / weekly 历史月)
@@ -26,7 +32,7 @@ import { RecentTransactions } from "@/components/dashboard/recent-transactions";
  * 关键约束:
  * - MonthPicker 必须显式传 {year, month}(FR-C002);缺省虽然后端也工作,
  *   但本页受 picker 控制,显式参数让缓存 key 稳定 + URL 可推断。
- * - 隐私模式:PrivacyToggle 在 header 右上,所有金额通过 `[data-amount]`
+ * - 隐私模式:PrivacyToggle 在 PageHeader 右上,所有金额通过 `[data-amount]`
  *   被 globals.css 的 `.privacy-on [data-amount]` 规则统一遮蔽(FR-C008/C009)。
  * - 最近流水独立于月份(FR-C007):recentTransactions 来自 dashboard.summary,
  *   后端返回最新 4 条,与 yearMonth 无关。
@@ -70,20 +76,21 @@ export default function DashboardPage() {
     month: yearMonth.month,
   });
 
-  // 问候切片用客户端 UTC 小时(在 hydration 后读取避免 SSR/CSR mismatch)。
-  // SSR 时输出空串占位,客户端挂载后再切真实值 —— 见 Greeting 组件。
+  // 问候切片用客户端 UTC 小时(SSR 与客户端 UTC 一致,无 hydration mismatch)。
   const displayName = meQuery.data?.member?.displayName ?? "";
   const isLoading = summaryQuery.isLoading || !summaryQuery.data;
 
   return (
-    <main className="min-h-screen pb-4">
-      <DashboardHeader displayName={displayName} />
-      <div className="px-4">
-        <MonthPicker
-          value={yearMonth}
-          onChange={(year, month) => setYearMonth({ year, month })}
-        />
-      </div>
+    <div>
+      <PageHeader
+        title="首页"
+        description={<Greeting displayName={displayName} />}
+        actions={<PrivacyToggle />}
+      />
+      <MonthPicker
+        value={yearMonth}
+        onChange={(year, month) => setYearMonth({ year, month })}
+      />
 
       {isLoading ? (
         <DashboardSkeleton />
@@ -98,29 +105,11 @@ export default function DashboardPage() {
           yearMonth={yearMonth}
         />
       )}
-    </main>
+    </div>
   );
 }
 
 // ─── 子组件 ────────────────────────────────────────────────────────────
-
-/** 顶部 Header:轻记 / 问候 + 昵称 / PrivacyToggle(FR-C001 + FR-C008)。 */
-function DashboardHeader({ displayName }: { displayName: string }) {
-  return (
-    <header className="px-4 pb-3 pt-6">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-bold leading-tight">轻记</h1>
-          <p className="mt-0.5 truncate text-sm text-muted-foreground">
-            <Greeting /> {displayName}
-          </p>
-        </div>
-        {/* PrivacyToggle 自带 aria-label + icon 切换;放在 header 右上,命中区域 ≥ 44px(FR-A007)。 */}
-        <PrivacyToggle />
-      </div>
-    </header>
-  );
-}
 
 /**
  * 问候切片:用当前 UTC 小时动态决定。
@@ -129,9 +118,10 @@ function DashboardHeader({ displayName }: { displayName: string }) {
  * 服务端与客户端渲染结果一致,无 hydration mismatch。直接读
  * `new Date().getUTCHours()` 即可。
  */
-function Greeting() {
+function Greeting({ displayName }: { displayName: string }) {
   const hour = new Date().getUTCHours();
-  return <>{greetingByUtcHour(hour)}</>;
+  const text = displayName ? `${greetingByUtcHour(hour)} ${displayName}` : greetingByUtcHour(hour);
+  return <>{text}</>;
 }
 
 /** 主卡:本月结余(FR-C005)。monthNet 大字号,收入/支出作为辅信息。 */
@@ -146,7 +136,7 @@ function SummaryHeroCard({
 }) {
   const netColor = monthNet >= 0 ? "text-[var(--success)]" : "text-[var(--danger)]";
   return (
-    <section aria-label="本月结余" className="px-4 pt-4">
+    <section aria-label="本月结余" className="pt-4">
       <Card>
         <Card.Content className="p-4">
           <p className="text-xs text-muted-foreground">本月结余</p>
@@ -184,7 +174,7 @@ function TrendSection({
 }) {
   const isDaily = trend.granularity === "daily";
   return (
-    <section aria-label="支出趋势" className="px-4 pt-4">
+    <section aria-label="支出趋势" className="pt-4">
       <Card>
         <Card.Content className="p-4">
           <h2 className="mb-3 text-sm font-medium text-foreground">
@@ -207,7 +197,7 @@ function TopCategoriesSection({
 }) {
   return (
     <section aria-label="支出 Top 2 分类">
-      <h2 className="px-4 pt-4 pb-1 text-sm font-medium text-foreground">
+      <h2 className="pt-4 pb-1 text-sm font-medium text-foreground">
         支出 Top 2 分类
       </h2>
       <TopCategoryCard items={items} yearMonth={yearMonth} />
@@ -223,7 +213,7 @@ function RecentSection({
 }) {
   return (
     <section aria-label="最近流水" className="pt-2">
-      <h2 className="px-4 pt-2 pb-1 text-sm font-medium text-foreground">
+      <h2 className="pt-2 pb-1 text-sm font-medium text-foreground">
         最近流水
       </h2>
       <RecentTransactions transactions={transactions} isLoading={false} />
@@ -236,22 +226,22 @@ function DashboardSkeleton() {
   return (
     <div className="space-y-3">
       {/* 主卡 */}
-      <div className="px-4 pt-4">
+      <div className="pt-4">
         <Skeleton className="h-28 w-full rounded-2xl" />
       </div>
       {/* 趋势 */}
-      <div className="px-4">
+      <div>
         <Skeleton className="h-44 w-full rounded-2xl" />
       </div>
       {/* Top 分类 */}
-      <div className="px-4">
+      <div>
         <div className="grid grid-cols-2 gap-2">
           <Skeleton className="h-24 w-full rounded-2xl" />
           <Skeleton className="h-24 w-full rounded-2xl" />
         </div>
       </div>
       {/* 最近流水 */}
-      <div className="px-4 space-y-2">
+      <div className="space-y-2">
         <Skeleton className="h-14 w-full" />
         <Skeleton className="h-14 w-full" />
         <Skeleton className="h-14 w-full" />

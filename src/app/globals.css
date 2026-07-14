@@ -2,20 +2,30 @@
 @import "@heroui/styles";
 
 /*
- * 配色:HeroUI v3 默认主题(026 范围修订 2026-07-13)
- * 不再维护奶油琥珀自定义令牌;@heroui/styles 已注入完整默认 token:
- *   --background / --surface / --accent / --accent-foreground /
- *   --muted / --default / --success / --warning / --danger / --foreground / ...
- * 业务语义映射(组件层用 HeroUI variant / CSS 变量):
+ * 主题 token(026-switch 第一期 4:三选主题系统)。
+ *
+ * 三种生效路径:
+ *   1. `<html class="dark">`     —— @heroui/styles 默认 dark token 被下面
+ *                                  `.dark { ... }` 覆盖(以对齐 shadcn
+ *                                  dark 调色板)。
+ *   2. `<html>` 无 dark class     —— HeroUI 默认浅色 token 生效,@heroui/styles
+ *                                  注入 light 一套;为了与 shadcn token
+ *                                  (`bg-background` 等 build-time 值)对齐,
+ *                                  `:root:not(.dark) { ... }` 显式给出 light
+ *                                  shadcn 值。
+ *   3. `<html class="dark privacy-on">` —— 在 dark 基础上加隐私模式,金额
+ *                                  被 globals.css 末尾规则遮蔽。
+ *
+ * layout.tsx inline script 在 hydration 前根据 localStorage 决定加不加
+ * `.dark`,ThemeProvider 在 hydration 后维护 `<html>.classList`。
+ * 详见 docs/THEME.md(若有)。
+ *
+ * 业务语义(组件层用 HeroUI variant / CSS 变量):
  *   收入 income  → success(绿)
  *   支出 expense → danger(红)
- *
- * 2026-07-13 二次修订:固定暗黑主题(`<html class="dark">`),dark token
- * 在下方 .dark 选择器覆盖。
- * 详见 docs/THEME.md。
  */
 
-/* 隐私模式(026-cream-amber-revamp, spec FR-C008 / research.md R5)
+/* 隐私模式(026-cream-amber-revamp, spec FR-C008 / research.md R5):
  * layout.tsx 在 <head> 注入 inline script,hydration 前读 localStorage
  * 并给 <html> 加 .privacy-on class。展示页金额元素挂 data-amount 属性。
  * "记一笔"页金额输入不挂 data-amount(clarify Q1 = A)。 */
@@ -28,6 +38,30 @@
 .month-picker-no-day [data-type="day"],
 .month-picker-no-day [data-type="literal"] {
   display: none;
+}
+
+/*
+ * Light theme(026-switch 第一期 4:三选主题)。
+ * `<html>` 无 dark class 时生效。覆盖 HeroUI v3 默认浅色以与 shadcn
+ * light 调色板对齐(对齐 shadcn `--color-background` 等的浅色值)。
+ */
+:root:not(.dark) {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --surface: oklch(0.97 0 0);
+  --surface-foreground: oklch(0.145 0 0);
+  --surface-secondary: oklch(0.92 0 0);
+  --surface-secondary-foreground: oklch(0.145 0 0);
+  --surface-tertiary: oklch(0.87 0 0);
+  --surface-tertiary-foreground: oklch(0.145 0 0);
+  --overlay: oklch(0.97 0 0);
+  --overlay-foreground: oklch(0.145 0 0);
+  --muted: oklch(0.55 0 0);
+  --default: oklch(0.92 0 0);
+  --default-foreground: oklch(0.145 0 0);
+  --border: oklch(0.9 0 0);
+  --field-background: oklch(1 0 0);
+  --field-placeholder: oklch(0.55 0 0);
 }
 
 /*
@@ -55,9 +89,34 @@
   --field-placeholder: oklch(0.6 0.01 285.89);
 }
 
-@theme {
-  /* shadcn legacy tokens remapped to dark palette (026 Phase 10 + dark 修订)。
-   * dark mode 下 shadcn `bg-background` / `text-foreground` 等需要 build-time 值。 */
+/*
+ * shadcn legacy tokens → 跟随 light / dark 状态。
+ * 之前固定 dark 值(原 026 注释),改为根据 .dark 切换两套值,
+ * 与上面 :root / .dark 保持一致。
+ */
+:root {
+  --color-background: oklch(1 0 0);
+  --color-foreground: oklch(0.145 0 0);
+  --color-primary: oklch(0.205 0 0);
+  --color-primary-foreground: oklch(0.985 0 0);
+  --color-muted: oklch(0.97 0 0);
+  --color-muted-foreground: oklch(0.556 0 0);
+  --color-accent: oklch(0.97 0 0);
+  --color-accent-foreground: oklch(0.205 0 0);
+  --color-border: oklch(0.922 0 0);
+  --color-input: oklch(0.922 0 0);
+  --color-ring: oklch(0.708 0 0);
+  --color-card: oklch(1 0 0);
+  --color-card-foreground: oklch(0.145 0 0);
+  --color-destructive: oklch(0.577 0.245 27.325);
+  --color-destructive-foreground: oklch(0.985 0 0);
+  --color-popover: oklch(1 0 0);
+  --color-popover-foreground: oklch(0.145 0 0);
+  --color-secondary: oklch(0.97 0 0);
+  --color-secondary-foreground: oklch(0.205 0 0);
+}
+
+.dark {
   --color-background: oklch(0.18 0.01 285.89);
   --color-foreground: oklch(0.97 0 0);
   --color-primary: oklch(0.6204 0.195 253.83);
@@ -77,6 +136,9 @@
   --color-popover-foreground: oklch(0.97 0 0);
   --color-secondary: oklch(0.27 0.01 285.89);
   --color-secondary-foreground: oklch(0.97 0 0);
+}
+
+@theme {
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 

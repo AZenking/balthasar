@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/server/auth/config";
-import { BottomNavigation } from "@/components/bottom-navigation";
+import { AppShell } from "@/components/layout/app-shell";
 
 export default async function AppLayout({
   children,
@@ -12,10 +12,9 @@ export default async function AppLayout({
   if (!session) {
     redirect("/login");
   }
-  return (
-    <div className="min-h-screen bg-background pb-20">
-      {children}
-      <BottomNavigation />
-    </div>
-  );
+  // AppShell 接管:
+  //   - 桌面端 Sidebar(md+ fixed 240px)+ main md:pl-60
+  //   - 移动端 BottomNavigation(fixed bottom + safe-area)
+  //   - 统一 max-w-[1120px] 容器 + 内边距
+  return <AppShell>{children}</AppShell>;
 }

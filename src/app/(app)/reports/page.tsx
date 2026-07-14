@@ -15,12 +15,18 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { MonthlyTrendChart } from "@/components/reports/monthly-trend-chart";
 import { CategoryDonut } from "@/components/reports/category-donut";
 import { CategoryBreakdownCard } from "@/components/reports/category-breakdown-card";
+import { PageHeader } from "@/components/layout/page-header";
 
 /**
- * Reports page (026-cream-amber-revamp, US3 / FR-D001-D005).
+ * Reports page (026-cream-amber-revamp + 026-switch 第一期 3:PageHeader)。
+ *
+ * 026-switch 调整:
+ *   - 整页 padding 由 AppShell 注入(去掉各 section 的 px-4)
+ *   - `<h1>报表</h1>` 替换为 PageHeader
+ *   - 目标月 Select 放进 PageHeader.actions
  *
  * Layout:
- *   - 顶部:页面标题 + 目标月 Select(HeroUI,枚举最近 24 个月)
+ *   - 顶部:PageHeader(报表) + 目标月 Select(HeroUI,枚举最近 24 个月)
  *   - 主卡:近 6 个月收支趋势(MonthlyTrendChart),点击月份切换目标月
  *   - 分类分析区:目标月分类占比 Donut + 分类明细 Card(桌面并排,移动端 375px 上下堆叠)
  *
@@ -38,10 +44,7 @@ const parseMonthKey = (key: string): { year: number; month: number } => {
 export default function ReportsPage() {
   const router = useRouter();
 
-  // Default target month = current UTC month. Independent of server clock:
-  // `dashboard.report` resolves missing input server-side, but we keep the
-  // local state so the Select can render a controlled value before the query
-  // resolves and so onMonthClick can mutate it without waiting for a refetch.
+  // Default target month = current UTC month.
   const [endYearMonth, setEndYearMonth] = useState(() => {
     const now = new Date();
     return { year: now.getUTCFullYear(), month: now.getUTCMonth() + 1 };
@@ -67,38 +70,38 @@ export default function ReportsPage() {
     router.push(`/transactions?month=${m}&type=expense&categoryId=${categoryId}`);
   };
 
-  return (
-    <div className="pb-4">
-      <h1 className="px-4 pb-2 pt-6 text-xl font-bold">报表</h1>
+  // 目标月 Select 作为 PageHeader 的 action(右侧 max-w-[180px])。
+  const monthSelect = (
+    <Select
+      aria-label="选择目标月份"
+      value={monthKey(endYearMonth.year, endYearMonth.month)}
+      onValueChange={(v) => {
+        if (v) setEndYearMonth(parseMonthKey(v));
+      }}
+    >
+      <SelectTrigger className="h-9 w-[180px]">
+        <SelectValue placeholder="选择月份" />
+      </SelectTrigger>
+      <SelectContent>
+        {months.map((m) => (
+          <SelectItem key={monthKey(m.year, m.month)} value={monthKey(m.year, m.month)}>
+            {m.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
 
-      {/* Target-month picker — HeroUI Select enumerating the last 24 months. */}
-      <div className="px-4 pb-2">
-        <Select
-          aria-label="选择目标月份"
-          value={monthKey(endYearMonth.year, endYearMonth.month)}
-          onValueChange={(v) => {
-            if (v) setEndYearMonth(parseMonthKey(v));
-          }}
-        >
-          <SelectTrigger className="h-11 w-full">
-            <SelectValue placeholder="选择月份" />
-          </SelectTrigger>
-          <SelectContent>
-            {months.map((m) => (
-              <SelectItem key={monthKey(m.year, m.month)} value={monthKey(m.year, m.month)}>
-                {m.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+  return (
+    <div>
+      <PageHeader title="报表" actions={monthSelect} />
 
       {isLoading || !data ? (
         <ReportsSkeleton />
       ) : (
         <>
           {/* Trend — full-width main card. Always 6 items (server pads). */}
-          <section className="px-4 pt-2">
+          <section className="pt-2">
             <MonthlyTrendChart
               months={data.monthlyTrend}
               targetYearMonth={data.endYearMonth}
@@ -109,7 +112,7 @@ export default function ReportsPage() {
           {/* Category analysis — donut + breakdown card.
               Desktop: side-by-side grid (donut 5/12, breakdown 7/12).
               Mobile (default): stacked single column. */}
-          <section className="px-4 pt-4">
+          <section className="pt-4">
             <h2 className="pb-2 text-sm font-semibold text-muted-foreground">
               {data.endYearMonth.year}年{data.endYearMonth.month}月 支出分类
             </h2>
@@ -139,7 +142,7 @@ export default function ReportsPage() {
 
 function ReportsSkeleton() {
   return (
-    <div className="space-y-4 px-4 pt-2">
+    <div className="space-y-4 pt-2">
       <Skeleton className="h-48 w-full rounded-xl" />
       <Skeleton className="h-4 w-32" />
       <div className="grid grid-cols-1 gap-4 md:grid-cols-12">

@@ -15,19 +15,19 @@ export function SummaryCards({
       <Card>
         <CardContent className="p-3 text-center">
           <p className="text-xs text-muted-foreground">收入</p>
-          <p className="text-sm font-bold text-green-600">{formatAmount(monthIncome)}</p>
+          <p className="text-sm font-bold text-[var(--success)]">{formatAmount(monthIncome)}</p>
         </CardContent>
       </Card>
       <Card>
         <CardContent className="p-3 text-center">
           <p className="text-xs text-muted-foreground">支出</p>
-          <p className="text-sm font-bold text-red-500">{formatAmount(monthExpense)}</p>
+          <p className="text-sm font-bold text-[var(--danger)]">{formatAmount(monthExpense)}</p>
         </CardContent>
       </Card>
       <Card>
         <CardContent className="p-3 text-center">
           <p className="text-xs text-muted-foreground">结余</p>
-          <p className={`text-sm font-bold ${monthNet >= 0 ? "text-green-600" : "text-red-500"}`}>
+          <p className={`text-sm font-bold ${monthNet >= 0 ? "text-[var(--success)]" : "text-[var(--danger)]"}`}>
             {formatAmount(monthNet)}
           </p>
         </CardContent>
