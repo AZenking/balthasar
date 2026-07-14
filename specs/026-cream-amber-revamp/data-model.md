@@ -158,23 +158,43 @@ z.object({
 
 ### 2.7 ThemeToken(纯客户端实体)
 
-**含义**: 奶油琥珀主题令牌(FR-A005)。
+**含义**(2026-07-14 修订): HeroUI v3 默认 token + shadcn legacy token 双套(覆盖原奶油琥珀 9 令牌,见 spec FR-A005' / Clarifications Q8)。原奶油琥珀色板已 **DEPRECATED**。
+
+**当前实际 token 结构**(见 `src/app/globals.css`):
 
 ```ts
-type ThemeToken = {
-  background: '#F8F4EA';
-  surface: '#FFFDF8';
-  accent: '#C79032';
-  accentHover: '#A97420';
-  foreground: '#292721';
-  muted: '#817B6D';
-  darkSurface: '#22211E';
-  income: '#3B9B74';
-  expense: '#D76555';
+// :root:not(.dark) { ... } 显式 light token(对齐 shadcn light)
+type LightTokens = {
+  background:    'oklch(1 0 0)';        // 纯白
+  foreground:    'oklch(0.145 0 0)';    // 接近黑
+  surface:       'oklch(0.97 0 0)';
+  muted:         'oklch(0.55 0 0)';
+  border:        'oklch(0.9 0 0)';
+  // ... 完整列表见 globals.css
 };
+
+// .dark { ... } 覆盖(对齐 shadcn dark)
+type DarkTokens = {
+  background:    'oklch(0.18 0.01 285.89)';   // 深紫黑
+  foreground:    'oklch(0.97 0 0)';
+  surface:       'oklch(0.22 0.01 285.89)';
+  muted:         'oklch(0.7 0.01 285.89)';
+  border:        'oklch(0.3 0.01 285.89)';
+  // ...
+};
+
+// 业务语义(组件层用 HeroUI variant / CSS 变量):
+//   收入 income  → HeroUI success variant(绿)
+//   支出 expense → HeroUI danger variant(红)
 ```
 
-**实现**: `src/lib/theme.ts` 导出常量;`globals.css` 同步落地 CSS 变量(`--background` 等);**两者 MUST 保持一致**(由单元测试 `tests/unit/theme.test.ts` 校验)。
+**实现**:
+- HeroUI v3 默认 token 通过 `@import "@heroui/styles"` 注入
+- `:root:not(.dark) { ... }` 显式覆盖 light(对齐 shadcn)
+- `.dark { ... }` 覆盖 dark(对齐 shadcn dark)
+- shadcn legacy `@theme` 块根据 `:root` / `.dark` 双套值响应主题切换
+- **不再需要** `src/lib/theme.ts` 与 `globals.css` 双写一致性测试(原 FR-A005 奶油琥珀 9 令牌 DEPRECATED,见 Clarifications Q8 / Q13)
+- 业务语义在组件层表达:income → `text-success` / HeroUI `color="success"`;expense → `text-danger` / `color="danger"`
 
 ---
 
@@ -195,6 +215,17 @@ type PrivacyState = {
 - `<html>` 的 `privacy-on` class 与 `localStorage[balthasar.privacy.enabled] === '1'` MUST 一致
 - `data-amount` 元素在 `.privacy-on` 下 MUST 不可见(CSS 规则强制)
 
+**CSS 实现**(2026-07-14 修订,消除位移):
+- 元素 `position: relative` 保留原盒模型宽度
+- 文字 `color: transparent` 仍占位(布局稳定)
+- `::after` absolute inset:0 居中渲染 `***`,不破坏宽度
+- *** 用 `var(--muted)` token,与上下文 muted 文字协调
+
+**`data-amount` 挂载规则**:
+- 精准挂在**仅金额 span**(避免父 div 挂导致子 span `text-foreground` 泄漏)
+- "记一笔"页金额输入**不挂** `data-amount`(clarify Q1 = A,用户输入时需核对)
+- 图表 Tooltip 内金额 span 也挂(2026-07-14 review 修复,见 tasks T102)
+
 ---
 
 ### 2.9 DateRangeUtility(纯函数实体)
@@ -210,6 +241,42 @@ getLast24Months(now?): Array<{ year, month, label }>
 ```
 
 **纯函数**: 无副作用,无 IO,易测试。tasks 阶段先写测试(红)再实现(绿)。
+
+---
+
+### 2.10 ThemePreference(纯客户端实体,2026-07-14 新增)
+
+**含义**: 用户主题偏好(三选:system / light / dark)。推翻原"奶油琥珀单一浅色,不做暗色"决策(见 spec Clarifications Q9)。
+
+```ts
+type ThemePreference = "system" | "light" | "dark";
+type ResolvedTheme = "light" | "dark";  // system 解析后的实际生效主题
+
+type ThemeState = {
+  theme: ThemePreference;          // 用户偏好
+  resolvedTheme: ResolvedTheme;    // 当前生效主题
+  setTheme(t: ThemePreference): void;   // 写 localStorage + 维护 <html>.classList
+  mounted: boolean;                // hydration 完成(消费方避免首帧闪烁)
+};
+```
+
+**属性**:
+- localStorage key: `balthasar.theme`
+- 默认值: `"system"`
+- 应用方式:
+  - **hydration 前**(`src/app/layout.tsx` inline script):读 localStorage,决定 `<html>` 是否加 `dark` class,避免 FOUC
+  - **hydration 后**(`src/components/theme/theme-provider.tsx`):
+    1. 读 localStorage 同步 state(`theme`)
+    2. 监听 `window.matchMedia("(prefers-color-scheme: dark)")`,当 `theme = "system"` 时实时切换
+    3. 维护 `<html>.classList`("dark" 加/去)
+    4. `mounted = true` 通知消费方避免首帧选中态闪烁
+
+**不变量**:
+- `<html>.classList` 包含 `dark` ↔ `resolvedTheme === "dark"` MUST 一致
+- `localStorage[balthasar.theme]` 与 state `theme` MUST 一致(写入失败时仅内存生效,见 ThemeProvider `setTheme` 异常处理)
+- SSR 阶段不读 localStorage(避免 hydration mismatch);由 layout inline script 在 hydration 前完成首次注入
+
+**与 globals.css 的协作**:见 spec FR-A005' 与 `src/app/globals.css` 注释。`.dark { ... }` 块覆盖 HeroUI v3 默认 dark token + shadcn legacy token;`:root:not(.dark) { ... }` 显式 light token 覆盖 HeroUI 默认浅色以对齐 shadcn light。
 
 ---
 
@@ -268,6 +335,6 @@ DateRangeUtility ──→ 纯函数,被 procedure 与 UI 共用
 
 - ❌ 报表 bookmark / 保存查询(无用户需求)
 - ❌ 隐私模式 per-page 配置(简单布尔足够)
-- ❌ Theme 切换器(本期单一奶油琥珀,无切换)
+- ❌ ~~Theme 切换器(本期单一奶油琥珀,无切换)~~ —— **2026-07-14 已引入**(§2.10 ThemePreference,三选 system/light/dark,推翻原决策)
 - ❌ `theme_version` / `privacy_version` 版本号(未达迁移复杂度)
 - ❌ `dashboard.report` 任意日期范围(固定近 6 月)
