@@ -1,4 +1,6 @@
+import { ReceiptText } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/feedback/empty-state";
 
 interface Transaction {
   id: string;
@@ -30,7 +32,12 @@ export function RecentTransactions({
 
   if (transactions.length === 0) {
     return (
-      <p className="py-8 text-center text-sm text-muted-foreground">暂无交易</p>
+      <EmptyState
+        icon={ReceiptText}
+        title="暂无交易"
+        description="记一笔,流水会显示在这里"
+        className="min-h-[20vh]"
+      />
     );
   }
 
@@ -53,7 +60,10 @@ export function RecentTransactions({
               </p>
             </div>
           </div>
-          <p className={`text-sm font-semibold ${t.type === "income" ? "text-green-600" : "text-red-500"}`}>
+          <p
+            data-amount
+            className={`text-sm font-semibold tabular-nums ${t.type === "income" ? "text-[var(--success)]" : "text-[var(--danger)]"}`}
+          >
             {t.type === "income" ? "+" : "-"}
             {formatAmount(t.amount)}
           </p>

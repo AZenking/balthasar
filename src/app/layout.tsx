@@ -2,13 +2,36 @@ import "./globals.css";
 import type { Metadata } from "next";
 import { Toaster } from "sonner";
 import { Providers } from "./providers";
+import { ThemeProvider } from "@/components/theme/theme-provider";
 
 export const metadata: Metadata = {
   title: "BALTHASAR · 家庭记账",
   description: "10 秒记账,每天坚持。",
 };
 
-const PRIVACY_INLINE_SCRIPT = `(function(){try{if(localStorage.getItem('${process.env.NEXT_PUBLIC_PRIVACY_KEY ?? "balthasar.privacy.enabled"}')==='1'){document.documentElement.classList.add('privacy-on');}}catch(e){}})();`;
+const PRIVACY_KEY = process.env.NEXT_PUBLIC_PRIVACY_KEY ?? "balthasar.privacy.enabled";
+
+/**
+ * 主题 + 隐私模式 inline script(026-switch 第一期 4:三选主题系统)。
+ *
+ * 必须在 React hydration 前执行,根据 localStorage 中存储的主题偏好
+ * (system / light / dark)和系统 prefers-color-scheme 把 `<html>.dark`
+ * 设置好,避免暗 → 亮 / 亮 → 暗 闪烁(FOUC)。同时同步读取隐私模式
+ * 开关,加 `privacy-on` class 让金额立即被遮蔽。
+ *
+ * 出错时 fallback 到 dark(与原行为一致)。
+ */
+const THEME_INLINE_SCRIPT = `(function(){try{
+  var t = localStorage.getItem('balthasar.theme') || 'system';
+  var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  var dark = t === 'dark' || (t === 'system' && prefersDark);
+  if (dark) document.documentElement.classList.add('dark');
+  if (localStorage.getItem('${PRIVACY_KEY}') === '1') {
+    document.documentElement.classList.add('privacy-on');
+  }
+} catch (e) {
+  document.documentElement.classList.add('dark');
+}})();`;
 
 export default function RootLayout({
   children,
@@ -18,10 +41,14 @@ export default function RootLayout({
   return (
     <html lang="zh-CN" suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: PRIVACY_INLINE_SCRIPT }} />
+        {/* suppressHydrationWarning: 因为 inline script 会改 className,
+            React hydration 时已知差异,这是官方推荐 pattern(see next-themes)。 */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INLINE_SCRIPT }} />
       </head>
       <body className="min-h-screen bg-background text-foreground antialiased">
-        <Providers>{children}</Providers>
+        <ThemeProvider>
+          <Providers>{children}</Providers>
+        </ThemeProvider>
         <Toaster richColors position="top-center" />
       </body>
     </html>

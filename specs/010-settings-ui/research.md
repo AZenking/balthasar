@@ -67,13 +67,13 @@ const cents = Math.round(parseFloat(input) * Math.pow(10, minorUnits));
 **`window.confirm("确认归档?此操作不影响已有交易")` (MVP 简化)。**
 
 ### Rationale
-- spec FR-010 + assumptions: "归档确认用 window.confirm (MVP 简化,与 009 删除模式一致;V2 评估 shadcn Dialog)"。
+- spec FR-010 + assumptions: "归档确认用 window.confirm (MVP 简化,与 009 删除模式一致;V2 评估 → 1.0.0 已实现为 HeroUI AlertDialog,见 026-cream-amber-revamp)"。
 - 一行代码,无需额外组件。
 - 取消归档无需确认 (直接恢复,无数据损失风险)。
 - 归档/取消归档成功后: `utils.account.list.invalidate()` 刷新列表。
 
 ### Alternatives considered
-- shadcn AlertDialog: 更好 UX 但增加复杂度,YAGNI (V2)。
+- AlertDialog: 更好 UX 但增加复杂度,YAGNI (V2)。1.0.0 已落地(026-cream-amber-revamp HeroUI AlertDialog)。
 
 ---
 

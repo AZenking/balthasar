@@ -1,6 +1,11 @@
+import { TRPCError } from "@trpc/server";
+import { z } from "zod";
+import { eq } from "drizzle-orm";
 import { router, publicProcedure, protectedProcedure } from "@/server/api/trpc";
 import { findRecentAuthEventsByEmail } from "@/server/db/queries/auth-events";
 import { loadFamilyAndMemberByUserId } from "@/server/db/queries/family-member";
+import { db } from "@/server/db/client";
+import { member } from "@/server/db/schema";
 
 /**
  * auth router — read-only queries that don't need cookie management.
@@ -52,6 +57,61 @@ export const authRouter = router({
     const events = await findRecentAuthEventsByEmail(ctx.session.user.email, 30);
     return { events };
   }),
+
+  /**
+   * POST /api/trpc/auth.updateNickname
+   *
+   * 026 Switch PR Phase 2: update the calling user's member.display_name.
+   *
+   * Target member is resolved server-side via `userId === ctx.session.user.id`
+   * — the client CANNOT inject memberId / familyId (cross-user hard isolation).
+   *
+   * Zero schema change: no `updatedAt` column, no audit log (display_name is a
+   * low-sensitivity field, outside the Constitution v3 audit scope).
+   *
+   * Contract: specs/026-cream-amber-revamp/contracts/auth-update-nickname.md
+   */
+  updateNickname: protectedProcedure
+    .input(
+      z.object({
+        displayName: z
+          .string()
+          .trim()
+          .min(1, "昵称不能为空")
+          .max(30, "昵称不超过 30 字符"),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // 1. Resolve target member by session.user.id (cross-user isolation).
+      const target = await db.query.member.findFirst({
+        where: eq(member.userId, ctx.session.user.id),
+      });
+      if (!target) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "成员不存在",
+        });
+      }
+
+      // 2. UPDATE + RETURNING subset (no userId / familyId / createdAt leak).
+      const [updated] = await db
+        .update(member)
+        .set({ displayName: input.displayName })
+        .where(eq(member.id, target.id))
+        .returning({
+          id: member.id,
+          displayName: member.displayName,
+        });
+
+      if (!updated) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "昵称更新失败",
+        });
+      }
+
+      return { member: updated };
+    }),
 });
 
 export type AuthRouter = typeof authRouter;

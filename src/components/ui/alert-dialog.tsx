@@ -1,49 +1,122 @@
 "use client";
 
+/**
+ * AlertDialog — shadcn API on top of HeroUI v3 <AlertDialog>.
+ *
+ * 026 Phase 3 US1: shadcn → HeroUI v3 adapter. External API unchanged
+ * (Radix-style compound: `AlertDialog` / `AlertDialogTrigger` /
+ * `AlertDialogContent` / `AlertDialogHeader` / `AlertDialogTitle` /
+ * `AlertDialogDescription` / `AlertDialogFooter` / `AlertDialogAction` /
+ * `AlertDialogCancel`).
+ *
+ * HeroUI v3 ships an independent `<AlertDialog>` component (not a Modal
+ * variant). It defaults to `isDismissable=false` and
+ * `isKeyboardDismissDisabled=true`, matching shadcn's AlertDialog semantics
+ * (Esc / outside-click do NOT dismiss — only Action/Cancel buttons do).
+ *
+ * API translation:
+ *   shadcn `open`         → HeroUI `isOpen`
+ *   shadcn `onOpenChange` → HeroUI `onOpenChange`
+ *   `AlertDialogAction`   → styled button that runs onClick, then closes
+ *   `AlertDialogCancel`   → outline-styled button that runs onClick, then closes
+ *
+ * To let Action/Cancel close the dialog without depending on
+ * `react-aria-components` directly (not a user-facing dependency), the Root
+ * owns a `close()` via a private React Context.
+ */
+
 import * as React from "react";
-import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog";
+import { AlertDialog } from "@heroui/react";
 
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 
-const AlertDialog = AlertDialogPrimitive.Root;
+/** Internal context: closes the alert dialog from any descendant. */
+const AlertDialogCloseContext = React.createContext<(() => void) | null>(null);
 
-const AlertDialogTrigger = AlertDialogPrimitive.Trigger;
+type AlertDialogProps = {
+  open?: boolean;
+  defaultOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  modal?: boolean;
+  children?: React.ReactNode;
+};
 
-const AlertDialogPortal = AlertDialogPrimitive.Portal;
+/** Root: shadcn `open` → HeroUI `isOpen`; expose `close` to descendants. */
+const AlertDialogRoot = ({
+  open,
+  defaultOpen,
+  onOpenChange,
+  children,
+}: AlertDialogProps) => {
+  const close = React.useCallback(
+    () => onOpenChange?.(false),
+    [onOpenChange],
+  );
+  return (
+    <AlertDialogCloseContext.Provider value={close}>
+      <AlertDialog.Root
+        isOpen={open}
+        defaultOpen={defaultOpen}
+        onOpenChange={onOpenChange}
+      >
+        {children}
+      </AlertDialog.Root>
+    </AlertDialogCloseContext.Provider>
+  );
+};
 
-const AlertDialogOverlay = React.forwardRef<
-  React.ElementRef<typeof AlertDialogPrimitive.Overlay>,
-  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Overlay>
->(({ className, ...props }, ref) => (
-  <AlertDialogPrimitive.Overlay
-    className={cn(
-      "fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-      className,
-    )}
-    {...props}
-    ref={ref}
-  />
-));
-AlertDialogOverlay.displayName = AlertDialogPrimitive.Overlay.displayName;
+const AlertDialogTrigger = ({
+  children,
+  asChild: _asChild,
+}: {
+  children: React.ReactNode;
+  asChild?: boolean;
+}) => (
+  <AlertDialog.Trigger>
+    {children as React.ReactElement}
+  </AlertDialog.Trigger>
+);
 
-const AlertDialogContent = React.forwardRef<
-  React.ElementRef<typeof AlertDialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Content>
->(({ className, ...props }, ref) => (
-  <AlertDialogPortal>
-    <AlertDialogOverlay />
-    <AlertDialogPrimitive.Content
-      ref={ref}
-      className={cn(
-        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
-        className,
-      )}
-      {...props}
-    />
-  </AlertDialogPortal>
-));
-AlertDialogContent.displayName = AlertDialogPrimitive.Content.displayName;
+/** Portal/Overlay are shadcn-only; under HeroUI they're internal. */
+const AlertDialogPortal = ({ children }: { children?: React.ReactNode }) => (
+  <>{children}</>
+);
+const AlertDialogOverlay = (_props: unknown) => null;
+
+/** Content: visible alert panel. */
+const AlertDialogContent = ({
+  className,
+  children,
+  // shadcn/Radix escape-hatch handlers — react-aria handles both internally.
+  onEscapeKeyDown: _onEscapeKeyDown,
+  onPointerDownOutside: _onPointerDownOutside,
+  onInteractOutside: _onInteractOutside,
+}: {
+  className?: string;
+  children?: React.ReactNode;
+  onEscapeKeyDown?: (e: KeyboardEvent) => void;
+  onPointerDownOutside?: (e: Event) => void;
+  onInteractOutside?: (e: Event) => void;
+}) => (
+  <AlertDialog.Backdrop
+    // AlertDialog semantics: do NOT dismiss on outside click / Esc.
+    isDismissable={false}
+    isKeyboardDismissDisabled
+  >
+    <AlertDialog.Container className="fixed inset-0 z-50 grid place-items-center">
+      <AlertDialog.Dialog
+        className={cn(
+          "relative z-50 grid w-full max-w-lg gap-4 border bg-background p-6 shadow-lg duration-200 sm:rounded-lg",
+          className,
+        )}
+      >
+        {children}
+      </AlertDialog.Dialog>
+    </AlertDialog.Container>
+  </AlertDialog.Backdrop>
+);
+AlertDialogContent.displayName = "AlertDialogContent";
 
 const AlertDialogHeader = ({
   className,
@@ -73,61 +146,120 @@ const AlertDialogFooter = ({
 );
 AlertDialogFooter.displayName = "AlertDialogFooter";
 
-const AlertDialogTitle = React.forwardRef<
-  React.ElementRef<typeof AlertDialogPrimitive.Title>,
-  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Title>
->(({ className, ...props }, ref) => (
-  <AlertDialogPrimitive.Title
-    ref={ref}
-    className={cn("text-lg font-semibold", className)}
-    {...props}
-  />
-));
-AlertDialogTitle.displayName = AlertDialogPrimitive.Title.displayName;
+const AlertDialogTitle = ({
+  className,
+  children,
+}: React.HTMLAttributes<HTMLHeadingElement>) => (
+  <AlertDialog.Heading className={cn("text-lg font-semibold", className)}>
+    {children}
+  </AlertDialog.Heading>
+);
+AlertDialogTitle.displayName = "AlertDialogTitle";
 
-const AlertDialogDescription = React.forwardRef<
-  React.ElementRef<typeof AlertDialogPrimitive.Description>,
-  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Description>
->(({ className, ...props }, ref) => (
-  <AlertDialogPrimitive.Description
-    ref={ref}
+const AlertDialogDescription = ({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLParagraphElement>) => (
+  <p
     className={cn("text-sm text-muted-foreground", className)}
     {...props}
   />
-));
-AlertDialogDescription.displayName =
-  AlertDialogPrimitive.Description.displayName;
+);
+AlertDialogDescription.displayName = "AlertDialogDescription";
 
+/**
+ * Action / Cancel: in Radix these are special triggers that close the dialog
+ * AND fire onClick. With HeroUI we render a regular button styled via
+ * `buttonVariants` that:
+ *   1. calls the consumer's onClick (if any),
+ *   2. closes the dialog via our internal context.
+ *
+ * `asChild` is honored by cloning children, matching shadcn usage like
+ * `<AlertDialogAction asChild><Button>...</Button></AlertDialogAction>`.
+ */
 const AlertDialogAction = React.forwardRef<
-  React.ElementRef<typeof AlertDialogPrimitive.Action>,
-  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Action>
->(({ className, ...props }, ref) => (
-  <AlertDialogPrimitive.Action
-    ref={ref}
-    className={cn(buttonVariants(), className)}
-    {...props}
-  />
-));
-AlertDialogAction.displayName = AlertDialogPrimitive.Action.displayName;
+  HTMLButtonElement,
+  React.ButtonHTMLAttributes<HTMLButtonElement> & { asChild?: boolean }
+>(({ className, onClick, children, asChild, type, ...props }, ref) => {
+  const close = React.useContext(AlertDialogCloseContext);
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    onClick?.(e);
+    if (!e.defaultPrevented) close?.();
+  };
+  if (asChild && React.isValidElement(children)) {
+    const child = children as React.ReactElement<{
+      onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
+      className?: string;
+      ref?: React.Ref<HTMLButtonElement>;
+    }>;
+    return React.cloneElement(child, {
+      ...props,
+      ref,
+      className: cn(buttonVariants(), className, child.props.className),
+      onClick: handleClick,
+    });
+  }
+  return (
+    <button
+      ref={ref}
+      type={type ?? "button"}
+      className={cn(buttonVariants(), className)}
+      onClick={handleClick}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+});
+AlertDialogAction.displayName = "AlertDialogAction";
 
 const AlertDialogCancel = React.forwardRef<
-  React.ElementRef<typeof AlertDialogPrimitive.Cancel>,
-  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Cancel>
->(({ className, ...props }, ref) => (
-  <AlertDialogPrimitive.Cancel
-    ref={ref}
-    className={cn(
-      buttonVariants({ variant: "outline" }),
-      "mt-2 sm:mt-0",
-      className,
-    )}
-    {...props}
-  />
-));
-AlertDialogCancel.displayName = AlertDialogPrimitive.Cancel.displayName;
+  HTMLButtonElement,
+  React.ButtonHTMLAttributes<HTMLButtonElement> & { asChild?: boolean }
+>(({ className, onClick, children, asChild, type, ...props }, ref) => {
+  const close = React.useContext(AlertDialogCloseContext);
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    onClick?.(e);
+    if (!e.defaultPrevented) close?.();
+  };
+  if (asChild && React.isValidElement(children)) {
+    const child = children as React.ReactElement<{
+      onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
+      className?: string;
+      ref?: React.Ref<HTMLButtonElement>;
+    }>;
+    return React.cloneElement(child, {
+      ...props,
+      ref,
+      className: cn(
+        buttonVariants({ variant: "outline" }),
+        "mt-2 sm:mt-0",
+        className,
+        child.props.className,
+      ),
+      onClick: handleClick,
+    });
+  }
+  return (
+    <button
+      ref={ref}
+      type={type ?? "button"}
+      className={cn(
+        buttonVariants({ variant: "outline" }),
+        "mt-2 sm:mt-0",
+        className,
+      )}
+      onClick={handleClick}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+});
+AlertDialogCancel.displayName = "AlertDialogCancel";
 
 export {
-  AlertDialog,
+  AlertDialogRoot as AlertDialog,
   AlertDialogPortal,
   AlertDialogOverlay,
   AlertDialogTrigger,

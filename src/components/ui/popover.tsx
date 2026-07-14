@@ -1,33 +1,110 @@
 "use client";
 
+/**
+ * Popover — shadcn API on top of HeroUI v3 <Popover>.
+ *
+ * 026 Phase 3 US1: shadcn → HeroUI v3 adapter. External API unchanged
+ * (Radix-style compound: `<Popover open onOpenChange>` with `PopoverTrigger`
+ * / `PopoverContent` / `PopoverAnchor`). Internally renders HeroUI's
+ * `<Popover>` compound (`.Root .Trigger .Content`).
+ *
+ * API translation:
+ *   shadcn `open`         → HeroUI `isOpen`
+ *   shadcn `onOpenChange` → HeroUI `onOpenChange`
+ *
+ * `PopoverContent` accepts shadcn's `align` / `sideOffset` props. HeroUI's
+ * Popover uses react-aria positioning (`placement` + `offset`); we forward
+ * `sideOffset` as `offset` and `side` as `placement`. `align` is accepted
+ * for API compatibility (center/start/end has no exact equivalent in
+ * react-aria's placement union at this level).
+ *
+ * `PopoverAnchor` is a pass-through: HeroUI uses the trigger as anchor by
+ * default, which matches the dominant shadcn usage.
+ */
+
 import * as React from "react";
-import * as PopoverPrimitive from "@radix-ui/react-popover";
+import { Popover } from "@heroui/react";
 
 import { cn } from "@/lib/utils";
 
-const Popover = PopoverPrimitive.Root;
+type PopoverProps = {
+  open?: boolean;
+  defaultOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  modal?: boolean;
+  children?: React.ReactNode;
+};
 
-const PopoverTrigger = PopoverPrimitive.Trigger;
+/** Root: shadcn `open` → HeroUI `isOpen`. */
+const PopoverRoot = ({
+  open,
+  defaultOpen,
+  onOpenChange,
+  children,
+}: PopoverProps) => (
+  <Popover.Root
+    isOpen={open}
+    defaultOpen={defaultOpen}
+    onOpenChange={onOpenChange}
+  >
+    {children}
+  </Popover.Root>
+);
 
-const PopoverAnchor = PopoverPrimitive.Anchor;
+const PopoverTrigger = ({
+  children,
+  asChild: _asChild,
+}: {
+  children: React.ReactNode;
+  asChild?: boolean;
+}) => <Popover.Trigger>{children as React.ReactElement}</Popover.Trigger>;
 
-const PopoverContent = React.forwardRef<
-  React.ElementRef<typeof PopoverPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Content>
->(({ className, align = "center", sideOffset = 4, ...props }, ref) => (
-  <PopoverPrimitive.Portal>
-    <PopoverPrimitive.Content
-      ref={ref}
-      align={align}
-      sideOffset={sideOffset}
-      className={cn(
-        "z-50 w-72 rounded-md border bg-popover p-4 text-popover-foreground shadow-md outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
-        className,
-      )}
-      {...props}
-    />
-  </PopoverPrimitive.Portal>
-));
-PopoverContent.displayName = PopoverPrimitive.Content.displayName;
+/**
+ * PopoverAnchor: shadcn exposes this for advanced positioning. HeroUI's
+ * Popover positions off the trigger; we accept the API but render the child
+ * unchanged so consumers compile.
+ */
+const PopoverAnchor = ({ children }: { children?: React.ReactNode }) => (
+  <>{children}</>
+);
 
-export { Popover, PopoverTrigger, PopoverContent, PopoverAnchor };
+const PopoverContent = ({
+  className,
+  children,
+  align: _align = "center",
+  sideOffset = 4,
+  side,
+  // shadcn escape hatches — react-aria handles internally.
+  onEscapeKeyDown: _onEscapeKeyDown,
+  onPointerDownOutside: _onPointerDownOutside,
+  onInteractOutside: _onInteractOutside,
+}: {
+  className?: string;
+  children?: React.ReactNode;
+  align?: "center" | "start" | "end";
+  sideOffset?: number;
+  side?: "top" | "bottom" | "left" | "right";
+  onEscapeKeyDown?: (e: KeyboardEvent) => void;
+  onPointerDownOutside?: (e: Event) => void;
+  onInteractOutside?: (e: Event) => void;
+}) => (
+  <Popover.Content
+    // shadcn default sideOffset=4 → react-aria cross-axis offset 4.
+    offset={sideOffset}
+    placement={side}
+    className={cn(
+      "z-50 w-72 rounded-md border bg-popover p-4 text-popover-foreground shadow-md outline-none",
+      className,
+    )}
+  >
+    {children}
+  </Popover.Content>
+);
+PopoverContent.displayName = "PopoverContent";
+
+export {
+  PopoverRoot as Popover,
+  PopoverTrigger,
+  PopoverContent,
+  PopoverAnchor,
+};

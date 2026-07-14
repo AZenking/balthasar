@@ -18,10 +18,11 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical } from "lucide-react";
+import { GripVertical, Tags } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/feedback/empty-state";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import {
@@ -279,9 +280,22 @@ export function CategoryManager() {
           ))}
         </div>
       ) : !tree || tree.length === 0 ? (
-        <p className="py-8 text-center text-sm text-muted-foreground">
-          没有分类。点&ldquo;新增分类&rdquo;开始。
-        </p>
+        <EmptyState
+          icon={Tags}
+          title="还没有自定义分类"
+          description="点「新增分类」开始组织你的记账维度"
+          action={
+            <Button
+              size="sm"
+              disabled={capReached}
+              title={capReached ? `已达上限 ${CUSTOM_CATEGORY_CAP}` : undefined}
+              onClick={() => setShowCreateForm(true)}
+            >
+              + 新增分类
+            </Button>
+          }
+          className="min-h-[24vh]"
+        />
       ) : (
         <DndContext
           sensors={sensors}

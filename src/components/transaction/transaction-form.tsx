@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { ChevronLeft } from "lucide-react";
 import {
   transactionFormSchema,
   yuanToCents,
@@ -11,6 +12,11 @@ import {
 } from "@/lib/validators/transaction";
 import { trpc } from "@/lib/trpc/client";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,10 +28,34 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CategorySelect } from "@/components/category/category-select";
-import { cn } from "@/lib/utils";
+import {
+  Tabs,
+  NumberField,
+  DatePicker,
+  DateField,
+  Calendar,
+  Card,
+  Label as HeroUILabel,
+} from "@heroui/react";
+import { CalendarDate, parseDate } from "@internationalized/date";
 
-export function TransactionForm({ editId }: { editId?: string }) {
+export function TransactionForm({
+  editId,
+  embedded = false,
+  onSubmitted,
+}: {
+  editId?: string;
+  /**
+   * embedded = true 时去掉外层 Card / Header / Footer,只渲染表单字段。
+   * 用于 Drawer / Modal 等容器场景(容器自带 Header/Footer)。
+   * 默认 false:独立 page 模式(/transaction/new / /transaction/[id]/edit)。
+   */
+  embedded?: boolean;
+  /** 提交成功后触发(用于关 Drawer / Modal)。embedded 模式下推荐传。 */
+  onSubmitted?: () => void;
+}) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const utils = trpc.useUtils();
   const [serverError, setServerError] = useState("");
 
@@ -82,18 +112,37 @@ export function TransactionForm({ editId }: { editId?: string }) {
     });
   }, [editData, reset]);
 
+  // ── Build the /transactions URL preserving the original filter string ──
+  // FR-B004: returning from an edit on a filtered list page must keep the
+  // month/type/categoryId query params so the user lands back on the same
+  // filtered view, not a reset list.
+  const transactionsHref = useMemo(() => {
+    const qs = searchParams.toString();
+    return qs ? `/transactions?${qs}` : "/transactions";
+  }, [searchParams]);
+
+  const handlePostSuccess = () => {
+    // FR-B003 / clarify Q5: invalidate the 3 key families so every screen
+    // (dashboard summary + report + transactions list/detail) refetches.
+    utils.dashboard.summary.invalidate();
+    utils.dashboard.report.invalidate();
+    utils.transaction.list.invalidate();
+    if (embedded && onSubmitted) {
+      onSubmitted(); // 关 Drawer / Modal
+    }
+  };
+
   const createMutation = trpc.transaction.create.useMutation({
     onSuccess: () => {
-      utils.dashboard.summary.invalidate();
-      router.push("/dashboard");
+      handlePostSuccess();
+      if (!embedded) router.push("/dashboard");
     },
   });
 
   const updateMutation = trpc.transaction.update.useMutation({
     onSuccess: () => {
-      utils.dashboard.summary.invalidate();
-      utils.transaction.list.invalidate();
-      router.push("/transactions");
+      handlePostSuccess();
+      if (!embedded) router.push(transactionsHref);
     },
   });
 
@@ -102,9 +151,6 @@ export function TransactionForm({ editId }: { editId?: string }) {
   );
 
   // ── Default accountId to first unarchived account (create mode only) ──
-  // 025: For shadcn Select we must set the form value explicitly (no
-  // native defaultValue on the original element). Run once accounts arrive.
-  // Deps intentionally limited: watch/setValue are RHF-stable refs.
   useEffect(() => {
     if (isEditMode) return;
     if (unarchivedAccounts.length === 0) return;
@@ -168,55 +214,56 @@ export function TransactionForm({ editId }: { editId?: string }) {
     }
   };
 
-  const today = new Date().toISOString().split("T")[0];
-
-  return (
-    <form
-      onSubmit={handleSubmit(onSubmit)}
-      className="space-y-4 p-4 pt-6"
-    >
-      <h1 className="text-xl font-bold">
-        {isEditMode ? "编辑交易" : "记一笔"}
-      </h1>
-
-      {/* Type Switch */}
-      <div className="flex gap-2">
-        {(["expense", "income"] as const).map((t) => (
-          <button
-            key={t}
-            type="button"
-            onClick={() => handleTypeSwitch(t)}
-            className={cn(
-              "flex-1 rounded-lg py-2 text-sm font-medium transition-colors",
-              selectedType === t
-                ? t === "expense"
-                  ? "bg-red-500 text-white"
-                  : "bg-green-500 text-white"
-                : "bg-muted text-muted-foreground"
-            )}
-          >
-            {t === "expense" ? "支出" : "收入"}
-          </button>
-        ))}
-      </div>
+  // 表单字段(embedded / page 模式共用)
+  const formFields = (
+    <>
+      {/* Type Switch — HeroUI Tabs */}
+      <Tabs
+        aria-label="交易类型"
+        selectedKey={selectedType}
+        onSelectionChange={(key) =>
+          handleTypeSwitch(key as "income" | "expense")
+        }
+      >
+        <Tabs.List>
+          <Tabs.Tab id="expense">支出</Tabs.Tab>
+          <Tabs.Tab id="income">收入</Tabs.Tab>
+        </Tabs.List>
+      </Tabs>
       <input type="hidden" {...register("type")} />
 
-      {/* Amount */}
-      <div className="space-y-2">
-        <Label htmlFor="amount">金额 (元)</Label>
-        <Input
-          id="amount"
-          type="text"
-          inputMode="decimal"
-          placeholder="0.00"
-          autoFocus={!isEditMode}
-          className="text-2xl font-bold"
-          {...register("amount")}
-        />
-        {errors.amount && (
-          <p className="text-xs text-destructive">{errors.amount.message}</p>
+      {/* Amount — HeroUI NumberField + ¥ prefix */}
+      {/* NumberField value 是 number,RHF/zod 用 string "0.00",Controller 桥接。
+       * 不挂 data-amount(globals.css clarify Q1:记一笔页金额输入不参与隐私遮罩)。 */}
+      <Controller
+        control={control}
+        name="amount"
+        render={({ field, fieldState }) => (
+          <NumberField
+            value={field.value ? parseFloat(field.value) : NaN}
+            onChange={(v: number) => field.onChange(String(v))}
+            step={0.01}
+            minValue={0.01}
+            isInvalid={fieldState.invalid}
+            aria-label="金额"
+            fullWidth
+          >
+            <HeroUILabel>金额 (元)</HeroUILabel>
+            <NumberField.Group>
+              <NumberField.Input
+                placeholder="0.00"
+                autoFocus={!isEditMode}
+                className="text-2xl font-bold"
+              />
+            </NumberField.Group>
+            {fieldState.error && (
+              <p className="text-xs text-[var(--danger)]">
+                {fieldState.error.message}
+              </p>
+            )}
+          </NumberField>
         )}
-      </div>
+      />
 
       {/* Account */}
       <div className="space-y-2">
@@ -225,10 +272,7 @@ export function TransactionForm({ editId }: { editId?: string }) {
           control={control}
           name="accountId"
           render={({ field }) => (
-            <Select
-              value={field.value ?? ""}
-              onValueChange={field.onChange}
-            >
+            <Select value={field.value ?? ""} onValueChange={field.onChange}>
               <SelectTrigger id="accountId">
                 <SelectValue placeholder="选择账户" />
               </SelectTrigger>
@@ -243,13 +287,13 @@ export function TransactionForm({ editId }: { editId?: string }) {
           )}
         />
         {errors.accountId && (
-          <p className="text-xs text-destructive">
+          <p className="text-xs text-[var(--danger)]">
             {errors.accountId.message}
           </p>
         )}
       </div>
 
-      {/* Category (023-category-ui US6: 用 CategorySelect 替换内联渲染) */}
+      {/* Category */}
       <div className="space-y-2">
         <Label htmlFor="categoryId">分类</Label>
         <CategorySelect
@@ -258,7 +302,7 @@ export function TransactionForm({ editId }: { editId?: string }) {
           onChange={(id) => setValue("categoryId", id, { shouldValidate: true })}
         />
         {errors.categoryId && (
-          <p className="text-xs text-destructive">
+          <p className="text-xs text-[var(--danger)]">
             {errors.categoryId.message}
           </p>
         )}
@@ -276,32 +320,103 @@ export function TransactionForm({ editId }: { editId?: string }) {
         />
       </div>
 
-      {/* Date */}
-      <div className="space-y-2">
-        <Label htmlFor="occurredAt">日期</Label>
-        <Input
-          id="occurredAt"
-          type="date"
-          max={today}
-          {...register("occurredAt")}
-        />
-      </div>
-
-      {serverError && (
-        <p className="text-xs text-destructive">{serverError}</p>
+      {/* Date — HeroUI DatePicker(不隐藏 day,记账需选具体日期) */}
+      <Controller
+        control={control}
+        name="occurredAt"
+        render={({ field }) => (
+          <DatePicker
+            value={field.value ? parseDate(field.value) : null}
+            onChange={(date: CalendarDate | null) => {
+              if (date) field.onChange(date.toString());
+            }}
+            aria-label="日期"
+          >
+            <HeroUILabel>日期</HeroUILabel>
+            <DateField.Group fullWidth>
+              <DateField.Input>
+                {(segment) => <DateField.Segment segment={segment} />}
+              </DateField.Input>
+              <DateField.Suffix>
+                <DatePicker.Trigger>
+                  <DatePicker.TriggerIndicator />
+                </DatePicker.Trigger>
+              </DateField.Suffix>
+            </DateField.Group>
+            <DatePicker.Popover>
+              <Calendar aria-label="日期选择日历">
+                <Calendar.Header>
+                  <Calendar.NavButton slot="previous" />
+                  <Calendar.Heading />
+                  <Calendar.NavButton slot="next" />
+                </Calendar.Header>
+                <Calendar.Grid>
+                  <Calendar.GridHeader>
+                    {(day) => <Calendar.HeaderCell>{day}</Calendar.HeaderCell>}
+                  </Calendar.GridHeader>
+                  <Calendar.GridBody>
+                    {(date) => <Calendar.Cell date={date} />}
+                  </Calendar.GridBody>
+                </Calendar.Grid>
+              </Calendar>
+            </DatePicker.Popover>
+          </DatePicker>
+        )}
+      />
+      {errors.occurredAt && (
+        <p className="text-xs text-[var(--danger)]">
+          {errors.occurredAt.message}
+        </p>
       )}
 
-      <Button
-        type="submit"
-        className="w-full"
-        disabled={isSubmitting}
-      >
-        {isSubmitting
-          ? "提交中..."
-          : isEditMode
-            ? "保存修改"
-            : "确认记账"}
-      </Button>
+      {serverError && (
+        <p className="text-xs text-[var(--danger)]">{serverError}</p>
+      )}
+    </>
+  );
+
+  // 提交按钮(embedded / page 模式共用)
+  const submitButton = (
+    <Button type="submit" className="w-full" disabled={isSubmitting}>
+      {isSubmitting
+        ? "提交中..."
+        : isEditMode
+          ? "保存修改"
+          : "确认记账"}
+    </Button>
+  );
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      {embedded ? (
+        // embedded 模式:无 Card 包裹(Drawer 自带 Header/Footer)
+        <div className="space-y-4 pb-4">
+          {formFields}
+          {submitButton}
+        </div>
+      ) : (
+        // 独立 page 模式:/transaction/new / /transaction/[id]/edit
+        <Card className="mx-4 mt-4">
+          <Card.Header className="flex items-center gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => router.back()}
+                  aria-label="返回"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>返回</TooltipContent>
+            </Tooltip>
+            <Card.Title>{isEditMode ? "编辑交易" : "记一笔"}</Card.Title>
+          </Card.Header>
+          <Card.Content className="space-y-4">{formFields}</Card.Content>
+          <Card.Footer>{submitButton}</Card.Footer>
+        </Card>
+      )}
     </form>
   );
 }

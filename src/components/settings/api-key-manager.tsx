@@ -1,8 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { Trash2 } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -40,9 +46,9 @@ export function ApiKeyManager() {
       </div>
 
       {newKey && (
-        <div className="mb-4 rounded-lg border border-yellow-300 bg-yellow-50 p-3 text-sm">
-          <p className="font-semibold text-yellow-800">⚠️ 请保存你的 API Key (仅显示一次)</p>
-          <code className="mt-1 block break-all rounded bg-white p-2 text-xs">{newKey}</code>
+        <div className="mb-4 rounded-lg border border-[var(--warning)] bg-[var(--warning)]/10 p-3 text-sm">
+          <p className="font-semibold text-[var(--warning)]">⚠️ 请保存你的 API Key (仅显示一次)</p>
+          <code className="mt-1 block break-all rounded bg-[var(--surface-secondary)] p-2 text-xs">{newKey}</code>
           <Button size="sm" variant="outline" className="mt-2" onClick={() => setNewKey(null)}>
             我已保存
           </Button>
@@ -76,18 +82,26 @@ export function ApiKeyManager() {
 
       {(activeKeys ?? []).map((k) => (
         <div key={k.id} className="flex items-center justify-between border-b py-2">
-          <div>
-            <p className="text-sm font-medium">{k.name}</p>
-            <p className="font-mono text-xs text-muted-foreground">{k.keyPrefix}...</p>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium">{k.name}</p>
+            <p className="truncate font-mono text-xs text-muted-foreground">{k.keyPrefix}...</p>
           </div>
-          <button
-            onClick={() => {
-              if (confirm("确认吊销此 Key?")) revokeMutation.mutate({ id: k.id });
-            }}
-            className="text-xs text-destructive hover:underline"
-          >
-            吊销
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="destructive"
+                size="icon"
+                className="min-h-[44px] min-w-[44px]"
+                onClick={() => {
+                  if (confirm("确认吊销此 Key?")) revokeMutation.mutate({ id: k.id });
+                }}
+                aria-label={`吊销 ${k.name}`}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>吊销</TooltipContent>
+          </Tooltip>
         </div>
       ))}
 

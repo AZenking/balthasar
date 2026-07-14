@@ -1,26 +1,114 @@
 @import "tailwindcss";
 @import "@heroui/styles";
-@import "tw-animate-css";
 
 /*
- * 配色:HeroUI v3 默认主题(026 范围修订 2026-07-13)
- * 不再维护奶油琥珀自定义令牌;@heroui/styles 已注入完整默认 token:
- *   --background / --surface / --accent / --accent-foreground /
- *   --muted / --default / --success / --warning / --danger / --foreground / ...
- * 业务语义映射(组件层用 HeroUI variant / CSS 变量):
+ * 主题 token(026-switch 第一期 4:三选主题系统)。
+ *
+ * 三种生效路径:
+ *   1. `<html class="dark">`     —— @heroui/styles 默认 dark token 被下面
+ *                                  `.dark { ... }` 覆盖(以对齐 shadcn
+ *                                  dark 调色板)。
+ *   2. `<html>` 无 dark class     —— HeroUI 默认浅色 token 生效,@heroui/styles
+ *                                  注入 light 一套;为了与 shadcn token
+ *                                  (`bg-background` 等 build-time 值)对齐,
+ *                                  `:root:not(.dark) { ... }` 显式给出 light
+ *                                  shadcn 值。
+ *   3. `<html class="dark privacy-on">` —— 在 dark 基础上加隐私模式,金额
+ *                                  被 globals.css 末尾规则遮蔽。
+ *
+ * layout.tsx inline script 在 hydration 前根据 localStorage 决定加不加
+ * `.dark`,ThemeProvider 在 hydration 后维护 `<html>.classList`。
+ * 详见 docs/THEME.md(若有)。
+ *
+ * 业务语义(组件层用 HeroUI variant / CSS 变量):
  *   收入 income  → success(绿)
  *   支出 expense → danger(红)
- * 详见 docs/THEME.md。
  */
 
-/* 隐私模式(026-cream-amber-revamp, spec FR-C008 / research.md R5)
+/* 隐私模式(026-cream-amber-revamp, spec FR-C008 / research.md R5;
+ * 026-switch 第一期 7:修复位移)。
+ *
  * layout.tsx 在 <head> 注入 inline script,hydration 前读 localStorage
  * 并给 <html> 加 .privacy-on class。展示页金额元素挂 data-amount 属性。
- * "记一笔"页金额输入不挂 data-amount(clarify Q1 = A)。 */
-.privacy-on [data-amount] { color: transparent; }
-.privacy-on [data-amount]::after { content: '***'; }
+ * "记一笔"页金额输入不挂 data-amount(clarify Q1 = A)。
+ *
+ * 实现策略(2026-07-13 修订,消除位移):
+ * - 原方案 `color: transparent` + `::after { content: '***' }` 让 *** 追加
+ *   在原文字后,*** 宽度 ≠ 原金额宽度,导致整行 reflow / 抖动。
+ * - 新方案:元素 `position: relative` 保留原盒模型宽度;文字 `color:
+ *   transparent` 仍占位(布局稳定);`::after` absolute inset:0 居中
+ *   渲染 ***,不破坏宽度。
+ * - *** 用 `--muted-foreground` token,与上下文 muted 文字协调,不写死色。
+ */
+.privacy-on [data-amount] {
+  position: relative;
+  color: transparent;
+}
+.privacy-on [data-amount]::after {
+  content: '***';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+}
 
-@theme {
+/*
+ * Light theme(026-switch 第一期 4:三选主题)。
+ * `<html>` 无 dark class 时生效。覆盖 HeroUI v3 默认浅色以与 shadcn
+ * light 调色板对齐(对齐 shadcn `--color-background` 等的浅色值)。
+ */
+:root:not(.dark) {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --surface: oklch(0.97 0 0);
+  --surface-foreground: oklch(0.145 0 0);
+  --surface-secondary: oklch(0.92 0 0);
+  --surface-secondary-foreground: oklch(0.145 0 0);
+  --surface-tertiary: oklch(0.87 0 0);
+  --surface-tertiary-foreground: oklch(0.145 0 0);
+  --overlay: oklch(0.97 0 0);
+  --overlay-foreground: oklch(0.145 0 0);
+  --muted: oklch(0.55 0 0);
+  --default: oklch(0.92 0 0);
+  --default-foreground: oklch(0.145 0 0);
+  --border: oklch(0.9 0 0);
+  --field-background: oklch(1 0 0);
+  --field-placeholder: oklch(0.55 0 0);
+}
+
+/*
+ * Dark theme:覆盖 HeroUI v3 默认 token + 业务语义。
+ * layout.tsx 给 <html> 加 class="dark",本块激活。
+ * 颜色对齐 shadcn dark 调色板 + HeroUI accent/danger/success/warning 保持不变
+ * (亮色 token 在深色背景下也足够对比度)。
+ */
+.dark {
+  --background: oklch(0.18 0.01 285.89);
+  --foreground: oklch(0.97 0 0);
+  --surface: oklch(0.22 0.01 285.89);
+  --surface-foreground: var(--foreground);
+  --surface-secondary: oklch(0.27 0.01 285.89);
+  --surface-secondary-foreground: var(--foreground);
+  --surface-tertiary: oklch(0.32 0.01 285.89);
+  --surface-tertiary-foreground: var(--foreground);
+  --overlay: oklch(0.22 0.01 285.89);
+  --overlay-foreground: var(--foreground);
+  --muted: oklch(0.7 0.01 285.89);
+  --default: oklch(0.27 0.01 285.89);
+  --default-foreground: var(--foreground);
+  --border: oklch(0.3 0.01 285.89);
+  --field-background: oklch(0.22 0.01 285.89);
+  --field-placeholder: oklch(0.6 0.01 285.89);
+}
+
+/*
+ * shadcn legacy tokens → 跟随 light / dark 状态。
+ * 之前固定 dark 值(原 026 注释),改为根据 .dark 切换两套值,
+ * 与上面 :root / .dark 保持一致。
+ */
+:root {
   --color-background: oklch(1 0 0);
   --color-foreground: oklch(0.145 0 0);
   --color-primary: oklch(0.205 0 0);
@@ -36,11 +124,35 @@
   --color-card-foreground: oklch(0.145 0 0);
   --color-destructive: oklch(0.577 0.245 27.325);
   --color-destructive-foreground: oklch(0.985 0 0);
-  /* 024-ui-consistency US1: shadcn primitives (Dialog/Popover/Tooltip/Select/Tabs) reference these tokens */
   --color-popover: oklch(1 0 0);
   --color-popover-foreground: oklch(0.145 0 0);
   --color-secondary: oklch(0.97 0 0);
   --color-secondary-foreground: oklch(0.205 0 0);
+}
+
+.dark {
+  --color-background: oklch(0.18 0.01 285.89);
+  --color-foreground: oklch(0.97 0 0);
+  --color-primary: oklch(0.6204 0.195 253.83);
+  --color-primary-foreground: oklch(0.9911 0 0);
+  --color-muted: oklch(0.27 0.01 285.89);
+  --color-muted-foreground: oklch(0.7 0.01 285.89);
+  --color-accent: oklch(0.27 0.01 285.89);
+  --color-accent-foreground: oklch(0.97 0 0);
+  --color-border: oklch(0.3 0.01 285.89);
+  --color-input: oklch(0.3 0.01 285.89);
+  --color-ring: oklch(0.6204 0.195 253.83);
+  --color-card: oklch(0.22 0.01 285.89);
+  --color-card-foreground: oklch(0.97 0 0);
+  --color-destructive: oklch(0.6532 0.2328 25.74);
+  --color-destructive-foreground: oklch(0.9911 0 0);
+  --color-popover: oklch(0.22 0.01 285.89);
+  --color-popover-foreground: oklch(0.97 0 0);
+  --color-secondary: oklch(0.27 0.01 285.89);
+  --color-secondary-foreground: oklch(0.97 0 0);
+}
+
+@theme {
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
@@ -48,4 +160,59 @@ html, body {
   font-family: var(--font-sans);
   background-color: var(--color-background);
   color: var(--color-foreground);
+}
+
+/*
+ * 5 级字体规范 + tabular numbers(026-switch 第二期 3)。
+ *
+ * 设计动机:HeroUI 自带 text-xs/sm/base/lg/xl/2xl 是 Tachyons 风格的
+ * 原子字号,但没有"语义层级"(display / heading / body / caption / amount)。
+ * 这里在 utility 层补充语义字号 + tabular-nums,业务代码可以同时拿到
+ * 字号 + 字重 + 字符宽度三件套,避免散落 `font-bold tabular-nums` 组合。
+ *
+ * 渐进迁移策略:
+ *   - 不强制全替换已有 `text-xl font-bold`(已稳定,改了徒增风险)
+ *   - 只在「关键金额」+「图表数字」节点应用 tabular-nums,以消除数字
+ *     宽度跳动(layout shift)。后续新增页面 / 组件应优先用 .text-amount
+ *     / .text-chart 这套语义类。
+ *
+ * 字号映射(参考 Material / iOS HIG):
+ *   .text-display  30px / 700  —— 品牌标题、关键 hero 数字
+ *   .text-heading  20px / 600  —— 卡片标题、分区标题
+ *   .text-body     14px / 400  —— 正文(默认 body 字号,显式语义)
+ *   .text-caption  12px / muted —— 辅助说明、时间戳、单位
+ *   .text-amount   24px / 700 / tabular-nums —— 关键金额(月度结余等)
+ *   .text-chart    11px / tabular-nums —— 图表内坐标 / 数据点
+ */
+@layer utilities {
+  .text-display {
+    font-size: 1.875rem;
+    line-height: 2.25rem;
+    font-weight: 700;
+  }
+  .text-heading {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+    font-weight: 600;
+  }
+  .text-body {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+  .text-caption {
+    font-size: 0.75rem;
+    line-height: 1rem;
+    color: var(--muted);
+  }
+  .text-amount {
+    font-size: 1.5rem;
+    line-height: 2rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .text-chart {
+    font-size: 0.6875rem;
+    line-height: 1rem;
+    font-variant-numeric: tabular-nums;
+  }
 }

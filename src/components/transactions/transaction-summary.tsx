@@ -10,10 +10,21 @@ export function TransactionSummary({
   net: number;
 }) {
   return (
-    <div className="flex justify-between rounded-lg bg-muted/50 px-4 py-2 text-sm">
-      <span className="text-green-600">收入 {formatAmount(income)}</span>
-      <span className="text-red-500">支出 {formatAmount(expense)}</span>
-      <span className={net >= 0 ? "text-green-600 font-semibold" : "text-red-500 font-semibold"}>
+    <div className="flex justify-between rounded-lg bg-[var(--surface-secondary)] px-4 py-2 text-sm tabular-nums">
+      <span data-amount className="text-[var(--success)]">
+        收入 {formatAmount(income)}
+      </span>
+      <span data-amount className="text-[var(--danger)]">
+        支出 {formatAmount(expense)}
+      </span>
+      <span
+        data-amount
+        className={
+          net >= 0
+            ? "font-semibold text-[var(--success)]"
+            : "font-semibold text-[var(--danger)]"
+        }
+      >
         结余 {formatAmount(net)}
       </span>
     </div>

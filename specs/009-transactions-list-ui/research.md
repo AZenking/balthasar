@@ -47,7 +47,7 @@
 
 ### Rationale
 - 一行代码,无需额外组件。
-- V2 替换为 shadcn AlertDialog (更好的 UX + 动画)。
+- V2 替换为 AlertDialog(更好的 UX + 动画)。1.0.0 已实现为 HeroUI AlertDialog(见 026-cream-amber-revamp)。
 - 删除成功后:`utils.transaction.list.invalidate()` 刷新列表 + 小计。
 
 ---

@@ -40,6 +40,33 @@
   - .specify/templates/tasks-template.md — ✅ 无需修改
 遗留 TODO: 无
 === 同步影响报告结束 ===
+
+
+=== 同步影响报告 (Sync Impact Report) ===
+版本变更: 2.0.0 → 3.0.0 (MAJOR)
+原则修改: 无原则章节变更
+新增章节: 无
+删除章节: 无
+技术栈章节修改 (MAJOR):
+  - UI 组件: shadcn/ui (Radix + Tailwind) → HeroUI v3 (@heroui/react + @heroui/styles)
+    (React Aria + Tailwind v4 + oklch 主题)
+  - 样式层备注更新: Tailwind CSS → Tailwind CSS v4 (配合 HeroUI v3)
+  - 其它栈保持 (Next.js / tRPC / Better-Auth / Drizzle / PostgreSQL / Docker / Vitest)
+修订动机:
+  026-cream-amber-revamp (1.0.0 release) 全站迁移 shadcn → HeroUI v3。理由:
+  - HeroUI v3 基于 React Aria,无障碍支持更强 (宪章未明文要求但符合产品价值)
+  - HeroUI v3 用 oklch 色彩空间 + CSS 变量主题,与 Tailwind v4 原生对齐
+  - HeroUI v3 组合式 API (Card.Header / Modal.Content) 比 shadcn flat API 更清晰
+  - 单人维护偏好: HeroUI 默认配色 + variant 系统降低主题决策负担
+迁移影响:
+  - 14 个 src/components/ui/*.tsx 改为 HeroUI 适配层 (shadcn API 兼容)
+  - 删除依赖: @radix-ui/* (8 件) / cmdk / class-variance-authority / tw-animate-css
+  - 新增依赖: @heroui/react / @heroui/styles / tailwind-variants
+  - 删除 components.json (shadcn CLI 配置)
+  - 026 spec / plan / research / data-model / contracts / tasks / quickstart 已落地
+待更新模板: 无
+遗留 TODO: 无
+=== 同步影响报告结束 ===
 -->
 
 # BALTHASAR 家庭记账系统 宪章
@@ -162,8 +189,8 @@ boilerplate (违反原则六 YAGNI)。
 | 认证 | Better-Auth | 邮箱密码 + session + 插件化 |
 | ORM | Drizzle | 类型化查询、迁移 (保留) |
 | 数据库 | PostgreSQL 16 | 唯一真相源 (保留) |
-| 样式 | Tailwind CSS | 配合 shadcn/ui 组件 (保留) |
-| UI 组件 | shadcn/ui | Radix + Tailwind (保留) |
+| 样式 | Tailwind CSS v4 | 配合 HeroUI v3 组件 |
+| UI 组件 | HeroUI v3 (@heroui/react + @heroui/styles) | React Aria + Tailwind v4 + oklch 主题 |
 | 部署 | Docker | 一键启动 (MVP 验收标准) |
 | 测试 | Vitest + testcontainers | 单元 + 契约 + 集成 |
 
@@ -204,4 +231,4 @@ boilerplate (违反原则六 YAGNI)。
 "宪章检查",逐条列出每条原则并标注是否违反。违反仅在以下情况允许
 发生: 该违反已写入 plan 的 Complexity Tracking 表并附带正当理由。
 
-**版本**: 2.0.0 | **批准日期**: 2026-07-06 | **最后修订**: 2026-07-06
+**版本**: 3.0.0 | **批准日期**: 2026-07-06 | **最后修订**: 2026-07-13 (v3.0.0: shadcn/ui → HeroUI v3,026-cream-amber-revamp)
