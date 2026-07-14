@@ -67,6 +67,40 @@
 待更新模板: 无
 遗留 TODO: 无
 === 同步影响报告结束 ===
+
+
+=== 同步影响报告 (Sync Impact Report) ===
+版本变更: 3.0.0 → 3.1.0 (MINOR)
+原则修改: 无原章节变更
+新增章节: 七、UI 调整纪律 (HeroUI + /heroui-react skill)
+删除章节: 无
+技术栈章节修改: 无 (HeroUI v3 栈在 v3.0.0 已冻结)
+修订动机:
+  v3.0.0 完成栈迁移 shadcn/ui → HeroUI v3 后,缺乏工作流纪律约束。
+  AI 协作场景下,Agent 易凭陈旧训练记忆 (shadcn / cva / Radix API)
+  直接编码,导致:
+  - HeroUI v3 组合式 API (Card.Header / Modal.Content) 被误用为 flat API
+  - oklch token 命名错配 (--accent vs shadcn --primary)
+  - variant 系统被绕过,退化为手写 className
+  - a11y (React Aria) 能力被静默回退
+  /heroui-react skill 缓存了 HeroUI v3 最新文档 (组件 API / props /
+  variant / theming / dark mode),一次查询比 grep + 试错更省时,
+  符合原则六 YAGNI ("复杂度是白交的税")。
+  本原则把 "UI 调整前先查 skill" 从隐含期望升格为 MUST 级宪章约束。
+迁移影响:
+  - plan-template.md / spec-template.md / tasks-template.md 无需修改
+    (plan-template Constitution Check 为动态门,自动继承新原则)
+  - docs/AGENTS.md 第 22 行仍写 "shadcn/ui" (v3.0.0 遗留 staleness),
+    属既有技术债,非本次修订引入;建议在下一 patch 跟进
+  - docs/THEME.md 已与 HeroUI v3 对齐,无需修改
+待更新模板:
+  - .specify/templates/plan-template.md — ✅ 无需修改
+  - .specify/templates/spec-template.md — ✅ 无需修改
+  - .specify/templates/tasks-template.md — ✅ 无需修改
+遗留 TODO:
+  - docs/AGENTS.md:22 "shadcn/ui" → "HeroUI v3 (@heroui/react + @heroui/styles)"
+    (v3.0.0 遗留,非本次修订范围;建议下次 docs patch 一并修正)
+=== 同步影响报告结束 ===
 -->
 
 # BALTHASAR 家庭记账系统 宪章
@@ -177,6 +211,34 @@ boilerplate (违反原则六 YAGNI)。
 
 **理由**: 这是一个面向单一产品的小型全栈应用。复杂度在这里是白交的税。
 
+### 七、UI 调整纪律 (优先 /heroui-react skill)
+
+任何 UI 调整 —— 新建组件、修改现有组件、调整主题 token、改 className
+或样式 —— **必须** 优先调用 `/heroui-react` skill 获取 HeroUI v3 的组件
+API、props、variant、theming 与最佳实践;**禁止** 凭记忆或 shadcn 时代
+经验直接编码。
+
+- 触发范围: 任何触及 `src/components/**/*.tsx`、`src/app/**/*.tsx` 中
+  JSX / className / 组件 props 的改动。纯文案 copy、纯 tRPC / SQL /
+  领域函数调整不触发本规则。
+- 新建 / 修改 `src/components/ui/*.tsx` 适配层前,先 `/heroui-react` 查
+  HeroUI v3 原生组件 API 与组合式子组件 (如 `Card.Header`、
+  `Modal.Content`、`Tabs.List`),确认 variant 与 slot 结构后再落码。
+- 主题 token 调整前,先 `/heroui-react` 查 oklch 变量与暗色模式约定;
+  `docs/THEME.md` 是业务语义映射 (income→success / expense→danger)
+  的真相源,HeroUI `variables.css` 是 token 真相源。
+- **禁止** 在未查 skill 的情况下: 引入新 UI 库、手写 Radix-style
+  primitives、回退到 shadcn / cva / `class-variance-authority` API 模式。
+- 合规审查 (见治理章节) 必须包含 "本 UI 改动是否查过 /heroui-react"
+  的核对;未查即落码视为违反本原则。
+
+**理由**: v3.0.0 已从 shadcn/ui 迁移至 HeroUI v3 (React Aria + Tailwind v4
++ oklch)。HeroUI v3 的组合式 API、variant 系统、token 命名与 shadcn
+差异显著;凭陈旧记忆编码会触发 API 误用、token 错配、a11y 静默回退。
+`/heroui-react` skill 缓存了 HeroUI v3 最新文档,一次查询比 grep + 试错
+更省时 (符合原则六 YAGNI)。把 "先查 skill" 从隐含期望升格为 MUST 级
+约束,是为了对抗 AI 协作场景下 "凭印象编码" 的系统性漂移。
+
 ## 技术栈
 
 由 `docs/AGENTS.md` 冻结。下表中任何一项的变更都是宪章修订,
@@ -231,4 +293,4 @@ boilerplate (违反原则六 YAGNI)。
 "宪章检查",逐条列出每条原则并标注是否违反。违反仅在以下情况允许
 发生: 该违反已写入 plan 的 Complexity Tracking 表并附带正当理由。
 
-**版本**: 3.0.0 | **批准日期**: 2026-07-06 | **最后修订**: 2026-07-13 (v3.0.0: shadcn/ui → HeroUI v3,026-cream-amber-revamp)
+**版本**: 3.1.0 | **批准日期**: 2026-07-06 | **最后修订**: 2026-07-14 (v3.1.0 MINOR: 新增原则七 UI 调整纪律 — 强制 /heroui-react skill 查询)
