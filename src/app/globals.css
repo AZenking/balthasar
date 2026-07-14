@@ -161,3 +161,58 @@ html, body {
   background-color: var(--color-background);
   color: var(--color-foreground);
 }
+
+/*
+ * 5 级字体规范 + tabular numbers(026-switch 第二期 3)。
+ *
+ * 设计动机:HeroUI 自带 text-xs/sm/base/lg/xl/2xl 是 Tachyons 风格的
+ * 原子字号,但没有"语义层级"(display / heading / body / caption / amount)。
+ * 这里在 utility 层补充语义字号 + tabular-nums,业务代码可以同时拿到
+ * 字号 + 字重 + 字符宽度三件套,避免散落 `font-bold tabular-nums` 组合。
+ *
+ * 渐进迁移策略:
+ *   - 不强制全替换已有 `text-xl font-bold`(已稳定,改了徒增风险)
+ *   - 只在「关键金额」+「图表数字」节点应用 tabular-nums,以消除数字
+ *     宽度跳动(layout shift)。后续新增页面 / 组件应优先用 .text-amount
+ *     / .text-chart 这套语义类。
+ *
+ * 字号映射(参考 Material / iOS HIG):
+ *   .text-display  30px / 700  —— 品牌标题、关键 hero 数字
+ *   .text-heading  20px / 600  —— 卡片标题、分区标题
+ *   .text-body     14px / 400  —— 正文(默认 body 字号,显式语义)
+ *   .text-caption  12px / muted —— 辅助说明、时间戳、单位
+ *   .text-amount   24px / 700 / tabular-nums —— 关键金额(月度结余等)
+ *   .text-chart    11px / tabular-nums —— 图表内坐标 / 数据点
+ */
+@layer utilities {
+  .text-display {
+    font-size: 1.875rem;
+    line-height: 2.25rem;
+    font-weight: 700;
+  }
+  .text-heading {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+    font-weight: 600;
+  }
+  .text-body {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+  .text-caption {
+    font-size: 0.75rem;
+    line-height: 1rem;
+    color: var(--muted-foreground);
+  }
+  .text-amount {
+    font-size: 1.5rem;
+    line-height: 2rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .text-chart {
+    font-size: 0.6875rem;
+    line-height: 1rem;
+    font-variant-numeric: tabular-nums;
+  }
+}

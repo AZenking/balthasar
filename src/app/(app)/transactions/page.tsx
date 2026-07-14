@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { TRPCClientError } from "@trpc/client";
 import { toast } from "sonner";
+import { ReceiptText } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { getUtcMonthRange } from "@/lib/date-ranges";
 import { Card } from "@heroui/react";
@@ -26,6 +27,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { EmptyState } from "@/components/feedback/empty-state";
 
 type TransactionItem = {
   id: string;
@@ -294,12 +296,13 @@ export default function TransactionsPage() {
   const grouped = useMemo(() => groupByDate(items), [items]);
 
   // ── First load skeleton ──
+  // PageHeader(title="流水" + filterDescription + count)同步渲染不需要占位;
+  // 这里复刻 SummaryCard (~h-10) + 流水列表项 (~h-16 × 6) 高度,降低加载完成跳动。
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        <Skeleton className="h-8 w-24" />
-        <Skeleton className="h-10 w-full" />
-        <div className="space-y-3">
+      <div className="space-y-3">
+        <Skeleton className="h-10 w-full rounded-lg" />
+        <div className="space-y-0">
           {Array.from({ length: 6 }).map((_, i) => (
             <Skeleton key={i} className="h-16 w-full" />
           ))}
@@ -335,11 +338,24 @@ export default function TransactionsPage() {
 
       <div className={`${isRefetching ? "opacity-50" : ""}`}>
         {items.length === 0 ? (
-          <div className="flex min-h-[40vh] items-center justify-center">
-            <p className="text-[var(--muted-foreground)]">
-              {hasFilters ? "无符合条件的交易" : "暂无交易"}
-            </p>
-          </div>
+          hasFilters ? (
+            <EmptyState
+              icon={ReceiptText}
+              title="无符合条件的交易"
+              description="试试调整筛选条件,或清除全部过滤"
+            />
+          ) : (
+            <EmptyState
+              icon={ReceiptText}
+              title="暂无交易"
+              description="开始记账,记录每一笔收支"
+              action={
+                <Button onClick={() => router.push("/transaction/new")}>
+                  记一笔
+                </Button>
+              }
+            />
+          )
         ) : (
           <>
             {/* 026 US6: 列表按日期分组渲染 */}

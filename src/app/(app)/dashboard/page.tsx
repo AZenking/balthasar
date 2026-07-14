@@ -142,20 +142,26 @@ function SummaryHeroCard({
           <p className="text-xs text-muted-foreground">本月结余</p>
           <p
             data-amount
-            className={`mt-1 text-3xl font-bold ${netColor}`}
+            className={`mt-1 text-amount ${netColor}`}
           >
             {formatCents(monthNet)}
           </p>
           <div className="mt-3 flex gap-4 text-sm">
             <div className="flex items-center gap-1">
               <span className="text-muted-foreground">收入</span>
-              <span data-amount className="font-semibold text-[var(--success)]">
+              <span
+                data-amount
+                className="font-semibold tabular-nums text-[var(--success)]"
+              >
                 {formatCents(monthIncome)}
               </span>
             </div>
             <div className="flex items-center gap-1">
               <span className="text-muted-foreground">支出</span>
-              <span data-amount className="font-semibold text-[var(--danger)]">
+              <span
+                data-amount
+                className="font-semibold tabular-nums text-[var(--danger)]"
+              >
                 {formatCents(monthExpense)}
               </span>
             </div>

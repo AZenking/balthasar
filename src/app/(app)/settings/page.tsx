@@ -20,7 +20,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Tags, ChevronRight, LogOut, User, KeyRound, Wallet, Palette, Package } from "lucide-react";
+import { Tags, ChevronRight, LogOut, User, KeyRound, Wallet, Palette } from "lucide-react";
 import { TRPCClientError } from "@trpc/client";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc/client";
@@ -49,6 +49,10 @@ import { AccountForm, type AccountFormValues } from "@/components/settings/accou
 import { ApiKeyManager } from "@/components/settings/api-key-manager";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { PageHeader } from "@/components/layout/page-header";
+import { EmptyState } from "@/components/feedback/empty-state";
+// 026-switch 第二期 2:版本号从 package.json 读。
+// Next.js 16 + App Router + resolveJsonModule:true 直接 import JSON 即可。
+import packageJson from "@/../package.json";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -226,16 +230,28 @@ export default function SettingsPage() {
           )}
 
           {isLoading ? (
-            <div className="space-y-2">
+            <div className="space-y-0">
               {[1, 2].map((i) => (
-                <Skeleton key={i} className="h-12 w-full" />
+                <Skeleton key={i} className="h-16 w-full" />
               ))}
             </div>
           ) : (activeAccounts ?? []).length === 0 &&
             (archivedAccounts ?? []).length === 0 ? (
-            <p className="py-4 text-center text-sm text-muted-foreground">
-              暂无账户,请先创建
-            </p>
+            <EmptyState
+              icon={Wallet}
+              title="还没有账户"
+              description="创建第一个账户,开始记录你的收支"
+              action={
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowCreateForm(true)}
+                >
+                  新建账户
+                </Button>
+              }
+              className="min-h-[24vh]"
+            />
           ) : (
             <>
               {(activeAccounts ?? []).map((account) =>
@@ -327,11 +343,11 @@ export default function SettingsPage() {
         退出登录
       </Button>
 
-      {/* 底部签名(可选) */}
-      <p className="flex items-center justify-center gap-1 pt-2 text-center text-xs text-muted-foreground">
-        <Package className="h-3 w-3" />
-        轻记 · 1.0.0
-      </p>
+      {/* 底部签名(026-switch 第二期 2:版本号从 package.json 读) */}
+      <div className="px-4 py-6 text-center text-xs text-muted-foreground">
+        <p className="font-medium">BALTHASAR</p>
+        <p className="mt-1">版本 v{packageJson.version}</p>
+      </div>
 
       <AlertDialog
         open={showLogoutConfirm}

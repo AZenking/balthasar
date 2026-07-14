@@ -1,3 +1,6 @@
+import { PieChart } from "lucide-react";
+import { EmptyState } from "@/components/feedback/empty-state";
+
 interface CategoryItem {
   categoryId: string;
   categoryName: string;
@@ -8,7 +11,14 @@ interface CategoryItem {
 
 export function CategoryBreakdown({ items }: { items: CategoryItem[] }) {
   if (items.length === 0) {
-    return <p className="py-4 text-center text-sm text-muted-foreground">暂无支出</p>;
+    return (
+      <EmptyState
+        icon={PieChart}
+        title="暂无支出"
+        description="本月还没有支出记录"
+        className="min-h-[16vh]"
+      />
+    );
   }
 
   const formatAmount = (cents: number) => `¥${(cents / 100).toFixed(2)}`;

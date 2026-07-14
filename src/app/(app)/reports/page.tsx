@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { PieChart } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MonthSelect } from "@/components/shared/month-select";
@@ -9,6 +10,7 @@ import { MonthlyTrendChart } from "@/components/reports/monthly-trend-chart";
 import { CategoryDonut } from "@/components/reports/category-donut";
 import { CategoryBreakdownCard } from "@/components/reports/category-breakdown-card";
 import { PageHeader } from "@/components/layout/page-header";
+import { EmptyState } from "@/components/feedback/empty-state";
 
 /**
  * Reports page (026-cream-amber-revamp + 026-switch 第一期 3:PageHeader)。
@@ -92,9 +94,12 @@ export default function ReportsPage() {
               {data.endYearMonth.year}年{data.endYearMonth.month}月 支出分类
             </h2>
             {data.targetMonthCategoryBreakdown.length === 0 ? (
-              <div className="rounded-xl bg-card p-6 text-center text-sm text-muted-foreground">
-                暂无报表数据
-              </div>
+              <EmptyState
+                icon={PieChart}
+                title="暂无报表数据"
+                description="本月还没有支出记录,记一笔后报表会自动汇总"
+                className="min-h-[24vh]"
+              />
             ) : (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
                 <div className="md:col-span-5">
