@@ -31,10 +31,7 @@ import { useEffect, useState } from "react";
 import {
   Button,
   Drawer,
-  DatePicker,
-  DateField,
   Calendar,
-  Label,
   Select,
   ListBox,
   ListBoxItem,
@@ -137,55 +134,42 @@ function MonthSelectDrawer({
                 <Drawer.Heading>{ariaLabel}</Drawer.Heading>
               </Drawer.Header>
               <Drawer.Body>
-                <DatePicker
+                {/* 直接渲染 Calendar(不再嵌 DatePicker 二级弹出)。
+                   HeroUI Calendar 独立受控:value + onChange,用户在日历
+                   grid 上直接点日期 → onChange 取 year + month(忽略 day)。 */}
+                <Calendar
+                  aria-label={ariaLabel}
                   value={calendarValue}
                   onChange={(date) => {
                     if (!date) return;
-                    // 只取 year + month,忽略 day(月份选择语义)
                     onChange(date.year, date.month);
                     setIsOpen(false);
                   }}
                   minValue={minValue}
                   maxValue={maxValue}
-                  aria-label={ariaLabel}
                 >
-                  <Label className="sr-only">选择月份</Label>
-                  <DateField.Group fullWidth>
-                    <DateField.Input>
-                      {(segment) => <DateField.Segment segment={segment} />}
-                    </DateField.Input>
-                    <DateField.Suffix>
-                      <DatePicker.Trigger>
-                        <DatePicker.TriggerIndicator />
-                      </DatePicker.Trigger>
-                    </DateField.Suffix>
-                  </DateField.Group>
-                  <DatePicker.Popover>
-                    <Calendar aria-label="月份选择日历">
-                      <Calendar.Header>
-                        <Calendar.YearPickerTrigger>
-                          <Calendar.YearPickerTriggerHeading />
-                          <Calendar.YearPickerTriggerIndicator />
-                        </Calendar.YearPickerTrigger>
-                        <Calendar.NavButton slot="previous" />
-                        <Calendar.NavButton slot="next" />
-                      </Calendar.Header>
-                      <Calendar.Grid>
-                        <Calendar.GridHeader>
-                          {(day) => <Calendar.HeaderCell>{day}</Calendar.HeaderCell>}
-                        </Calendar.GridHeader>
-                        <Calendar.GridBody>
-                          {(date) => <Calendar.Cell date={date} />}
-                        </Calendar.GridBody>
-                      </Calendar.Grid>
-                      <Calendar.YearPickerGrid>
-                        <Calendar.YearPickerGridBody>
-                          {({ year }) => <Calendar.YearPickerCell year={year} />}
-                        </Calendar.YearPickerGridBody>
-                      </Calendar.YearPickerGrid>
-                    </Calendar>
-                  </DatePicker.Popover>
-                </DatePicker>
+                  <Calendar.Header>
+                    <Calendar.YearPickerTrigger>
+                      <Calendar.YearPickerTriggerHeading />
+                      <Calendar.YearPickerTriggerIndicator />
+                    </Calendar.YearPickerTrigger>
+                    <Calendar.NavButton slot="previous" />
+                    <Calendar.NavButton slot="next" />
+                  </Calendar.Header>
+                  <Calendar.Grid>
+                    <Calendar.GridHeader>
+                      {(day) => <Calendar.HeaderCell>{day}</Calendar.HeaderCell>}
+                    </Calendar.GridHeader>
+                    <Calendar.GridBody>
+                      {(date) => <Calendar.Cell date={date} />}
+                    </Calendar.GridBody>
+                  </Calendar.Grid>
+                  <Calendar.YearPickerGrid>
+                    <Calendar.YearPickerGridBody>
+                      {({ year }) => <Calendar.YearPickerCell year={year} />}
+                    </Calendar.YearPickerGridBody>
+                  </Calendar.YearPickerGrid>
+                </Calendar>
               </Drawer.Body>
             </Drawer.Dialog>
           </Drawer.Content>
