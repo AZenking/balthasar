@@ -5,7 +5,6 @@ import { trpc } from "@/lib/trpc/client";
 import { Card, Skeleton } from "@heroui/react";
 import { MonthSelect } from "@/components/shared/month-select";
 import { ExpenseTrendChart } from "@/components/dashboard/expense-trend-chart";
-import { TopCategoryCard } from "@/components/dashboard/top-category-card";
 import { PrivacyToggle } from "@/components/privacy-toggle";
 import { RecentTransactions } from "@/components/dashboard/recent-transactions";
 import { PageHeader } from "@/components/layout/page-header";
@@ -24,8 +23,12 @@ import { PageHeader } from "@/components/layout/page-header";
  * ├       MonthSelect (最近 24 个月,与报表页共用)
  * ├ 主卡:本月结余(monthNet 大字 + 收入/支出)
  * ├ 支出趋势:ExpenseTrendChart (daily 当前月 / weekly 历史月)
- * ├ Top 2 分类:TopCategoryCard (点击下钻 /transactions?month=…&type=expense&categoryId=…)
  * └ 最近流水:RecentTransactions (最新 4 条,不受月份影响)
+ *
+ * 026-dashboard-ui-refinement 调整:
+ * - 移除 Top 2 分类卡(用户反馈:首页信息密度过高;Top 2 已在 reports 页详尽呈现)
+ * - TrendSection title 改用 HeroUI Card.Title(语义化,字号字重由 HeroUI token 决定)
+ * - 后端 dashboard.summary 仍返回 topExpenseCategories(契约不变),前端不消费
  *
  * 数据契约:specs/026-cream-amber-revamp/contracts/dashboard-summary.md
  *
@@ -100,7 +103,6 @@ export default function DashboardPage() {
           monthExpense={summaryQuery.data.monthExpense}
           monthNet={summaryQuery.data.monthNet}
           expenseTrend={summaryQuery.data.expenseTrend}
-          topExpenseCategories={summaryQuery.data.topExpenseCategories}
           recentTransactions={summaryQuery.data.recentTransactions}
           yearMonth={yearMonth}
         />
@@ -251,7 +253,9 @@ function TrendBadge({ percent }: { percent: number }) {
   );
 }
 
-/** 支出趋势区块(FR-C003 + FR-C004)。 */
+/** 支出趋势区块(FR-C003 + FR-C004)。
+ *  026-dashboard-ui-refinement:title 用 HeroUI Card.Title(默认 h3 + token
+ *  字号字重),不再自定义 h2 + text-sm font-medium。 */
 function TrendSection({
   trend,
 }: {
@@ -261,10 +265,12 @@ function TrendSection({
   return (
     <section aria-label="支出趋势" className="pt-4">
       <Card>
-        <Card.Content className="p-4">
-          <h2 className="mb-3 text-sm font-medium text-foreground">
+        <Card.Header>
+          <Card.Title>
             {isDaily ? "本周支出趋势" : "本月支出趋势(按周)"}
-          </h2>
+          </Card.Title>
+        </Card.Header>
+        <Card.Content className="p-4 pt-0">
           <ExpenseTrendChart trend={trend} />
         </Card.Content>
       </Card>
@@ -272,25 +278,11 @@ function TrendSection({
   );
 }
 
-/** Top 2 分类卡(FR-C006)。下钻由 TopCategoryCard 内部 router.push 处理。 */
-function TopCategoriesSection({
-  items,
-  yearMonth,
-}: {
-  items: React.ComponentProps<typeof TopCategoryCard>["items"];
-  yearMonth: { year: number; month: number };
-}) {
-  return (
-    <section aria-label="支出 Top 2 分类">
-      <h2 className="pt-4 pb-1 text-sm font-medium text-foreground">
-        支出 Top 2 分类
-      </h2>
-      <TopCategoryCard items={items} yearMonth={yearMonth} />
-    </section>
-  );
-}
-
-/** 最近流水(FR-C007)。固定最新 4 条,不受月份影响。 */
+/** 最近流水(FR-C007)。固定最新 4 条,不受月份影响。
+ *
+ *  本 section 不在 Card 内(RecentTransactions 是平铺列表,直接渲染),
+ *  所以保留 h2 而非 Card.Title(Card.Title 必须在 Card 上下文里)。
+ *  样式上与 Card.Title 视觉一致(text-sm font-medium text-foreground)。 */
 function RecentSection({
   transactions,
 }: {
@@ -306,7 +298,8 @@ function RecentSection({
   );
 }
 
-/** 加载态:用 Skeleton 复刻各区块高度,避免数据到位后布局跳动。 */
+/** 加载态:用 Skeleton 复刻各区块高度,避免数据到位后布局跳动。
+ *  026-dashboard-ui-refinement:移除 Top 分类占位(Top 2 已下架)。 */
 function DashboardSkeleton() {
   return (
     <div className="space-y-3">
@@ -317,13 +310,6 @@ function DashboardSkeleton() {
       {/* 趋势 */}
       <div>
         <Skeleton className="h-44 w-full rounded-2xl" />
-      </div>
-      {/* Top 分类 */}
-      <div>
-        <div className="grid grid-cols-2 gap-2">
-          <Skeleton className="h-24 w-full rounded-2xl" />
-          <Skeleton className="h-24 w-full rounded-2xl" />
-        </div>
       </div>
       {/* 最近流水 */}
       <div className="space-y-2">
@@ -343,7 +329,6 @@ function DashboardBody({
   monthExpense,
   monthNet,
   expenseTrend,
-  topExpenseCategories,
   recentTransactions,
   yearMonth,
 }: {
@@ -351,7 +336,6 @@ function DashboardBody({
   monthExpense: number;
   monthNet: number;
   expenseTrend: React.ComponentProps<typeof ExpenseTrendChart>["trend"];
-  topExpenseCategories: React.ComponentProps<typeof TopCategoryCard>["items"];
   recentTransactions: React.ComponentProps<typeof RecentTransactions>["transactions"];
   yearMonth: { year: number; month: number };
 }) {
@@ -365,7 +349,6 @@ function DashboardBody({
         yearMonth={yearMonth}
       />
       <TrendSection trend={expenseTrend} />
-      <TopCategoriesSection items={topExpenseCategories} yearMonth={yearMonth} />
       <RecentSection transactions={recentTransactions} />
     </>
   );
