@@ -34,7 +34,21 @@ import {
 } from "@heroui/react";
 import { CalendarDate, parseDate } from "@internationalized/date";
 
-export function TransactionForm({ editId }: { editId?: string }) {
+export function TransactionForm({
+  editId,
+  embedded = false,
+  onSubmitted,
+}: {
+  editId?: string;
+  /**
+   * embedded = true 时去掉外层 Card / Header / Footer,只渲染表单字段。
+   * 用于 Drawer / Modal 等容器场景(容器自带 Header/Footer)。
+   * 默认 false:独立 page 模式(/transaction/new / /transaction/[id]/edit)。
+   */
+  embedded?: boolean;
+  /** 提交成功后触发(用于关 Drawer / Modal)。embedded 模式下推荐传。 */
+  onSubmitted?: () => void;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const utils = trpc.useUtils();
@@ -102,24 +116,28 @@ export function TransactionForm({ editId }: { editId?: string }) {
     return qs ? `/transactions?${qs}` : "/transactions";
   }, [searchParams]);
 
+  const handlePostSuccess = () => {
+    // FR-B003 / clarify Q5: invalidate the 3 key families so every screen
+    // (dashboard summary + report + transactions list/detail) refetches.
+    utils.dashboard.summary.invalidate();
+    utils.dashboard.report.invalidate();
+    utils.transaction.list.invalidate();
+    if (embedded && onSubmitted) {
+      onSubmitted(); // 关 Drawer / Modal
+    }
+  };
+
   const createMutation = trpc.transaction.create.useMutation({
     onSuccess: () => {
-      // FR-B003 / clarify Q5: invalidate the 3 key families so every screen
-      // (dashboard summary + report + transactions list/detail) refetches.
-      utils.dashboard.summary.invalidate();
-      utils.dashboard.report.invalidate();
-      utils.transaction.list.invalidate();
-      router.push("/dashboard");
+      handlePostSuccess();
+      if (!embedded) router.push("/dashboard");
     },
   });
 
   const updateMutation = trpc.transaction.update.useMutation({
     onSuccess: () => {
-      // FR-B003 / clarify Q5: same 3-key-family invalidation as create.
-      utils.dashboard.summary.invalidate();
-      utils.dashboard.report.invalidate();
-      utils.transaction.list.invalidate();
-      router.push(transactionsHref);
+      handlePostSuccess();
+      if (!embedded) router.push(transactionsHref);
     },
   });
 
@@ -128,9 +146,6 @@ export function TransactionForm({ editId }: { editId?: string }) {
   );
 
   // ── Default accountId to first unarchived account (create mode only) ──
-  // 025: For shadcn Select we must set the form value explicitly (no
-  // native defaultValue on the original element). Run once accounts arrive.
-  // Deps intentionally limited: watch/setValue are RHF-stable refs.
   useEffect(() => {
     if (isEditMode) return;
     if (unarchivedAccounts.length === 0) return;
@@ -194,195 +209,204 @@ export function TransactionForm({ editId }: { editId?: string }) {
     }
   };
 
+  // 表单字段(embedded / page 模式共用)
+  const formFields = (
+    <>
+      {/* Type Switch — HeroUI Tabs */}
+      <Tabs
+        aria-label="交易类型"
+        selectedKey={selectedType}
+        onSelectionChange={(key) =>
+          handleTypeSwitch(key as "income" | "expense")
+        }
+      >
+        <Tabs.List>
+          <Tabs.Tab id="expense">支出</Tabs.Tab>
+          <Tabs.Tab id="income">收入</Tabs.Tab>
+        </Tabs.List>
+      </Tabs>
+      <input type="hidden" {...register("type")} />
+
+      {/* Amount — HeroUI NumberField + ¥ prefix */}
+      {/* NumberField value 是 number,RHF/zod 用 string "0.00",Controller 桥接。
+       * 不挂 data-amount(globals.css clarify Q1:记一笔页金额输入不参与隐私遮罩)。 */}
+      <Controller
+        control={control}
+        name="amount"
+        render={({ field, fieldState }) => (
+          <NumberField
+            value={field.value ? parseFloat(field.value) : NaN}
+            onChange={(v: number) => field.onChange(String(v))}
+            step={0.01}
+            minValue={0.01}
+            isInvalid={fieldState.invalid}
+            aria-label="金额"
+            fullWidth
+          >
+            <HeroUILabel>金额 (元)</HeroUILabel>
+            <NumberField.Group>
+              <NumberField.Input
+                placeholder="0.00"
+                autoFocus={!isEditMode}
+                className="text-2xl font-bold"
+              />
+            </NumberField.Group>
+            {fieldState.error && (
+              <p className="text-xs text-[var(--danger)]">
+                {fieldState.error.message}
+              </p>
+            )}
+          </NumberField>
+        )}
+      />
+
+      {/* Account */}
+      <div className="space-y-2">
+        <Label htmlFor="accountId">账户</Label>
+        <Controller
+          control={control}
+          name="accountId"
+          render={({ field }) => (
+            <Select value={field.value ?? ""} onValueChange={field.onChange}>
+              <SelectTrigger id="accountId">
+                <SelectValue placeholder="选择账户" />
+              </SelectTrigger>
+              <SelectContent>
+                {unarchivedAccounts.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>
+                    {a.name} (¥{(a.initialBalance / 100).toFixed(2)})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        />
+        {errors.accountId && (
+          <p className="text-xs text-[var(--danger)]">
+            {errors.accountId.message}
+          </p>
+        )}
+      </div>
+
+      {/* Category */}
+      <div className="space-y-2">
+        <Label htmlFor="categoryId">分类</Label>
+        <CategorySelect
+          type={selectedType}
+          value={watch("categoryId")}
+          onChange={(id) => setValue("categoryId", id, { shouldValidate: true })}
+        />
+        {errors.categoryId && (
+          <p className="text-xs text-[var(--danger)]">
+            {errors.categoryId.message}
+          </p>
+        )}
+      </div>
+
+      {/* Remark */}
+      <div className="space-y-2">
+        <Label htmlFor="remark">备注 (选填)</Label>
+        <Input
+          id="remark"
+          type="text"
+          placeholder="如:午餐咖啡"
+          maxLength={200}
+          {...register("remark")}
+        />
+      </div>
+
+      {/* Date — HeroUI DatePicker(不隐藏 day,记账需选具体日期) */}
+      <Controller
+        control={control}
+        name="occurredAt"
+        render={({ field }) => (
+          <DatePicker
+            value={field.value ? parseDate(field.value) : null}
+            onChange={(date: CalendarDate | null) => {
+              if (date) field.onChange(date.toString());
+            }}
+            aria-label="日期"
+          >
+            <HeroUILabel>日期</HeroUILabel>
+            <DateField.Group fullWidth>
+              <DateField.Input>
+                {(segment) => <DateField.Segment segment={segment} />}
+              </DateField.Input>
+              <DateField.Suffix>
+                <DatePicker.Trigger>
+                  <DatePicker.TriggerIndicator />
+                </DatePicker.Trigger>
+              </DateField.Suffix>
+            </DateField.Group>
+            <DatePicker.Popover>
+              <Calendar aria-label="日期选择日历">
+                <Calendar.Header>
+                  <Calendar.NavButton slot="previous" />
+                  <Calendar.Heading />
+                  <Calendar.NavButton slot="next" />
+                </Calendar.Header>
+                <Calendar.Grid>
+                  <Calendar.GridHeader>
+                    {(day) => <Calendar.HeaderCell>{day}</Calendar.HeaderCell>}
+                  </Calendar.GridHeader>
+                  <Calendar.GridBody>
+                    {(date) => <Calendar.Cell date={date} />}
+                  </Calendar.GridBody>
+                </Calendar.Grid>
+              </Calendar>
+            </DatePicker.Popover>
+          </DatePicker>
+        )}
+      />
+      {errors.occurredAt && (
+        <p className="text-xs text-[var(--danger)]">
+          {errors.occurredAt.message}
+        </p>
+      )}
+
+      {serverError && (
+        <p className="text-xs text-[var(--danger)]">{serverError}</p>
+      )}
+    </>
+  );
+
+  // 提交按钮(embedded / page 模式共用)
+  const submitButton = (
+    <Button type="submit" className="w-full" disabled={isSubmitting}>
+      {isSubmitting
+        ? "提交中..."
+        : isEditMode
+          ? "保存修改"
+          : "确认记账"}
+    </Button>
+  );
+
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
-      <Card className="mx-4 mt-4">
-        <Card.Header className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => router.back()}
-            aria-label="返回"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
-          <Card.Title>{isEditMode ? "编辑交易" : "记一笔"}</Card.Title>
-        </Card.Header>
-        <Card.Content className="space-y-4">
-          {/* Type Switch — HeroUI Tabs */}
-          <Tabs
-            aria-label="交易类型"
-            selectedKey={selectedType}
-            onSelectionChange={(key) =>
-              handleTypeSwitch(key as "income" | "expense")
-            }
-          >
-            <Tabs.List>
-              <Tabs.Tab id="expense">支出</Tabs.Tab>
-              <Tabs.Tab id="income">收入</Tabs.Tab>
-            </Tabs.List>
-          </Tabs>
-          <input type="hidden" {...register("type")} />
-
-          {/* Amount — HeroUI NumberField + ¥ prefix */}
-          {/* NumberField value 是 number,RHF/zod 用 string "0.00",Controller 桥接。
-           * 不挂 data-amount(globals.css clarify Q1:记一笔页金额输入不参与隐私遮罩)。 */}
-          <Controller
-            control={control}
-            name="amount"
-            render={({ field, fieldState }) => (
-              <NumberField
-                value={field.value ? parseFloat(field.value) : NaN}
-                onChange={(v: number) => field.onChange(String(v))}
-                step={0.01}
-                minValue={0.01}
-                isInvalid={fieldState.invalid}
-                aria-label="金额"
-                fullWidth
-              >
-                <HeroUILabel>金额 (元)</HeroUILabel>
-                <NumberField.Group>
-                  <NumberField.Input
-                    placeholder="0.00"
-                    autoFocus={!isEditMode}
-                    className="text-2xl font-bold"
-                  />
-                </NumberField.Group>
-                {fieldState.error && (
-                  <p className="text-xs text-[var(--danger)]">
-                    {fieldState.error.message}
-                  </p>
-                )}
-              </NumberField>
-            )}
-          />
-
-          {/* Account */}
-          <div className="space-y-2">
-            <Label htmlFor="accountId">账户</Label>
-            <Controller
-              control={control}
-              name="accountId"
-              render={({ field }) => (
-                <Select
-                  value={field.value ?? ""}
-                  onValueChange={field.onChange}
-                >
-                  <SelectTrigger id="accountId">
-                    <SelectValue placeholder="选择账户" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {unarchivedAccounts.map((a) => (
-                      <SelectItem key={a.id} value={a.id}>
-                        {a.name} (¥{(a.initialBalance / 100).toFixed(2)})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-            {errors.accountId && (
-              <p className="text-xs text-[var(--danger)]">
-                {errors.accountId.message}
-              </p>
-            )}
-          </div>
-
-          {/* Category (023-category-ui US6: 用 CategorySelect 替换内联渲染) */}
-          <div className="space-y-2">
-            <Label htmlFor="categoryId">分类</Label>
-            <CategorySelect
-              type={selectedType}
-              value={watch("categoryId")}
-              onChange={(id) => setValue("categoryId", id, { shouldValidate: true })}
-            />
-            {errors.categoryId && (
-              <p className="text-xs text-[var(--danger)]">
-                {errors.categoryId.message}
-              </p>
-            )}
-          </div>
-
-          {/* Remark */}
-          <div className="space-y-2">
-            <Label htmlFor="remark">备注 (选填)</Label>
-            <Input
-              id="remark"
-              type="text"
-              placeholder="如:午餐咖啡"
-              maxLength={200}
-              {...register("remark")}
-            />
-          </div>
-
-          {/* Date — HeroUI DatePicker(不隐藏 day,记账需选具体日期) */}
-          {/* RHF 存储 ISO "YYYY-MM-DD" string,DatePicker 用 CalendarDate;parseDate ↔ toString 桥接。 */}
-          <Controller
-            control={control}
-            name="occurredAt"
-            render={({ field }) => (
-              <DatePicker
-                value={field.value ? parseDate(field.value) : null}
-                onChange={(date: CalendarDate | null) => {
-                  if (date) field.onChange(date.toString());
-                }}
-                aria-label="日期"
-              >
-                <HeroUILabel>日期</HeroUILabel>
-                <DateField.Group fullWidth>
-                  <DateField.Input>
-                    {(segment) => <DateField.Segment segment={segment} />}
-                  </DateField.Input>
-                  <DateField.Suffix>
-                    <DatePicker.Trigger>
-                      <DatePicker.TriggerIndicator />
-                    </DatePicker.Trigger>
-                  </DateField.Suffix>
-                </DateField.Group>
-                <DatePicker.Popover>
-                  <Calendar aria-label="日期选择日历">
-                    <Calendar.Header>
-                      <Calendar.NavButton slot="previous" />
-                      <Calendar.Heading />
-                      <Calendar.NavButton slot="next" />
-                    </Calendar.Header>
-                    <Calendar.Grid>
-                      <Calendar.GridHeader>
-                        {(day) => <Calendar.HeaderCell>{day}</Calendar.HeaderCell>}
-                      </Calendar.GridHeader>
-                      <Calendar.GridBody>
-                        {(date) => <Calendar.Cell date={date} />}
-                      </Calendar.GridBody>
-                    </Calendar.Grid>
-                  </Calendar>
-                </DatePicker.Popover>
-              </DatePicker>
-            )}
-          />
-          {errors.occurredAt && (
-            <p className="text-xs text-[var(--danger)]">
-              {errors.occurredAt.message}
-            </p>
-          )}
-
-          {serverError && (
-            <p className="text-xs text-[var(--danger)]">{serverError}</p>
-          )}
-        </Card.Content>
-        <Card.Footer>
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={isSubmitting}
-          >
-            {isSubmitting
-              ? "提交中..."
-              : isEditMode
-                ? "保存修改"
-                : "确认记账"}
-          </Button>
-        </Card.Footer>
-      </Card>
+      {embedded ? (
+        // embedded 模式:无 Card 包裹(Drawer 自带 Header/Footer)
+        <div className="space-y-4 pb-4">
+          {formFields}
+          {submitButton}
+        </div>
+      ) : (
+        // 独立 page 模式:/transaction/new / /transaction/[id]/edit
+        <Card className="mx-4 mt-4">
+          <Card.Header className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => router.back()}
+              aria-label="返回"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <Card.Title>{isEditMode ? "编辑交易" : "记一笔"}</Card.Title>
+          </Card.Header>
+          <Card.Content className="space-y-4">{formFields}</Card.Content>
+          <Card.Footer>{submitButton}</Card.Footer>
+        </Card>
+      )}
     </form>
   );
 }
