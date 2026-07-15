@@ -31,6 +31,8 @@ interface Transaction {
   remark: string;
   occurredAt: string | Date;
   accountName: string | null;
+  toAccountId?: string | null; // 027 US4:transfer 转入账户
+  toAccountName?: string | null; // 027 US4:transfer 转入账户名
   categoryName: string | null;
   categoryIcon: string | null;
   // 撤销重建所需的全部字段(serializeTransaction 输出):

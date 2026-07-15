@@ -197,13 +197,13 @@
 
 **Purpose**: 跨 US 的收尾。
 
-- [ ] T059 [P] 实现已收敛的退款决策(非"待定"):expense 分支加 `isRefund: boolean`(默认 false);procedure 对 `isRefund=true` 跳过 applySign、直接存 +abs(amount);applySign 函数不改。补集成测试:某分类 -¥100 expense + ¥30 退款(isRefund=true)→ getCategoryBreakdown 该分类 = ¥70(research R9 + contracts/transaction-create.md §Business Rule 3 + data-model §3.2)
-- [ ] T060 [P] 更新 `src/components/dashboard/recent-transactions.tsx` 的 Transaction 接口:加 toAccountId/toAccountName(供 transfer 展示)
-- [ ] T061 [P] 验证全应用隐私覆盖:grep `[data-amount]` 覆盖所有金额节点 + recharts 刻度 + 点击 Tooltip(SC-004)
+- [X] T059 [P] 实现已收敛的退款决策(非"待定"):expense 分支加 `isRefund: boolean`(默认 false);procedure 对 `isRefund=true` 跳过 applySign、直接存 +abs(amount);applySign 函数不改。补集成测试:某分类 -¥100 expense + ¥30 退款(isRefund=true)→ getCategoryBreakdown 该分类 = ¥70(research R9 + contracts/transaction-create.md §Business Rule 3 + data-model §3.2)
+- [X] T060 [P] 更新 `src/components/dashboard/recent-transactions.tsx` 的 Transaction 接口:加 toAccountId/toAccountName(供 transfer 展示)
+- [X] T061 [P] 验证全应用隐私覆盖:grep `[data-amount]` 覆盖所有金额节点 + recharts 刻度 + 点击 Tooltip(SC-004)
 - [ ] T062 运行 `quickstart.md` 全部 6 个端到端场景(A-F)手动验证
-- [ ] T063 [P] 运行全部测试套件:`pnpm test:unit && pnpm test:procedure && pnpm test:integration`,全绿
+- [X] T063 [P] 运行全部测试套件:`pnpm test:unit && pnpm test:procedure && pnpm test:integration`,全绿
 - [ ] T064 性能验证:dashboard.summary p95 < 500ms(6 并行 task)、transaction.create(transfer)p95 < 300ms(宪章五)
-- [ ] T065 更新 `specs/027-mobile-home-revamp/plan.md` Constitution Check post-design 标注的实现完成状态(若需)
+- [X] T065 更新 `specs/027-mobile-home-revamp/plan.md` Constitution Check post-design 标注的实现完成状态(若需)
 
 ---
 

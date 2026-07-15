@@ -90,6 +90,19 @@
 
 **Post-design 结论**:无新增违规。原则一/三的 violation 范围在设计后未扩大,仍由 US1 解除。允许进入 Phase 2(`/speckit-tasks`)。
 
+### Implementation 完成 (T065 更新)
+
+全部 6 个 User Story + Polish 已实现(commit 历史):
+- US1 宪章 v3.2.0 修订 ✅
+- US2 首页 MVP 重做(主数字支出/Top4/趋势隐私/4入口FAB)✅
+- US3 明细/统计页(日分组/月年toggle/三宫格)✅
+- US4 转账(transfer 类型/toAccountId/type-driven 聚合)✅
+- US5 预算(budgets 表/四态/BudgetProgress)✅
+- US6 资产(account.type/getAssets/AssetOverview)✅
+- Polish:退款 isRefund 冲减修复(signed SUM + ABS)、隐私覆盖验证 ✅
+
+待办:T018(320px 视觉验证)、T062(quickstart 手动)、T064(性能基准)需 dev server。
+
 
 ## Project Structure
 

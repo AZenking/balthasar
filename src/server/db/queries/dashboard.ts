@@ -30,10 +30,14 @@ export async function getMonthSummary(opts: {
   monthStart: Date;
   monthEnd: Date;
 }): Promise<{ income: number; expense: number }> {
+  // 027 US4/C2 (research R9):type-driven 聚合。
+  // expense 用 signed SUM + 最终 ABS:普通支出负、退款正(isRefund),相加后
+  // ABS 得净支出(退款真正冲减,而非 ABS 逐行求和导致退款反向增加)。
+  // 例:−10000 + 退款 +3000 = −7000 → ABS = 7000(净支出下降)。
   const rows = await db
     .select({
       income: sql<number>`COALESCE(SUM(CASE WHEN ${transaction.type} = 'income' THEN ${transaction.amount} ELSE 0 END), 0)`,
-      expense: sql<number>`COALESCE(SUM(CASE WHEN ${transaction.type} = 'expense' THEN ABS(${transaction.amount}) ELSE 0 END), 0)`,
+      expense: sql<number>`ABS(COALESCE(SUM(CASE WHEN ${transaction.type} = 'expense' THEN ${transaction.amount} ELSE 0 END), 0))`,
     })
     .from(transaction)
     .where(
@@ -106,7 +110,9 @@ export async function getCategoryBreakdown(opts: {
       categoryId: category.id,
       categoryName: category.name,
       categoryIcon: category.icon,
-      amount: sql<number>`SUM(ABS(${transaction.amount}))`,
+      // 027 C2:signed SUM + ABS —— 退款(+正 amount)真正冲减分类净支出,
+      // 而非 ABS 逐行求和(会导致退款反向增加)。例:−10000 + 退款 +3000 → ABS(−7000)=7000。
+      amount: sql<number>`ABS(SUM(${transaction.amount}))`,
     })
     .from(transaction)
     .innerJoin(category, eq(transaction.categoryId, category.id))
@@ -119,7 +125,7 @@ export async function getCategoryBreakdown(opts: {
       )
     )
     .groupBy(category.id, category.name, category.icon)
-    .orderBy(sql`SUM(ABS(${transaction.amount})) DESC`);
+    .orderBy(sql`ABS(SUM(${transaction.amount})) DESC`);
 
   return rows.map((r) => ({
     categoryId: r.categoryId,
