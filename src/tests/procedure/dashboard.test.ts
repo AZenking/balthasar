@@ -11,6 +11,8 @@ vi.mock("@/server/db/queries/dashboard", () => ({
     { categoryId: "c1", categoryName: "餐饮", categoryIcon: "🍔", amount: 8000 },
     { categoryId: "c2", categoryName: "交通", categoryIcon: "🚗", amount: 2000 },
   ]),
+  // 027: summary 内联 getDailyTrend(本月每日趋势),mock 需同步导出
+  getDailyTrend: vi.fn().mockResolvedValue([]),
 }));
 
 import { createCaller } from "@/lib/trpc/server";

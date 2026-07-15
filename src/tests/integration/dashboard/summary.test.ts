@@ -243,8 +243,11 @@ describe("[T011] current month default returns daily trend (026 FR-F001)", () =>
     });
     expect(result.expenseTrend.granularity).toBe("daily");
     if (result.expenseTrend.granularity !== "daily") return; // narrow for TS
-    // daily buckets cover 7 days Mon-Sun
-    expect(result.expenseTrend.buckets.length).toBe(7);
+    // 027: daily buckets cover the whole current month (1..last day), not a 7-day week.
+    const daysInMonth = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0),
+    ).getUTCDate();
+    expect(result.expenseTrend.buckets.length).toBe(daysInMonth);
     for (const b of result.expenseTrend.buckets) {
       expect(b.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
       expect(typeof b.amount).toBe("number");
@@ -410,30 +413,35 @@ describe("[T018] percentage zero-boundary when monthExpense=0 (026)", () => {
   });
 });
 
-describe("[T019] daily trend zero-pads missing days (026 FR-C003)", () => {
-  it("current week: Wednesday-only expense → Mon/Tue zero-padded, Wed = 3000", async () => {
+describe("[T019] daily trend zero-pads missing days (027: monthly buckets)", () => {
+  it("current month: mid-month expense → prior days zero-padded, seeded day = 3000", async () => {
     const email = `t019-${Date.now()}@example.com`;
     const s = await seedSetup(email);
 
-    // Locate the *current* Mon-Sun week (same algorithm the procedure uses),
-    // then place an expense on Wednesday 12:00 UTC — Monday & Tuesday stay
-    // empty so they must be zero-padded.
+    // 027: trend covers the whole current month (1..last day), not a Mon-Sun
+    // week. Place an expense on the 15th at 12:00 UTC — days 1..14 stay empty
+    // so they must be zero-padded. (Guard: skip if today is the 15th in UTC
+    // and the seeded tx would land "now" — irrelevant to the assertion.)
     const now = new Date();
-    const nowDow = (now.getUTCDay() + 6) % 7; // 0=Mon
-    const thisWeekMon = new Date(
-      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - nowDow),
+    const expenseDay = Math.min(15, now.getUTCDate());
+    const expenseDate = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), expenseDay, 12, 0, 0),
     );
-    const thisWeekWed = new Date(thisWeekMon.getTime() + 2 * 86400000 + 12 * 3600000);
+    const expenseKey = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-${String(expenseDay).padStart(2, "0")}`;
 
     await insertTxAt({
       familyId: s.famId, type: "expense", accountId: s.accId, categoryId: s.expenseCatId,
-      amount: -3000, occurredAt: thisWeekWed,
+      amount: -3000, occurredAt: expenseDate,
     });
 
     const result = await caller(s.userId).dashboard.summary();
     expect(result.expenseTrend.granularity).toBe("daily");
     if (result.expenseTrend.granularity !== "daily") return;
-    expect(result.expenseTrend.buckets.length).toBe(7);
+
+    const daysInMonth = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0),
+    ).getUTCDate();
+    expect(result.expenseTrend.buckets.length).toBe(daysInMonth);
 
     // Every bucket MUST be present with a finite numeric amount (zero-pad).
     for (const b of result.expenseTrend.buckets) {
@@ -443,10 +451,11 @@ describe("[T019] daily trend zero-pads missing days (026 FR-C003)", () => {
     const total = result.expenseTrend.buckets.reduce((s, b) => s + b.amount, 0);
     expect(total).toBe(3000);
 
-    // Wednesday's bucket (index 2 when Mon=0) holds the seeded amount.
-    expect(result.expenseTrend.buckets[2]!.amount).toBe(3000);
-    // Monday's bucket is zero-padded (no tx seeded).
-    expect(result.expenseTrend.buckets[0]!.amount).toBe(0);
+    // The seeded day's bucket holds the amount; day 1 is zero-padded.
+    const seededBucket = result.expenseTrend.buckets.find((b) => b.date === expenseKey);
+    expect(seededBucket).toBeDefined();
+    expect(seededBucket!.amount).toBe(3000);
+    expect(result.expenseTrend.buckets[0]!.amount).toBe(0); // day 1 zero-padded
   });
 });
 
