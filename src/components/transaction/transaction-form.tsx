@@ -350,7 +350,8 @@ export function TransactionForm({
       <input type="hidden" {...register("type")} />
 
       {/* Amount — HeroUI NumberField + ¥ prefix */}
-      {/* NumberField value 是 number,RHF/zod 用 string "0.00",Controller 桥接。
+      {/* 主角高亮区(与预算弹窗一致):无边框 + surface 底 + ¥ 前缀 + 大号居中。
+       * NumberField value 是 number,RHF/zod 用 string "0.00",Controller 桥接。
        * 不挂 data-amount(globals.css clarify Q1:记一笔页金额输入不参与隐私遮罩)。 */}
       <Controller
         control={control}
@@ -365,12 +366,16 @@ export function TransactionForm({
             aria-label="金额"
             fullWidth
           >
-            <HeroUILabel>金额 (元)</HeroUILabel>
-            <NumberField.Group>
+            <HeroUILabel className="sr-only">金额 (元)</HeroUILabel>
+            <NumberField.Group className="h-auto items-center justify-center gap-1 rounded-2xl border-0 bg-[var(--surface)] px-4 py-4 shadow-none">
+              <span className="text-3xl font-bold tabular-nums text-muted-foreground">
+                ¥
+              </span>
               <NumberField.Input
                 placeholder="0.00"
+                inputMode="decimal"
                 autoFocus={!isEditMode}
-                className="text-2xl font-bold"
+                className="w-full border-0 bg-transparent p-0 text-center text-3xl font-bold tabular-nums text-foreground shadow-none outline-none focus:ring-0"
               />
             </NumberField.Group>
             {fieldState.error && (
