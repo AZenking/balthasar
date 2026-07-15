@@ -87,17 +87,10 @@ function NavEntry({ entry, active }: { entry: Entry; active: boolean }) {
       className={cn(
         "relative flex h-16 flex-1 flex-col items-center justify-center gap-1 text-xs transition-colors",
         active
-          ? "text-primary"
+          ? "font-semibold text-primary"
           : "text-muted-foreground hover:text-foreground",
       )}
     >
-      {active && (
-        <span
-          aria-hidden
-          className="absolute top-0 left-1/2 h-1 w-8 -translate-x-1/2 rounded-full"
-          style={{ backgroundColor: "var(--accent)" }}
-        />
-      )}
       <Icon className="h-5 w-5" aria-hidden />
       <span>{label}</span>
     </Link>

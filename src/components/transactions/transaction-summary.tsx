@@ -1,5 +1,9 @@
 const formatAmount = (cents: number) => `¥${(cents / 100).toFixed(2)}`;
 
+/**
+ * TransactionSummary — 线稿式三列卡片(收入/支出/结余)。
+ * 大金额 + 列分隔,移除嵌套背景条。
+ */
 export function TransactionSummary({
   income,
   expense,
@@ -9,24 +13,27 @@ export function TransactionSummary({
   expense: number;
   net: number;
 }) {
+  const netColor = net >= 0 ? "text-[var(--success)]" : "text-[var(--danger)]";
   return (
-    <div className="flex justify-between rounded-lg bg-[var(--surface-secondary)] px-4 py-2 text-sm tabular-nums">
-      <span data-amount className="text-[var(--success)]">
-        收入 {formatAmount(income)}
-      </span>
-      <span data-amount className="text-[var(--danger)]">
-        支出 {formatAmount(expense)}
-      </span>
-      <span
-        data-amount
-        className={
-          net >= 0
-            ? "font-semibold text-[var(--success)]"
-            : "font-semibold text-[var(--danger)]"
-        }
-      >
-        结余 {formatAmount(net)}
-      </span>
+    <div className="grid grid-cols-3 text-center">
+      <div className="border-r border-[var(--border)] py-2">
+        <p className="text-xs text-muted-foreground">收入</p>
+        <p data-amount className="mt-0.5 text-sm font-semibold tabular-nums text-[var(--success)]">
+          {formatAmount(income)}
+        </p>
+      </div>
+      <div className="border-r border-[var(--border)] py-2">
+        <p className="text-xs text-muted-foreground">支出</p>
+        <p data-amount className="mt-0.5 text-sm font-semibold tabular-nums text-[var(--danger)]">
+          {formatAmount(expense)}
+        </p>
+      </div>
+      <div className="py-2">
+        <p className="text-xs text-muted-foreground">结余</p>
+        <p data-amount className={`mt-0.5 text-sm font-semibold tabular-nums ${netColor}`}>
+          {formatAmount(net)}
+        </p>
+      </div>
     </div>
   );
 }

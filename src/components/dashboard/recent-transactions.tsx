@@ -33,9 +33,11 @@ interface Transaction {
 export function RecentTransactions({
   transactions,
   isLoading,
+  maxItems,
 }: {
   transactions: Transaction[];
   isLoading: boolean;
+  maxItems?: number;
 }) {
   const router = useRouter();
 
@@ -66,9 +68,11 @@ export function RecentTransactions({
     return d.toLocaleDateString("zh-CN", { month: "short", day: "numeric" });
   };
 
+  const displayItems = maxItems ? transactions.slice(0, maxItems) : transactions;
+
   return (
     <div className="divide-y px-4">
-      {transactions.map((t) => (
+      {displayItems.map((t) => (
         <button
           key={t.id}
           type="button"
@@ -82,12 +86,12 @@ export function RecentTransactions({
             <span className="text-xl">{t.categoryIcon}</span>
             <div className="min-w-0">
               <p className="truncate text-sm font-medium">
-                {t.categoryName || "?"}
+                {t.remark || t.categoryName || "?"}
               </p>
               <p className="truncate text-xs text-muted-foreground">
                 {t.type === "transfer" && t.toAccountName
-                  ? `${t.accountName} → ${t.toAccountName}`
-                  : `${t.accountName} · ${t.remark || "—"}`}
+                  ? `${t.categoryName} · ${t.accountName} → ${t.toAccountName}`
+                  : `${t.categoryName} · ${t.accountName}`}
                 {" · "}
                 {formatTime(t.occurredAt)}
               </p>

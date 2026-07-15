@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, Bell, UserRound } from "lucide-react";
+import { ChevronLeft, ChevronRight, Bell, UserRound, ChevronRight as ChevronRightSmall } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc/client";
 import { PrivacyToggle } from "@/components/privacy-toggle";
@@ -95,7 +95,7 @@ export function DashboardTopNav({
               {displayName ? `，${displayName}` : ""}
             </span>
             <span className="block truncate text-xs text-muted-foreground">
-              {ledgerName}
+              {ledgerName} <ChevronRightSmall className="inline h-3 w-3" aria-hidden />
             </span>
           </span>
         </button>

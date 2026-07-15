@@ -45,12 +45,12 @@ export function TransactionListItem({
         <span className="text-xl">{transaction.categoryIcon}</span>
         <div className="min-w-0">
           <p className="truncate text-sm font-medium text-[var(--foreground)]">
-            {transaction.categoryName || "?"}
+            {transaction.remark || transaction.categoryName || "?"}
           </p>
           <p className="truncate text-xs text-[var(--muted-foreground)]">
             {isTransfer && transaction.toAccountName
-              ? `${transaction.accountName} → ${transaction.toAccountName}`
-              : `${transaction.accountName} · ${transaction.remark || "—"}`}
+              ? `${transaction.categoryName} · ${transaction.accountName} → ${transaction.toAccountName}`
+              : `${transaction.categoryName} · ${transaction.accountName}`}
             {" · "}
             {formatDate(transaction.occurredAt)}
           </p>

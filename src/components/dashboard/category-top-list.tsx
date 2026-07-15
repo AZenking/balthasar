@@ -50,12 +50,22 @@ export function CategoryTopList({
     <section aria-label="支出分类" className="pt-4">
       <Card>
         <Card.Content className="p-4">
-          <h2 className="mb-3 text-sm font-medium text-foreground">支出分类</h2>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-medium text-foreground">支出分类</h2>
+            {items.length > 0 && (
+              <a
+                href="/transactions?type=expense"
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
+                全部
+              </a>
+            )}
+          </div>
           {items.length === 0 ? (
             <p className="text-xs text-muted-foreground">本月暂无支出</p>
           ) : (
             <ul className="space-y-3">
-              {items.map((item) => {
+              {items.slice(0, 3).map((item) => {
                 const widthPct = maxAmount > 0 ? (item.amount / maxAmount) * 100 : 0;
                 return (
                   <li key={item.categoryId}>

@@ -47,6 +47,24 @@ export default function DashboardPage() {
     month: yearMonth.month,
   });
 
+  // 上月 summary(用于趋势环比徽标)
+  const prevYm =
+    yearMonth.month === 1
+      ? { year: yearMonth.year - 1, month: 12 }
+      : { year: yearMonth.year, month: yearMonth.month - 1 };
+  const prevSummaryQuery = trpc.dashboard.summary.useQuery({
+    year: prevYm.year,
+    month: prevYm.month,
+  });
+  const comparisonPercent =
+    prevSummaryQuery.data && prevSummaryQuery.data.monthExpense > 0
+      ? Math.round(
+          ((summaryQuery.data?.monthExpense ?? 0 - prevSummaryQuery.data.monthExpense) /
+            prevSummaryQuery.data.monthExpense) *
+            1000,
+        ) / 10
+      : null;
+
   // 隐私态:读 localStorage(客户端)。SSR 默认 false,hydration 后真实。
   // 趋势图 isPrivacy prop 控制刻度遮蔽;文本金额由全局 .privacy-on CSS 遮蔽。
   // 全局 <html>.classList('privacy-on') 由 PrivacyToggle 维护;此处只在
@@ -81,6 +99,7 @@ export default function DashboardPage() {
           recentTransactions={summaryQuery.data.recentTransactions}
           budget={summaryQuery.data.budget}
           assets={summaryQuery.data.assets}
+          comparisonPercent={comparisonPercent}
           yearMonth={yearMonth}
           isPrivacy={isPrivacy}
         />
@@ -95,18 +114,33 @@ export default function DashboardPage() {
 function TrendSection({
   trend,
   isPrivacy,
+  comparisonPercent,
 }: {
   trend: React.ComponentProps<typeof ExpenseTrendChart>["trend"];
   isPrivacy: boolean;
+  comparisonPercent: number | null;
 }) {
-  const isDaily = trend.granularity === "daily";
   return (
     <section aria-label="支出趋势" className="pt-4">
       <Card>
         <Card.Header>
-          <Card.Title>
-            {isDaily ? "本月支出趋势" : "本月支出趋势(按周)"}
-          </Card.Title>
+          <div className="flex items-center justify-between">
+            <Card.Title>支出趋势</Card.Title>
+            {comparisonPercent !== null && (
+              <span
+                className={`inline-flex items-center gap-0.5 text-xs font-medium tabular-nums ${
+                  comparisonPercent > 0
+                    ? "text-[var(--danger)]"
+                    : comparisonPercent < 0
+                      ? "text-[var(--success)]"
+                      : "text-muted-foreground"
+                }`}
+              >
+                较上月 {comparisonPercent > 0 ? "↑" : comparisonPercent < 0 ? "↓" : "→"}{" "}
+                {comparisonPercent === 0 ? "持平" : `${Math.abs(comparisonPercent)}%`}
+              </span>
+            )}
+          </div>
         </Card.Header>
         <Card.Content className="p-4 pt-0">
           <ExpenseTrendChart trend={trend} isPrivacy={isPrivacy} />
@@ -133,7 +167,7 @@ function RecentSection({
           查看明细
         </a>
       </div>
-      <RecentTransactions transactions={transactions} isLoading={false} />
+      <RecentTransactions transactions={transactions} isLoading={false} maxItems={3} />
     </section>
   );
 }
@@ -167,6 +201,7 @@ function DashboardBody({
   recentTransactions,
   budget,
   assets,
+  comparisonPercent,
   yearMonth,
   isPrivacy,
 }: {
@@ -178,6 +213,7 @@ function DashboardBody({
   recentTransactions: React.ComponentProps<typeof RecentTransactions>["transactions"];
   budget: React.ComponentProps<typeof BudgetProgress>["budget"];
   assets: React.ComponentProps<typeof AssetOverview>["assets"];
+  comparisonPercent: number | null;
   yearMonth: { year: number; month: number };
   isPrivacy: boolean;
 }) {
@@ -194,7 +230,7 @@ function DashboardBody({
         yearMonth={yearMonth}
       />
       <CategoryTopList items={topExpenseCategories} yearMonth={yearMonth} />
-      <TrendSection trend={expenseTrend} isPrivacy={isPrivacy} />
+      <TrendSection trend={expenseTrend} isPrivacy={isPrivacy} comparisonPercent={comparisonPercent} />
       <RecentSection transactions={recentTransactions} />
       <AssetOverview assets={assets} />
     </>

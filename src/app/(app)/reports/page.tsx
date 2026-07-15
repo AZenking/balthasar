@@ -93,6 +93,22 @@ export default function ReportsPage() {
   const periodStart = period === "year" ? yearStart : mStart;
   const periodEnd = period === "year" ? yearEnd : mEnd;
 
+  // 上一周期(用于摘要"较上期"对比)
+  const prevPeriodStart =
+    period === "year"
+      ? new Date(Date.UTC(endYearMonth.year - 1, 0, 1))
+      : endYearMonth.month === 1
+        ? new Date(Date.UTC(endYearMonth.year - 1, 11, 1))
+        : new Date(Date.UTC(endYearMonth.year, endYearMonth.month - 2, 1));
+  const prevPeriodEnd = period === "year" ? yearStart : mStart;
+  const { data: prevPeriodData } = trpc.transaction.list.useQuery({
+    startDate: prevPeriodStart.toISOString(),
+    endDate: prevPeriodEnd.toISOString(),
+    limit: 1,
+    includeSummary: true,
+  });
+  const prevExpense = prevPeriodData?.summary?.expense ?? null;
+
   // transaction.list:limit ≤ 100(后端 zod max=100)。年模式分页拉取全部。
   const PAGE_SIZE = 100;
   const { data: page1 } = trpc.transaction.list.useQuery({
@@ -305,12 +321,36 @@ export default function ReportsPage() {
                 >
                   {formatCents(targetExpense)}
                 </p>
-                <div className="mt-3 flex gap-4 text-sm">
+                <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
                   <div>
                     <p className="text-xs text-muted-foreground">{labels.average}</p>
                     <p data-amount className="font-medium tabular-nums">
                       {formatCents(avgValue)}
                     </p>
+                  </div>
+                  <div className="border-l border-[var(--border)] pl-2">
+                    <p className="text-xs text-muted-foreground">{labels.comparison}</p>
+                    {prevExpense != null && prevExpense > 0 ? (
+                      <p
+                        data-amount
+                        className={`font-medium tabular-nums ${
+                          targetExpense > prevExpense
+                            ? "text-[var(--danger)]"
+                            : targetExpense < prevExpense
+                              ? "text-[var(--success)]"
+                              : ""
+                        }`}
+                      >
+                        {targetExpense > prevExpense ? "↑" : targetExpense < prevExpense ? "↓" : "→"}{" "}
+                        {Math.abs(Math.round(((targetExpense - prevExpense) / prevExpense) * 1000) / 10)}%
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">暂无对比</p>
+                    )}
+                  </div>
+                  <div className="border-l border-[var(--border)] pl-2">
+                    <p className="text-xs text-muted-foreground">支出笔数</p>
+                    <p className="font-medium tabular-nums">{insights.expenseCount} 笔</p>
                   </div>
                 </div>
               </Card.Content>
@@ -321,7 +361,23 @@ export default function ReportsPage() {
           <section className="pt-4">
             <Card>
               <Card.Header>
-                <Card.Title>支出趋势</Card.Title>
+                <div className="flex items-center justify-between">
+                  <Card.Title>支出趋势</Card.Title>
+                  {(() => {
+                    const max = trendData.buckets.reduce(
+                      (m, b) => (b.amount > m.amount ? b : m),
+                      { date: "", amount: 0 } as { date: string; amount: number },
+                    );
+                    if (max.amount === 0) return null;
+                    const [, mm, dd] = max.date.split("-");
+                    return (
+                      <span className="text-xs text-muted-foreground">
+                        峰值 {Number(mm)}/{Number(dd)}{" "}
+                        <span data-amount>{formatCents(max.amount)}</span>
+                      </span>
+                    );
+                  })()}
+                </div>
               </Card.Header>
               <Card.Content className="p-4 pt-0">
                 {trendData.buckets.length > 0 ? (

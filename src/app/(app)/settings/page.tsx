@@ -125,8 +125,20 @@ export default function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-[720px] space-y-4">
-      {/* ── 顶部标题 ── */}
-      <h1 className="pt-2 text-lg font-medium">设置</h1>
+      {/* ── 顶部标题 + 状态徽标 ── */}
+      <div className="flex items-center justify-between pt-2">
+        <h1 className="text-lg font-medium">设置</h1>
+        <span
+          className={cn(
+            "rounded-full px-2 py-0.5 text-xs font-medium",
+            email
+              ? "bg-[var(--accent)] text-[var(--accent-foreground)]"
+              : "bg-[var(--muted)] text-muted-foreground",
+          )}
+        >
+          {email ? "已同步" : "本地使用"}
+        </span>
+      </div>
 
       {/* ── 个人资料卡 ── */}
       <Card>
@@ -228,16 +240,16 @@ export default function SettingsPage() {
         <SettingsRow icon={Gauge} label="预算设置" value={budgetAmount != null ? formatCents(budgetAmount) : "未设置"} onClick={() => router.push("/dashboard")} />
       </SettingsGroup>
 
-      {/* ── 偏好设置 ── */}
+      {/* ── 偏好设置(顺序:隐私 → 提醒 → 默认账户 → 主题) ── */}
       <SettingsGroup title="偏好设置">
         <SettingsToggleRow icon={EyeOff} label="隐私保护">
           <PrivacyToggleInline />
         </SettingsToggleRow>
+        <SettingsRow icon={BellRing} label="记账提醒" value="未开启" onClick={v2Toast} />
+        <SettingsRow icon={Landmark} label="默认账户" value="未设置" onClick={v2Toast} />
         <SettingsToggleRow icon={Palette} label="外观主题">
           <ThemeToggle />
         </SettingsToggleRow>
-        <SettingsRow icon={BellRing} label="记账提醒" value="未开启" onClick={v2Toast} />
-        <SettingsRow icon={Landmark} label="默认账户" value="未设置" onClick={v2Toast} />
       </SettingsGroup>
 
       {/* ── 数据与同步 ── */}

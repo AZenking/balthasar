@@ -50,10 +50,10 @@ export function TransactionDrawer() {
               size: "lg",
               isIconOnly: true,
             }),
-            "h-14 w-14 rounded-full shadow-lg",
+            "h-12 w-12 rounded-full shadow-lg",
           )}
         >
-          <Plus className="h-6 w-6" aria-hidden />
+          <Plus className="h-5 w-5" aria-hidden />
         </span>
         <span className="sr-only">记一笔</span>
       </button>
