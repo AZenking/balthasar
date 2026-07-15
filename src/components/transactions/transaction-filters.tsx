@@ -16,7 +16,12 @@ import {
 const ALL_SENTINEL = "__all__";
 
 // Type tab ids — `__all__` 表示无类型筛选。
-type TypeTab = "__all__" | "expense" | "income";
+type TypeTab = "__all__" | "expense" | "income" | "transfer";
+
+// US4(转账)落地前,transfer 类型在 DB/procedure 尚不存在(transaction.list
+// 的 type zod 仍为 ["income","expense"])。US4 合并后把此 flag 翻 true。
+// 027 US3 阶段:tab 不渲染,避免传非法 type 触发 400。
+export const TRANSFER_TAB_ENABLED = false;
 
 export interface FilterValues {
   type: "income" | "expense" | undefined;
@@ -46,7 +51,12 @@ export function TransactionFilters({
     const tab = String(key) as TypeTab;
     onChange({
       ...filters,
-      type: tab === "__all__" ? undefined : tab,
+      // transfer 在 US4 前不是合法 FilterValues.type(DB 无此类型);
+      // tab 虽不渲染(TRANSFER_TAB_ENABLED=false),此处仍收紧类型防御。
+      type:
+        tab === "__all__" || tab === "transfer"
+          ? undefined
+          : tab,
       // 切类型时清空分类(分类是 type-scoped)。
       categoryId: undefined,
     });
@@ -65,6 +75,8 @@ export function TransactionFilters({
           <Tabs.Tab id="__all__">全部</Tabs.Tab>
           <Tabs.Tab id="expense">支出</Tabs.Tab>
           <Tabs.Tab id="income">收入</Tabs.Tab>
+          {/* 转账 tab:US4 合并后 TRANSFER_TAB_ENABLED=true 时渲染 */}
+          {TRANSFER_TAB_ENABLED && <Tabs.Tab id="transfer">转账</Tabs.Tab>}
         </Tabs.List>
       </Tabs>
 

@@ -13,7 +13,7 @@ import {
   type FilterValues,
 } from "@/components/transactions/transaction-filters";
 import { TransactionSummary } from "@/components/transactions/transaction-summary";
-import { TransactionListItem } from "@/components/transactions/transaction-list-item";
+import { TransactionDayGroup } from "@/components/transactions/transaction-day-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/layout/page-header";
@@ -40,66 +40,9 @@ type TransactionItem = {
   categoryIcon: string | null;
 };
 
-// ── Date grouping for the transaction list (US6 visual upgrade) ──
-//
-// Groups transactions by relative bucket based on `occurredAt` UTC date:
-//   - 今日 (today UTC)
-//   - 昨日 (yesterday UTC)
-//   - 本周 (within last 7 days, excl. today/yesterday)
-//   - 本月 (within last 30 days, excl. above)
-//   - 具体日期 YYYY-MM-DD (older)
-//
-// UTC-aligned to stay consistent with `date-ranges.ts` (R7) and the DB.
-// Same-day transactions land in the same bucket regardless of order.
-
-function startOfUtcDay(d: Date): Date {
-  return new Date(
-    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
-  );
-}
-
-function formatUtcYmd(d: Date): string {
-  const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(d.getUTCDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
-function groupByDate(
-  items: TransactionItem[]
-): Array<{ label: string; items: TransactionItem[] }> {
-  if (items.length === 0) return [];
-
-  const now = new Date();
-  const todayStart = startOfUtcDay(now).getTime();
-  const oneDayMs = 24 * 60 * 60 * 1000;
-  const yesterdayStart = todayStart - oneDayMs;
-  const weekStart = todayStart - 7 * oneDayMs;
-  const monthStart = todayStart - 30 * oneDayMs;
-
-  const buckets = new Map<string, TransactionItem[]>();
-  const order: string[] = [];
-
-  for (const t of items) {
-    const d = typeof t.occurredAt === "string" ? new Date(t.occurredAt) : t.occurredAt;
-    const ts = startOfUtcDay(d).getTime();
-
-    let label: string;
-    if (ts === todayStart) label = "今日";
-    else if (ts === yesterdayStart) label = "昨日";
-    else if (ts > weekStart) label = "本周";
-    else if (ts > monthStart) label = "本月";
-    else label = formatUtcYmd(d);
-
-    if (!buckets.has(label)) {
-      buckets.set(label, []);
-      order.push(label);
-    }
-    buckets.get(label)!.push(t);
-  }
-
-  return order.map((label) => ({ label, items: buckets.get(label)! }));
-}
+// 027 US3 (FR-010): 按日分组 + 组头小计已抽取到 TransactionDayGroup 组件
+// (src/components/transactions/transaction-day-group.tsx),含 groupByUtcDay /
+// daySubtotal 纯函数(单测 T019)。本页只做装配。
 
 // ── Build the human-readable filter description for the Card header ──
 //
@@ -293,7 +236,6 @@ export default function TransactionsPage() {
   );
 
   const isRefetching = isFetching && cursor === undefined && !isLoading;
-  const grouped = useMemo(() => groupByDate(items), [items]);
 
   // ── First load skeleton ──
   // PageHeader(title="流水" + filterDescription + count)同步渲染不需要占位;
@@ -315,7 +257,7 @@ export default function TransactionsPage() {
     <div>
       {/* 026 US6 + 026-switch:Header 用 PageHeader,Card 仅承载 summary */}
       <PageHeader
-        title="流水"
+        title="明细"
         description={filterDescription}
         actions={
           <span className="text-xs text-muted-foreground">{items.length} 笔</span>
@@ -358,24 +300,12 @@ export default function TransactionsPage() {
           )
         ) : (
           <>
-            {/* 026 US6: 列表按日期分组渲染 */}
-            {grouped.map((group) => (
-              <div key={group.label} className="mt-4">
-                <div className="sticky top-0 z-10 bg-[var(--background)]/80 py-2 text-xs font-medium text-[var(--muted-foreground)] backdrop-blur">
-                  {group.label}
-                </div>
-                <div className="space-y-0">
-                  {group.items.map((t) => (
-                    <TransactionListItem
-                      key={t.id}
-                      transaction={t}
-                      onEdit={handleEdit}
-                      onDelete={handleDelete}
-                    />
-                  ))}
-                </div>
-              </div>
-            ))}
+            {/* 027 US3 (FR-010): 列表按 UTC 日历日分组 + 组头收支小计 */}
+            <TransactionDayGroup
+              items={items}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+            />
 
             {nextCursor !== null && (
               <div className="py-4 text-center">

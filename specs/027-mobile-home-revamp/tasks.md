@@ -97,17 +97,17 @@
 
 ### Tests for US3 (TDD)
 
-- [ ] T019 [P] [US3] 集成测试:明细页按日分组 + 组头小计在 `src/tests/integration/transactions/day-group.test.ts`
-- [ ] T020 [P] [US3] 组件测试:统计页月/年 toggle 切换标签在 `src/tests/unit/components/stats-period-toggle.test.tsx`
+- [X] T019 [P] [US3] 集成测试:明细页按日分组 + 组头小计在 `src/tests/integration/transactions/day-group.test.ts`
+- [X] T020 [P] [US3] 组件测试:统计页月/年 toggle 切换标签在 `src/tests/unit/components/stats-period-toggle.test.tsx`
 
 ### Implementation for US3
 
-- [ ] T021 [US3] 扩展 `src/components/transactions/transaction-filters.tsx`:加"转账" tab(US4 落地后生效;US4 前隐藏或空态)。**执行前 `/heroui-react` 查 Tabs**
-- [ ] T022 [US3] 新建 `src/components/transactions/transaction-day-group.tsx`:按日分组 + 组头显示当日支出/收入/(转账)小计
-- [ ] T023 [US3] 更新 `src/app/(app)/transactions/page.tsx`:用 TransactionDayGroup 替换现有平铺列表
-- [ ] T024 [US3] 新建 `src/components/reports/stats-period-toggle.tsx`:月/年 toggle。**执行前 `/heroui-react`**
-- [ ] T025 [US3] 新建 `src/components/reports/stats-insights-grid.tsx`:最高支出日/最大单笔/支出次数三宫格(FR-011)
-- [ ] T026 [US3] 更新 `src/app/(app)/reports/page.tsx`:集成 StatsPeriodToggle + StatsInsightsGrid + 峰值徽标;月/年切换时标签与聚合同步(月=本月支出/日均;年=全年支出/月均)
+- [X] T021 [US3] 扩展 `src/components/transactions/transaction-filters.tsx`:加"转账" tab(US4 落地后生效;US4 前隐藏或空态)。**执行前 `/heroui-react` 查 Tabs**
+- [X] T022 [US3] 新建 `src/components/transactions/transaction-day-group.tsx`:按日分组 + 组头显示当日支出/收入/(转账)小计
+- [X] T023 [US3] 更新 `src/app/(app)/transactions/page.tsx`:用 TransactionDayGroup 替换现有平铺列表
+- [X] T024 [US3] 新建 `src/components/reports/stats-period-toggle.tsx`:月/年 toggle。**执行前 `/heroui-react`**
+- [X] T025 [US3] 新建 `src/components/reports/stats-insights-grid.tsx`:最高支出日/最大单笔/支出次数三宫格(FR-011)
+- [X] T026 [US3] 更新 `src/app/(app)/reports/page.tsx`:集成 StatsPeriodToggle + StatsInsightsGrid + 峰值徽标;月/年切换时标签与聚合同步(月=本月支出/日均;年=全年支出/月均)
 
 **Checkpoint**: 明细/统计页对齐线稿;首页下钻目标(点分类进明细、点趋势进统计)贯通。
 
