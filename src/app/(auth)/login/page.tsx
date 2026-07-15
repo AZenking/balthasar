@@ -4,22 +4,34 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ChevronLeft, Eye, EyeOff, ShieldCheck } from "lucide-react";
+import {
+  ChevronLeft,
+  Eye,
+  EyeOff,
+  ShieldCheck,
+} from "lucide-react";
+import {
+  TextField,
+  Input as HeroInput,
+  Label,
+  FieldError,
+  Button,
+  Spinner,
+} from "@heroui/react";
 import { loginSchema, type LoginFormValues } from "@/lib/validators/login";
 import { authClient } from "@/server/auth/client";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
 /**
- * 登录页 (027 线稿对齐)。
+ * 登录页 (027 线稿对齐 + HeroUI v3 原生组合)。
  *
  * 克制、系统级安全登录风格。仅邮箱 + 密码。
+ * - HeroUI v3 TextField + Label + Input + FieldError(非 shadcn 适配层)
  * - 顶部:返回按钮 + "安全登录"徽标
  * - 品牌区:灰色圆角图标 + 标题"登录并同步数据" + 副标题
  * - 邮箱:autocomplete="email"
  * - 密码:显示/隐藏切换 + autocomplete="current-password"
- * - 主按钮:高对比黑色、~52px、大圆角
+ * - 主按钮:高对比、52px、rounded-xl、加载 Spinner
  * - 注册入口:"还没有账户? 创建账户"
  * - 手机全屏;桌面 ≤420px 居中面板
  */
@@ -51,7 +63,7 @@ export default function LoginPage() {
       }
       return;
     }
-    router.push("/dashboard");
+    window.location.href = "/dashboard";
   };
 
   const handleBack = () => {
@@ -93,38 +105,36 @@ export default function LoginPage() {
         </p>
       </div>
 
-      {/* ── 表单 ── */}
+      {/* ── 表单(HeroUI v3 TextField 组合) ── */}
       <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-5">
         {/* 邮箱 */}
-        <div className="space-y-1.5">
-          <Label htmlFor="email" className="text-sm font-medium">
-            邮箱
-          </Label>
-          <Input
-            id="email"
-            type="email"
-            autoComplete="email"
+        <TextField
+          fullWidth
+          isInvalid={!!errors.email}
+          name="email"
+          type="email"
+          autoComplete="email"
+        >
+          <Label className="text-sm font-medium">邮箱</Label>
+          <HeroInput
             placeholder="you@example.com"
             className="h-[52px] rounded-xl"
             {...register("email")}
           />
-          {errors.email && (
-            <p role="alert" className="text-xs text-[var(--danger)]">
-              {errors.email.message}
-            </p>
-          )}
-        </div>
+          {errors.email && <FieldError>{errors.email.message}</FieldError>}
+        </TextField>
 
         {/* 密码 */}
-        <div className="space-y-1.5">
-          <Label htmlFor="password" className="text-sm font-medium">
-            密码
-          </Label>
+        <TextField
+          fullWidth
+          isInvalid={!!errors.password}
+          name="password"
+          autoComplete="current-password"
+        >
+          <Label className="text-sm font-medium">密码</Label>
           <div className="relative">
-            <Input
-              id="password"
+            <HeroInput
               type={showPassword ? "text" : "password"}
-              autoComplete="current-password"
               placeholder="请输入密码"
               className="h-[52px] rounded-xl pr-12"
               {...register("password")}
@@ -135,35 +145,37 @@ export default function LoginPage() {
               aria-label={showPassword ? "隐藏密码" : "显示密码"}
               className="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-[var(--muted)]"
             >
-              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              {showPassword ? (
+                <EyeOff className="h-4 w-4" />
+              ) : (
+                <Eye className="h-4 w-4" />
+              )}
             </button>
           </div>
           {errors.password && (
-            <p role="alert" className="text-xs text-[var(--danger)]">
-              {errors.password.message}
-            </p>
+            <FieldError>{errors.password.message}</FieldError>
           )}
-        </div>
+        </TextField>
 
         {/* 服务端错误 */}
         {serverError && (
-          <p role="alert" className="text-xs text-[var(--danger)]">
+          <p
+            role="alert"
+            className="rounded-lg bg-[var(--danger)]/10 px-3 py-2 text-xs text-[var(--danger)]"
+          >
             {serverError}
           </p>
         )}
 
         {/* 主按钮 */}
-        <button
+        <Button
           type="submit"
-          disabled={isSubmitting}
-          className={cn(
-            "flex h-[52px] w-full items-center justify-center rounded-xl text-sm font-semibold text-white transition-opacity",
-            "bg-[var(--foreground)] hover:opacity-90",
-            isSubmitting && "cursor-not-allowed opacity-60",
-          )}
+          variant="primary"
+          isPending={isSubmitting}
+          className="h-[52px] w-full rounded-xl text-sm font-semibold"
         >
           {isSubmitting ? "登录中..." : "登录"}
-        </button>
+        </Button>
       </form>
 
       {/* ── 注册入口 ── */}

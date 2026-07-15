@@ -149,7 +149,11 @@ export const auth = betterAuth({
   },
   advanced: {
     cookies: {
-      sessionToken: {
+      // Better Auth uses the endpoint cookie id (snake_case) as the
+      // configuration key. `sessionToken` is silently ignored, leaving the
+      // app on Better Auth's default cookie and making logout/config changes
+      // disagree about which cookie represents the active session.
+      session_token: {
         name: "balthasar.session_token",
         attributes: {
           httpOnly: true,

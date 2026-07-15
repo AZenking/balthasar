@@ -45,3 +45,4 @@ next-env.d.ts
 
 # CodeGraph MCP local index (developer-local)
 .codegraph/
+.zcode/*

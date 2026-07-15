@@ -74,6 +74,7 @@ export default function SettingsPage() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
 
   const createMutation = trpc.account.create.useMutation({
@@ -316,16 +317,48 @@ export default function SettingsPage() {
             <AlertDialogAction asChild>
               <Button
                 variant="destructive"
+                disabled={isLoggingOut}
                 onClick={async () => {
-                  const { authClient } = await import("@/server/auth/client");
-                  await authClient.signOut();
-                  // 全页跳转(非 router.push):确保 (auth) layout 的
-                  // getSession 服务端检查重新执行,避免客户端导航缓存
-                  // 残留会话导致 redirect 回 /dashboard。
-                  window.location.href = "/login";
+                  setIsLoggingOut(true);
+
+                  try {
+                    const { authClient } = await import("@/server/auth/client");
+                    const signOutResult = await authClient.signOut();
+
+                    if (signOutResult.error) {
+                      throw new Error(
+                        signOutResult.error.message || "退出登录失败，请重试"
+                      );
+                    }
+
+                    // Do not redirect until the server confirms the cookie no
+                    // longer resolves to a session. Otherwise /login's auth
+                    // layout correctly redirects the still-authenticated user
+                    // straight back to /dashboard.
+                    const sessionResult = await authClient.getSession();
+                    if (sessionResult.error) {
+                      throw new Error(
+                        sessionResult.error.message || "无法确认退出状态，请重试"
+                      );
+                    }
+                    if (sessionResult.data) {
+                      throw new Error("会话仍未清除，请重试");
+                    }
+
+                    // Full replacement forces the server auth layout to run
+                    // again and keeps Dashboard out of browser history.
+                    window.location.replace("/login");
+                  } catch (error) {
+                    const message =
+                      error instanceof Error
+                        ? error.message
+                        : "退出登录失败，请重试";
+                    toast.error(message);
+                    setIsLoggingOut(false);
+                  }
                 }}
               >
-                退出登录
+                {isLoggingOut ? "正在退出…" : "退出登录"}
               </Button>
             </AlertDialogAction>
           </AlertDialogFooter>

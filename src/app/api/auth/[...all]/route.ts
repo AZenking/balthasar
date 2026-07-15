@@ -71,6 +71,31 @@ function rewritePath(url: URL): URL {
   return url;
 }
 
+/**
+ * Before the session cookie config was corrected, Better Auth used its
+ * default cookie name. Expire both variants during logout so an old session
+ * cannot become active again if cookie settings change between deployments.
+ */
+function clearLegacySessionCookies(response: Response): Response {
+  const headers = new Headers(response.headers);
+  const expired = "Max-Age=0; Path=/; HttpOnly; SameSite=Lax";
+
+  headers.append(
+    "Set-Cookie",
+    `better-auth.session_token=; ${expired}`
+  );
+  headers.append(
+    "Set-Cookie",
+    `__Secure-better-auth.session_token=; ${expired}; Secure`
+  );
+
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
 export const POST = async (req: Request): Promise<Response> => {
   const originalUrl = new URL(req.url);
   const rewrittenUrl = rewritePath(originalUrl);
@@ -134,6 +159,11 @@ export const POST = async (req: Request): Promise<Response> => {
 
       return upstream;
     }
+  }
+
+  if (path === "/sign-out") {
+    const upstream = await betterAuthHandler.POST!(req);
+    return clearLegacySessionCookies(upstream);
   }
 
   // ─── All other auth endpoints: pass through ────────────────────────────
