@@ -6,7 +6,7 @@
  * and server agree on field constraints.
  */
 import { z } from "zod";
-import { CATEGORY_EMOJI_SET } from "@/lib/constants/category-emojis";
+import { CATEGORY_ICON_SET } from "@/lib/constants/category-icons";
 
 export const categoryTypeSchema = z.enum(["income", "expense"]);
 
@@ -16,8 +16,8 @@ const nameSchema = z
   .min(1, "分类名不能为空")
   .max(30, "不能超过 30 字");
 
-const iconSchema = z.string().refine((v) => CATEGORY_EMOJI_SET.has(v), {
-  message: "icon 必须来自内置 emoji 库白名单",
+const iconSchema = z.string().refine((v) => CATEGORY_ICON_SET.has(v), {
+  message: "图标必须来自内置图标库",
 });
 
 export const categoryCreateSchema = z

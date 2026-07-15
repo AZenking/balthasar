@@ -15,7 +15,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { EmojiPicker } from "./emoji-picker";
+import { IconPicker } from "./icon-picker";
+import { CategoryIcon } from "@/components/category/category-icon";
 import type { CategoryNode } from "./category-item";
 
 /**
@@ -62,7 +63,6 @@ export function CategoryForm({
       name: defaultValues?.name ?? "",
       icon: defaultValues?.icon ?? "",
       parentId: defaultValues?.parentId,
-      sortOrder: defaultValues?.sortOrder,
     },
   });
 
@@ -157,14 +157,14 @@ export function CategoryForm({
         )}
       </div>
 
-      {/* emoji picker (Controller-wrapped, RHF manages value) */}
+      {/* icon picker (Controller-wrapped, RHF manages value) */}
       <div>
         <Label className="mb-1 block">图标</Label>
         <Controller
           control={control}
           name="icon"
           render={({ field }) => (
-            <EmojiPicker
+            <IconPicker
               value={field.value ?? ""}
               onChange={field.onChange}
             />
@@ -196,8 +196,11 @@ export function CategoryForm({
                 <SelectItem value={PARENT_ROOT_SENTINEL}>(顶级分类)</SelectItem>
                 {parentOptions.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
-                    {c.icon} {c.name}
-                    {c.isBuiltIn ? " (内置)" : ""}
+                    <span className="flex items-center gap-1.5">
+                      <CategoryIcon name={c.icon} size={16} />
+                      {c.name}
+                      {c.isBuiltIn ? " (内置)" : ""}
+                    </span>
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -215,21 +218,7 @@ export function CategoryForm({
         )}
       </div>
 
-      {/* sortOrder */}
-      <div>
-        <Label htmlFor="category-sort-order" className="mb-1 block">排序 (可选)</Label>
-        <Input
-          id="category-sort-order"
-          type="number"
-          {...register("sortOrder", { valueAsNumber: true })}
-          min={0}
-          step={1}
-          placeholder="默认 100"
-        />
-        {errors.sortOrder && (
-          <p className="mt-1 text-xs text-destructive">{errors.sortOrder.message}</p>
-        )}
-      </div>
+      {/* 排序:由列表拖拽管理,表单不再暴露(开发概念,避免与拖拽双入口冲突) */}
 
       {/* actions */}
       <div className="flex justify-end gap-2 pt-2">

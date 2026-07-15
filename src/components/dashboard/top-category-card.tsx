@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { CategoryIcon } from "@/components/category/category-icon";
 
 /**
  * TopCategoryCard (026-cream-amber-revamp, spec FR-C006).
@@ -121,9 +122,7 @@ export function TopCategoryCard({
           <CardContent className="p-3">
             <div className="flex items-center gap-1.5 text-sm">
               {c.categoryIcon ? (
-                <span aria-hidden="true" className="text-base leading-none">
-                  {c.categoryIcon}
-                </span>
+                <CategoryIcon name={c.categoryIcon} size={18} />
               ) : null}
               <span className="truncate font-medium">{c.categoryName}</span>
             </div>

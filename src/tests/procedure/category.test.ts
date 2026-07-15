@@ -14,8 +14,8 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 
 vi.mock("@/server/db/queries/category", () => ({
   findAllCategories: vi.fn().mockResolvedValue([
-    { id: "c1", name: "餐饮", type: "expense", icon: "🍔", sortOrder: 100, isBuiltIn: true, familyId: null, parentId: null, archivedAt: null, updatedAt: new Date(), createdAt: new Date() },
-    { id: "c2", name: "工资", type: "income", icon: "💰", sortOrder: 100, isBuiltIn: true, familyId: null, parentId: null, archivedAt: null, updatedAt: new Date(), createdAt: new Date() },
+    { id: "c1", name: "餐饮", type: "expense", icon: "utensils", sortOrder: 100, isBuiltIn: true, familyId: null, parentId: null, archivedAt: null, updatedAt: new Date(), createdAt: new Date() },
+    { id: "c2", name: "工资", type: "income", icon: "wallet", sortOrder: 100, isBuiltIn: true, familyId: null, parentId: null, archivedAt: null, updatedAt: new Date(), createdAt: new Date() },
   ]),
   findCategoryById: vi.fn(),
 }));
@@ -29,6 +29,7 @@ vi.mock("@/server/db/queries/account", () => ({
 vi.mock("@/server/domain/category/rules", () => ({
   buildCategoryTree: vi.fn((flat: unknown[]) => flat),
   isCategoryEmoji: vi.fn(() => true),
+  isCategoryIcon: vi.fn(() => true),
 }));
 
 import { createCaller } from "@/lib/trpc/server";
@@ -104,7 +105,7 @@ describe("[T021-T023] category.get procedure", () => {
   it("T021: returns category when found", async () => {
     mockedFindById.mockResolvedValueOnce({
       id: "95d6dc66-12c4-5f2b-bf9b-1d439a9c8100",
-      name: "餐饮", type: "expense", icon: "🍔", sortOrder: 100,
+      name: "餐饮", type: "expense", icon: "utensils", sortOrder: 100,
       isBuiltIn: true, createdAt: new Date(),
     } as any);
 

@@ -81,7 +81,7 @@ describe("[US1] category.create procedure", () => {
       id: "c_new_1",
       name: "宠物用品",
       type: "expense",
-      icon: "🐾",
+      icon: "paw-print",
       sortOrder: 100,
       isBuiltIn: false,
       familyId: "fam_test_1",
@@ -95,14 +95,14 @@ describe("[US1] category.create procedure", () => {
     const result = await caller.category.create({
       type: "expense",
       name: "宠物用品",
-      icon: "🐾",
+      icon: "paw-print",
     });
 
     expect(result).toMatchObject({
       id: "c_new_1",
       name: "宠物用品",
       type: "expense",
-      icon: "🐾",
+      icon: "paw-print",
       isBuiltIn: false,
       familyId: "fam_test_1",
       parentId: null,
@@ -116,7 +116,7 @@ describe("[US1] category.create procedure", () => {
       id: "c_new_2",
       name: "副业收入",
       type: "income",
-      icon: "💻",
+      icon: "laptop",
       sortOrder: 100,
       isBuiltIn: false,
       familyId: "fam_test_1",
@@ -130,7 +130,7 @@ describe("[US1] category.create procedure", () => {
     const result = await caller.category.create({
       type: "income",
       name: "副业收入",
-      icon: "💻",
+      icon: "laptop",
     });
     expect(result.type).toBe("income");
   });
@@ -147,7 +147,7 @@ describe("[US1] category.create procedure", () => {
       caller.category.create({
         type: "expense",
         name: "宠物用品",
-        icon: "🐾",
+        icon: "paw-print",
       }),
     ).rejects.toMatchObject({ code: "CONFLICT" });
   });
@@ -158,7 +158,7 @@ describe("[US1] category.create procedure", () => {
       caller.category.create({
         type: "expense",
         name: "   ",
-        icon: "🐾",
+        icon: "paw-print",
       }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
     expect(mockedCreate).not.toHaveBeenCalled();
@@ -170,7 +170,7 @@ describe("[US1] category.create procedure", () => {
       caller.category.create({
         type: "expense",
         name: "a".repeat(31),
-        icon: "🐾",
+        icon: "paw-print",
       }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
     expect(mockedCreate).not.toHaveBeenCalled();
@@ -183,7 +183,7 @@ describe("[US1] category.create procedure", () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         type: "invalid" as any,
         name: "Test",
-        icon: "🐾",
+        icon: "paw-print",
       }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
@@ -206,7 +206,7 @@ describe("[US1] category.create procedure", () => {
       id: parentUuid,
       name: "人情",
       type: "expense",
-      icon: "🎁",
+      icon: "gift",
       sortOrder: 100,
       isBuiltIn: false,
       familyId: "fam_test_1",
@@ -219,7 +219,7 @@ describe("[US1] category.create procedure", () => {
       id: "00000000-0000-5000-8000-000000000018",
       name: "婚礼红包",
       type: "expense",
-      icon: "💍",
+      icon: "heart-handshake",
       sortOrder: 100,
       isBuiltIn: false,
       familyId: "fam_test_1",
@@ -233,7 +233,7 @@ describe("[US1] category.create procedure", () => {
     const result = await caller.category.create({
       type: "expense",
       name: "婚礼红包",
-      icon: "💍",
+      icon: "heart-handshake",
       parentId: parentUuid,
     });
     expect(result.parentId).toBe(parentUuid);
@@ -254,7 +254,7 @@ describe("[US1] category.create procedure", () => {
       caller.category.create({
         type: "expense",
         name: "Third",
-        icon: "🐾",
+        icon: "paw-print",
         parentId: "00000000-0000-5000-8000-000000000019",
       }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
@@ -273,7 +273,7 @@ describe("[US1] category.create procedure", () => {
       caller.category.create({
         type: "expense",
         name: "Test",
-        icon: "🐾",
+        icon: "paw-print",
         parentId: "00000000-0000-5000-8000-000000000010",
       }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
@@ -285,7 +285,7 @@ describe("[US1] category.create procedure", () => {
       caller.category.create({
         type: "expense",
         name: "Test",
-        icon: "🐾",
+        icon: "paw-print",
       }),
     ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
     expect(mockedCreate).not.toHaveBeenCalled();
@@ -297,7 +297,7 @@ describe("[US1] category.create procedure", () => {
       caller.category.create({
         type: "expense",
         name: "Test",
-        icon: "🐾",
+        icon: "paw-print",
         familyId: "attacker_injected",
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any),

@@ -1,5 +1,6 @@
 import { PieChart } from "lucide-react";
 import { EmptyState } from "@/components/feedback/empty-state";
+import { CategoryIcon } from "@/components/category/category-icon";
 
 interface CategoryItem {
   categoryId: string;
@@ -29,7 +30,7 @@ export function CategoryBreakdown({ items }: { items: CategoryItem[] }) {
         <div key={c.categoryId}>
           <div className="flex items-center justify-between text-sm">
             <span className="flex items-center gap-1">
-              <span className="text-base">{c.categoryIcon}</span>
+              <CategoryIcon name={c.categoryIcon} size={18} />
               {c.categoryName}
             </span>
             <span className="text-muted-foreground">

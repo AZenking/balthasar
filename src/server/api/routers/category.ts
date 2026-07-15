@@ -11,7 +11,8 @@ import {
   unarchiveCategory,
 } from "@/server/db/queries/category";
 import { loadFamilyAndMemberIdsByUserId } from "@/server/db/queries/account";
-import { buildCategoryTree, isCategoryEmoji } from "@/server/domain/category/rules";
+import { buildCategoryTree } from "@/server/domain/category/rules";
+import { isCategoryIcon } from "@/lib/constants/category-icons";
 import { categoryType } from "@/server/db/schema";
 
 /**
@@ -25,13 +26,13 @@ import { categoryType } from "@/server/db/schema";
 const typeSchema = z.enum(categoryType.enumValues);
 
 /**
- * FR-004: icon MUST be in shared emoji whitelist.
- * Frontend + backend import same constant file (research.md D3).
+ * FR-004: icon MUST be in shared icon name whitelist.
+ * Frontend + backend import same constant file (028-category-lucide-icons).
  */
 const iconSchema = z
   .string()
-  .refine((v) => isCategoryEmoji(v), {
-    message: "icon 必须来自内置 emoji 库白名单",
+  .refine((v) => isCategoryIcon(v), {
+    message: "图标必须来自内置图标库",
   });
 
 /**

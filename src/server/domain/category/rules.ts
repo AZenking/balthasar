@@ -14,7 +14,7 @@
  * - Frontend drag-and-drop UI (when computing new sortOrder on drop)
  */
 
-import { CATEGORY_EMOJI_SET } from "@/lib/constants/category-emojis";
+import { isCategoryIcon } from "@/lib/constants/category-icons";
 
 /**
  * Compute the new sortOrder for an item dragged between prev and next
@@ -111,11 +111,16 @@ export function buildCategoryTree<
 }
 
 /**
- * Validate that a string is in the category emoji whitelist (FR-004).
+ * Validate that a string is in the category icon name whitelist (FR-004).
  *
- * Backed by CATEGORY_EMOJI_SET (O(1) lookup). Used by zod refine in
- * create/update procedures to reject arbitrary user input.
+ * 028-category-lucide-icons: migrated from emoji set to lucide icon name set.
+ * Delegates to the shared `isCategoryIcon` function in category-icons.ts.
+ *
+ * Kept as a re-export for backwards compatibility with any callers that
+ * imported `isCategoryEmoji` by name. Will be removed in a future cleanup.
  */
 export function isCategoryEmoji(value: string): boolean {
-  return typeof value === "string" && CATEGORY_EMOJI_SET.has(value);
+  return isCategoryIcon(value);
 }
+
+export { isCategoryIcon };

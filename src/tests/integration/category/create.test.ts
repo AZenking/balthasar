@@ -74,7 +74,7 @@ describe("[US1] createCategory DB-level integration", () => {
     const created = await createCategory({
       type: "expense",
       name: "AuditTest",
-      icon: "🍔",
+      icon: "utensils",
       familyId: famId,
       actorMemberId: memId,
     });
@@ -90,7 +90,7 @@ describe("[US1] createCategory DB-level integration", () => {
     const after = events[0].after as Record<string, unknown>;
     expect(after).toMatchObject({
       name: "AuditTest",
-      icon: "🍔",
+      icon: "utensils",
       type: "expense",
       sortOrder: 100,
       parentId: null,
@@ -131,7 +131,7 @@ describe("[US1] createCategory DB-level integration", () => {
     const income = await createCategory({
       type: "income",
       name: "DualType",
-      icon: "💰",
+      icon: "wallet",
       familyId: famId,
       actorMemberId: memId,
     });
@@ -180,7 +180,7 @@ describe("[US1] createCategory DB-level integration", () => {
       createCategory({
         type: "income", // mismatched
         name: "ChildIncome",
-        icon: "💰",
+        icon: "wallet",
         familyId: famId,
         actorMemberId: memId,
         parentId: parent.id,

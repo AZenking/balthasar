@@ -149,7 +149,7 @@ describe("[US4] findAllCategories hierarchical + filters", () => {
     await createCategory({
       type: "income",
       name: "FilterIncome",
-      icon: "💰",
+      icon: "wallet",
       familyId: famId,
       actorMemberId: memId,
     });

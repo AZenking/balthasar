@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { CategoryIcon } from "@/components/category/category-icon";
 
 const formatAmount = (cents: number) => `¥${(cents / 100).toFixed(2)}`;
 const formatDate = (date: string | Date) => {
@@ -42,7 +43,7 @@ export function TransactionListItem({
       aria-label={`编辑 ${transaction.categoryName ?? "交易"}`}
     >
       <div className="flex min-w-0 flex-1 items-center gap-2">
-        <span className="text-xl">{transaction.categoryIcon}</span>
+        <CategoryIcon name={transaction.categoryIcon ?? "circle-help"} size={20} />
         <div className="min-w-0">
           <p className="truncate text-sm font-medium text-[var(--foreground)]">
             {transaction.remark || transaction.categoryName || "?"}

@@ -32,6 +32,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
+import {
   computeSortOrder,
   renumberSortOrders,
 } from "@/server/domain/category/rules";
@@ -68,6 +78,11 @@ export function CategoryManager() {
   const [includeArchived, setIncludeArchived] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  // 归档二次确认目标(onArchive 仅写入,AlertDialog 承载确认 UI)
+  const [archiveTarget, setArchiveTarget] = useState<{
+    id: string;
+    childCount: number;
+  } | null>(null);
 
   // ─── list query ───
   const query = trpc.category.list.useQuery({ type, includeArchived });
@@ -212,12 +227,14 @@ export function CategoryManager() {
   };
 
   const onArchive = (id: string, childCount: number) => {
-    const msg =
-      childCount > 0
-        ? `确定归档?该分类及其 ${childCount} 个子分类将从新建交易的下拉中隐藏,但历史交易仍保留。`
-        : "确定归档?该分类将从新建交易的下拉中隐藏,但历史交易仍保留。";
-    if (!window.confirm(msg)) return;
-    archiveMutation.mutate({ id });
+    // 仅记录目标,确认动作交给 AlertDialog(避免 window.confirm 的原生弹窗)
+    setArchiveTarget({ id, childCount });
+  };
+
+  const confirmArchive = () => {
+    if (!archiveTarget) return;
+    archiveMutation.mutate({ id: archiveTarget.id });
+    setArchiveTarget(null);
   };
 
   const onUnarchive = (id: string, _childCount: number) => {
@@ -260,17 +277,24 @@ export function CategoryManager() {
         </div>
       </div>
 
-      {/* 新增按钮 */}
-      <div className="mb-3 flex justify-end">
-        <Button
-          size="sm"
-          disabled={capReached}
-          title={capReached ? `已达上限 ${CUSTOM_CATEGORY_CAP}` : undefined}
-          onClick={() => setShowCreateForm(true)}
-        >
-          + 新增分类
-        </Button>
-      </div>
+      {/* 新增按钮(列表为空时隐藏:EmptyState 内已有同款 CTA,避免重复) */}
+      {tree && tree.length > 0 && (
+        <div className="mb-3 flex flex-col items-end gap-1">
+          <Button
+            size="sm"
+            disabled={capReached}
+            title={capReached ? `已达上限 ${CUSTOM_CATEGORY_CAP}` : undefined}
+            onClick={() => setShowCreateForm(true)}
+          >
+            + 新增分类
+          </Button>
+          {capReached && (
+            <p className="text-xs text-muted-foreground">
+              已达上限 {CUSTOM_CATEGORY_CAP} 个自定义分类
+            </p>
+          )}
+        </div>
+      )}
 
       {/* 列表 */}
       {isLoading ? (
@@ -288,7 +312,6 @@ export function CategoryManager() {
             <Button
               size="sm"
               disabled={capReached}
-              title={capReached ? `已达上限 ${CUSTOM_CATEGORY_CAP}` : undefined}
               onClick={() => setShowCreateForm(true)}
             >
               + 新增分类
@@ -356,7 +379,6 @@ export function CategoryManager() {
                 name: editingNode.name,
                 icon: editingNode.icon,
                 parentId: editingNode.parentId ?? undefined,
-                sortOrder: editingNode.sortOrder,
               }}
               onSubmit={handleUpdate}
               onCancel={() => setEditingCategoryId(null)}
@@ -365,6 +387,31 @@ export function CategoryManager() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* 归档二次确认(替代 window.confirm) */}
+      <AlertDialog
+        open={!!archiveTarget}
+        onOpenChange={(v) => { if (!v) setArchiveTarget(null); }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>归档分类</AlertDialogTitle>
+            <AlertDialogDescription>
+              {archiveTarget && archiveTarget.childCount > 0
+                ? `确定归档?该分类及其 ${archiveTarget.childCount} 个子分类将从新建交易的下拉中隐藏,但历史交易仍保留。`
+                : "确定归档?该分类将从新建交易的下拉中隐藏,但历史交易仍保留。"}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction asChild>
+              <Button variant="destructive" onClick={confirmArchive}>
+                归档
+              </Button>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

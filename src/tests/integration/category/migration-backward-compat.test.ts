@@ -98,7 +98,7 @@ describe("018 migration 0006: backward compat with 003", () => {
     expect(餐饮[0]).toMatchObject({
       name: "餐饮",
       type: "expense",
-      icon: "🍔",
+      icon: "utensils",
       sortOrder: 100,
       isBuiltIn: true,
     });
@@ -110,7 +110,7 @@ describe("018 migration 0006: backward compat with 003", () => {
     expect(交通[0]).toMatchObject({
       name: "交通",
       type: "expense",
-      icon: "🚗",
+      icon: "car",
       sortOrder: 200,
     });
 
@@ -121,7 +121,7 @@ describe("018 migration 0006: backward compat with 003", () => {
     expect(工资[0]).toMatchObject({
       name: "工资",
       type: "income",
-      icon: "💰",
+      icon: "wallet",
       sortOrder: 100,
     });
   });

@@ -144,32 +144,32 @@ describe("buildCategoryTree", () => {
   });
 });
 
-// ─── isCategoryEmoji ───
+// ─── isCategoryEmoji (028: 现为 isCategoryIcon 的别名,校验 lucide 图标名) ───
 
 describe("isCategoryEmoji", () => {
-  it("returns true for known emojis (003 built-ins)", () => {
-    expect(isCategoryEmoji("🍔")).toBe(true);
-    expect(isCategoryEmoji("🚗")).toBe(true);
-    expect(isCategoryEmoji("💰")).toBe(true);
-    expect(isCategoryEmoji("🎁")).toBe(true);
+  it("returns true for known icon names (003 built-ins)", () => {
+    expect(isCategoryEmoji("utensils")).toBe(true);
+    expect(isCategoryEmoji("car")).toBe(true);
+    expect(isCategoryEmoji("wallet")).toBe(true);
+    expect(isCategoryEmoji("gift")).toBe(true);
   });
 
-  it("returns true for known emojis (018 extended)", () => {
-    expect(isCategoryEmoji("🐾")).toBe(true);
-    expect(isCategoryEmoji("🐶")).toBe(true);
+  it("returns true for known icon names (018 extended)", () => {
+    expect(isCategoryEmoji("paw-print")).toBe(true);
+    expect(isCategoryEmoji("dog")).toBe(true);
   });
 
   it("returns false for arbitrary strings", () => {
     expect(isCategoryEmoji("upload.png")).toBe(false);
     expect(isCategoryEmoji("invalid")).toBe(false);
-    expect(isCategoryEmoji("not_an_emoji_at_all")).toBe(false);
+    expect(isCategoryEmoji("not_an_icon_at_all")).toBe(false);
   });
 
   it("returns false for empty string", () => {
     expect(isCategoryEmoji("")).toBe(false);
   });
 
-  it("returns false for non-emoji unicode", () => {
+  it("returns false for non-icon strings", () => {
     expect(isCategoryEmoji("A")).toBe(false);
     expect(isCategoryEmoji("中")).toBe(false);
     expect(isCategoryEmoji("$")).toBe(false);
