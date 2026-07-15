@@ -135,7 +135,7 @@ export default function TransactionsPage() {
 
   // ── Delete confirm state (025: AlertDialog state-driven, replaces native confirm) ──
   const [confirmingTxId, setConfirmingTxId] = useState<string | null>(null);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true); // 类型标签常驻(线稿)
 
   // ── Pagination state ──
   const [cursor, setCursor] = useState<string | undefined>(undefined);

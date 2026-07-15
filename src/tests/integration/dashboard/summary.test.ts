@@ -267,13 +267,11 @@ describe("[T012] explicit month returns weekly trend (026 FR-F001)", () => {
 
     expect(result.queriedYearMonth).toEqual({ year: 2026, month: 6 });
     expect(result.monthExpense).toBe(10000);
-    expect(result.expenseTrend.granularity).toBe("weekly");
-    if (result.expenseTrend.granularity !== "weekly") return; // narrow for TS
-    // buckets have startDate/endDate/label + amount
+    expect(result.expenseTrend.granularity).toBe("daily"); // 027: 全部改 daily
+    if (result.expenseTrend.granularity !== "daily") return; // narrow for TS
+    // buckets have date + amount
     for (const b of result.expenseTrend.buckets) {
-      expect(b.startDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-      expect(b.endDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-      expect(typeof b.label).toBe("string");
+      expect(b.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
       expect(typeof b.amount).toBe("number");
     }
     // at least one bucket has the 10000 expense
@@ -311,8 +309,8 @@ describe("[T014] empty month: zeros + zero-filled trend buckets (026)", () => {
     expect(result.monthNet).toBe(0);
     expect(result.topExpenseCategories).toEqual([]);
     // weekly trend buckets MUST be present (not empty) and all amounts 0
-    expect(result.expenseTrend.granularity).toBe("weekly");
-    if (result.expenseTrend.granularity !== "weekly") return;
+    expect(result.expenseTrend.granularity).toBe("daily");
+    if (result.expenseTrend.granularity !== "daily") return;
     expect(result.expenseTrend.buckets.length).toBeGreaterThan(0);
     for (const b of result.expenseTrend.buckets) {
       expect(b.amount).toBe(0);
@@ -335,7 +333,7 @@ describe("[T015] cross-family isolation with explicit month (026)", () => {
     const result = await caller(sB.userId).dashboard.summary({ year: 2026, month: 6 });
     expect(result.monthExpense).toBe(0);
     expect(result.topExpenseCategories).toEqual([]);
-    if (result.expenseTrend.granularity !== "weekly") return;
+    if (result.expenseTrend.granularity !== "daily") return;
     const total = result.expenseTrend.buckets.reduce((s, b) => s + b.amount, 0);
     expect(total).toBe(0);
   });
@@ -477,8 +475,8 @@ describe("[T020] weekly trend first/last partial weeks (026 FR-C004)", () => {
     });
 
     const result = await caller(s.userId).dashboard.summary({ year: 2026, month: 2 });
-    expect(result.expenseTrend.granularity).toBe("weekly");
-    if (result.expenseTrend.granularity !== "weekly") return;
+    expect(result.expenseTrend.granularity).toBe("daily");
+    if (result.expenseTrend.granularity !== "daily") return;
     // buckets must include first (partial Sun-only) and last (partial) weeks
     expect(result.expenseTrend.buckets.length).toBeGreaterThanOrEqual(5);
     const total = result.expenseTrend.buckets.reduce((s, b) => s + b.amount, 0);

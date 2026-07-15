@@ -225,41 +225,43 @@ function BudgetSetModal({
   onDelete?: () => void;
 }) {
   return (
-    <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
-      <Modal.Dialog>
-        <Modal.Header>
-          <Modal.Heading>设置本月预算</Modal.Heading>
-          <Modal.CloseTrigger />
-        </Modal.Header>
-        <Modal.Body>
-          <NumberField
-            value={inputYuan ? parseFloat(inputYuan) : NaN}
-            onChange={(v: number) => onInputChange(String(v))}
-            step={100}
-            minValue={0.01}
-            aria-label="预算金额"
-            fullWidth
-          >
-            <Label>预算金额 (元)</Label>
-            <NumberField.Group>
-              <NumberField.Input placeholder="0.00" autoFocus />
-            </NumberField.Group>
-          </NumberField>
-        </Modal.Body>
-        <Modal.Footer>
-          {onDelete && (
-            <Button variant="ghost" onPress={onDelete}>
-              删除预算
+    <Modal.Backdrop isOpen={isOpen} onOpenChange={onOpenChange}>
+      <Modal.Container>
+        <Modal.Dialog>
+          <Modal.Header>
+            <Modal.Heading>设置本月预算</Modal.Heading>
+            <Modal.CloseTrigger />
+          </Modal.Header>
+          <Modal.Body>
+            <NumberField
+              value={inputYuan ? parseFloat(inputYuan) : NaN}
+              onChange={(v: number) => onInputChange(String(v))}
+              step={100}
+              minValue={0.01}
+              aria-label="预算金额"
+              fullWidth
+            >
+              <Label>预算金额 (元)</Label>
+              <NumberField.Group>
+                <NumberField.Input placeholder="0.00" autoFocus />
+              </NumberField.Group>
+            </NumberField>
+          </Modal.Body>
+          <Modal.Footer>
+            {onDelete && (
+              <Button variant="ghost" onPress={onDelete}>
+                删除预算
+              </Button>
+            )}
+            <Button variant="ghost" onPress={() => onOpenChange(false)}>
+              取消
             </Button>
-          )}
-          <Button variant="ghost" onPress={() => onOpenChange(false)}>
-            取消
-          </Button>
-          <Button variant="primary" onPress={onSet} isPending={isPending}>
-            保存
-          </Button>
-        </Modal.Footer>
-      </Modal.Dialog>
-    </Modal>
+            <Button variant="primary" onPress={onSet} isPending={isPending}>
+              保存
+            </Button>
+          </Modal.Footer>
+        </Modal.Dialog>
+      </Modal.Container>
+    </Modal.Backdrop>
   );
 }

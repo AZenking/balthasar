@@ -6,7 +6,6 @@ import {
   getRecentTransactions,
   getCategoryBreakdown,
   getDailyTrend,
-  getWeeklyTrend,
 } from "@/server/db/queries/dashboard";
 import { getAssets } from "@/server/db/queries/assets";
 import {
@@ -25,7 +24,6 @@ import { serializeTransaction } from "@/server/db/queries/transaction";
  * 026-cream-amber-revamp extension (year/month input, expenseTrend,
  * Top 2 categories, 4 recent transactions).
  */
-const isoWeekday = (utcDay: number) => (utcDay === 0 ? 6 : utcDay - 1);
 
 export const dashboardRouter = router({
   summary: protectedProcedure
@@ -56,37 +54,16 @@ export const dashboardRouter = router({
       const { start: monthStart, end: monthEnd } = getUtcMonthRange(year, month);
       const isCurrentMonth = year === currentYear && month === currentMonth;
 
-      // Current-week Mon-Sun window for the daily trend. `now` may live in
-      // any week; back up to the most recent Monday 00:00 UTC.
-      const nowDow = isoWeekday(now.getUTCDay());
-      const weekStart = new Date(
-        Date.UTC(
-          now.getUTCFullYear(),
-          now.getUTCMonth(),
-          now.getUTCDate() - nowDow,
-        ),
-      );
-      const weekEnd = new Date(weekStart.getTime() + 7 * 86400000);
-
+      // 027:趋势改为本月每日(线稿口径),不再用本周 Mon-Sun 窗口。
+      // 当前月:每日桶 1 日..今天;历史月:每日桶 1 日..月末。
       const [summary, recent, breakdown, trend] = await Promise.all([
         getMonthSummary({ familyId, monthStart, monthEnd }),
         getRecentTransactions({ familyId, limit: 5 }),
         getCategoryBreakdown({ familyId, monthStart, monthEnd }),
-        isCurrentMonth
-          ? getDailyTrend({ familyId, weekStart, weekEnd }).then((buckets) => ({
-              granularity: "daily" as const,
-              buckets,
-            }))
-          : getWeeklyTrend({
-              familyId,
-              year,
-              month,
-              monthStart,
-              monthEnd,
-            }).then((buckets) => ({
-              granularity: "weekly" as const,
-              buckets,
-            })),
+        getDailyTrend({ familyId, weekStart: monthStart, weekEnd: monthEnd }).then((buckets) => ({
+          granularity: "daily" as const,
+          buckets,
+        })),
       ]);
 
       const monthNet = summary.income - summary.expense;

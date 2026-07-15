@@ -61,15 +61,20 @@ export default function ReportsPage() {
     month: endYearMonth.month,
   });
 
-  // 目标月交易(用于三宫格客户端聚合)
+  // 年模式:全年日期范围;月模式:当月范围
+  const yearStart = new Date(Date.UTC(endYearMonth.year, 0, 1));
+  const yearEnd = new Date(Date.UTC(endYearMonth.year + 1, 0, 1));
   const { start: mStart, end: mEnd } = getUtcMonthRange(
     endYearMonth.year,
     endYearMonth.month,
   );
-  const { data: monthTxs } = trpc.transaction.list.useQuery({
-    startDate: mStart.toISOString(),
-    endDate: mEnd.toISOString(),
-    limit: 100,
+  const periodStart = period === "year" ? yearStart : mStart;
+  const periodEnd = period === "year" ? yearEnd : mEnd;
+
+  const { data: periodTxs } = trpc.transaction.list.useQuery({
+    startDate: periodStart.toISOString(),
+    endDate: periodEnd.toISOString(),
+    limit: 200,
     includeSummary: false,
   });
 
@@ -82,19 +87,34 @@ export default function ReportsPage() {
   };
 
   const labels = periodLabels(period);
-  const targetExpense = data?.monthExpense ?? 0;
   const now = new Date();
   const isCurrentMonth =
     endYearMonth.year === now.getUTCFullYear() &&
     endYearMonth.month === now.getUTCMonth() + 1;
-  const days = isCurrentMonth
-    ? now.getUTCDate()
-    : new Date(endYearMonth.year, endYearMonth.month, 0).getUTCDate();
-  const dailyAvg = days > 0 ? Math.round(targetExpense / days) : 0;
+
+  // 年模式:从 periodTxs 客户端聚合全年支出;月模式:用 summary
+  const yearExpenses = (periodTxs?.items ?? []).filter((t) => t.type === "expense");
+  const targetExpense =
+    period === "year"
+      ? yearExpenses.reduce((s, t) => s + Math.abs(t.amount), 0)
+      : data?.monthExpense ?? 0;
+  const dailyAvg =
+    period === "year"
+      ? Math.round(targetExpense / 12) // 月均
+      : (isCurrentMonth
+          ? now.getUTCDate()
+          : new Date(endYearMonth.year, endYearMonth.month, 0).getUTCDate()) > 0
+        ? Math.round(
+            targetExpense /
+              (isCurrentMonth
+                ? now.getUTCDate()
+                : new Date(endYearMonth.year, endYearMonth.month, 0).getUTCDate()),
+          )
+        : 0;
 
   const insights =
-    period === "month" && monthTxs
-      ? computeInsights(monthTxs.items)
+    periodTxs && periodTxs.items.length > 0
+      ? computeInsights(periodTxs.items)
       : {
           maxExpenseDay: null,
           maxExpenseDayAmount: null,
@@ -130,7 +150,9 @@ export default function ReportsPage() {
           <ChevronLeft className="h-5 w-5" />
         </button>
         <span className="min-w-[6rem] text-center text-sm font-medium tabular-nums">
-          {endYearMonth.year} 年 {endYearMonth.month} 月
+          {period === "year"
+            ? `${endYearMonth.year} 年`
+            : `${endYearMonth.year} 年 ${endYearMonth.month} 月`}
         </span>
         <button
           type="button"
@@ -198,7 +220,9 @@ export default function ReportsPage() {
           {/* 3. 分类占比 */}
           <section className="pt-4">
             <h2 className="pb-2 text-sm font-semibold text-muted-foreground">
-              {endYearMonth.year}年{endYearMonth.month}月 支出分类
+              {period === "year"
+                ? `${endYearMonth.year}年 支出分类`
+                : `${endYearMonth.year}年${endYearMonth.month}月 支出分类`}
             </h2>
             {data.topExpenseCategories.length === 0 ? (
               <EmptyState

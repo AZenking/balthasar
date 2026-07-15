@@ -33,10 +33,12 @@ import {
   CircleHelp,
   Info,
   ChevronRight,
+  Trash2,
   type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc/client";
+import { isPrivacyOn, setPrivacy } from "@/lib/privacy";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { NicknameEditor } from "@/components/settings/nickname-editor";
 import { AccountForm, type AccountFormValues } from "@/components/settings/account-form";
@@ -114,6 +116,9 @@ export default function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-[720px] space-y-4">
+      {/* ── 顶部标题 ── */}
+      <h1 className="pt-2 text-lg font-medium">设置</h1>
+
       {/* ── 个人资料卡 ── */}
       <Card>
         <Card.Content className="flex items-center justify-between p-4">
@@ -125,7 +130,19 @@ export default function SettingsPage() {
               <p className="text-sm font-semibold">
                 {member?.displayName ?? "未设置昵称"}
               </p>
-              <p className="text-xs text-muted-foreground">{email || "本地使用"}</p>
+              <p className="text-xs text-muted-foreground">
+                {email ? (
+                  <span className="inline-flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[var(--success)]" />
+                    已同步 · {email}
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[var(--muted-foreground)]" />
+                    本地使用
+                  </span>
+                )}
+              </p>
             </div>
           </div>
           <NicknameEditor
@@ -197,13 +214,16 @@ export default function SettingsPage() {
             </>
           )}
         </SettingsRow>
-        <SettingsRow icon={NotebookTabs} label="账本管理" onClick={v2Toast} />
+        <SettingsRow icon={NotebookTabs} label="账本管理" value="我的账本" onClick={v2Toast} />
         <SettingsLinkRow icon={Tags} label="分类与标签" href="/settings/categories" />
         <SettingsRow icon={Gauge} label="预算设置" onClick={() => router.push("/dashboard")} />
       </SettingsGroup>
 
       {/* ── 偏好设置 ── */}
       <SettingsGroup title="偏好设置">
+        <SettingsToggleRow icon={EyeOff} label="隐私保护">
+          <PrivacyToggleInline />
+        </SettingsToggleRow>
         <SettingsToggleRow icon={Palette} label="外观主题">
           <ThemeToggle />
         </SettingsToggleRow>
@@ -213,15 +233,14 @@ export default function SettingsPage() {
 
       {/* ── 数据与同步 ── */}
       <SettingsGroup title="数据与同步">
-        <SettingsRow icon={Cloud} label="云同步" value="登录后开启" onClick={v2Toast} />
+        <SettingsRow
+          icon={Cloud}
+          label="云同步"
+          value={email ? "已同步" : "登录后开启"}
+          onClick={v2Toast}
+        />
         <SettingsRow icon={DatabaseBackup} label="本地备份" onClick={v2Toast} />
         <SettingsRow icon={ArrowDownUp} label="导入与导出" onClick={v2Toast} />
-        <SettingsRow
-          icon={EyeOff}
-          label="隐私保护"
-          onClick={() => router.push("/dashboard")}
-          value="在首页设置"
-        />
       </SettingsGroup>
 
       {/* ── 其他 ── */}
@@ -240,6 +259,15 @@ export default function SettingsPage() {
         >
           {showApiKey && <ApiKeyManager />}
         </SettingsRow>
+      </SettingsGroup>
+
+      {/* ── 危险区 ── */}
+      <SettingsGroup title="">
+        <SettingsRow
+          icon={Trash2}
+          label="清空全部数据"
+          onClick={() => toast.error("此操作不可撤销,请确认后联系管理员")}
+        />
       </SettingsGroup>
 
       {/* ── 退出 ── */}
@@ -280,6 +308,37 @@ export default function SettingsPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+// ── 隐私开关(内联 toggle,直接在设置页操作) ──
+function PrivacyToggleInline() {
+  const [on, setOn] = useState(false);
+  useState(() => {
+    setOn(isPrivacyOn());
+  });
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      onClick={() => {
+        const next = !on;
+        setPrivacy(next);
+        setOn(next);
+      }}
+      className={cn(
+        "relative h-6 w-11 rounded-full transition-colors",
+        on ? "bg-[var(--primary)]" : "bg-[var(--muted)]",
+      )}
+    >
+      <span
+        className={cn(
+          "absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform",
+          on ? "translate-x-5" : "translate-x-0.5",
+        )}
+      />
+    </button>
   );
 }
 
