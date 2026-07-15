@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { ReceiptText } from "lucide-react";
+import { ListBox } from "@heroui/react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { cn } from "@/lib/utils";
@@ -72,47 +73,53 @@ export function RecentTransactions({
   const displayItems = maxItems ? transactions.slice(0, maxItems) : transactions;
 
   return (
-    <div className="divide-y">
-      {displayItems.map((t) => (
-        <button
+    <ListBox
+      aria-label="最近交易"
+      selectionMode="none"
+      items={displayItems}
+      onAction={(key) => router.push(`/transactions?edit=${key}`)}
+      className="divide-y outline-none"
+    >
+      {(t) => (
+        <ListBox.Item
           key={t.id}
-          type="button"
-          onClick={() => router.push(`/transactions?edit=${t.id}`)}
-          className={cn(
-            "flex w-full items-center justify-between py-3 text-left",
-          )}
-          aria-label={`编辑 ${t.categoryName ?? "交易"}`}
+          id={t.id}
+          textValue={t.remark || t.categoryName || "交易"}
+          className="cursor-pointer outline-none data-[focus-visible]:bg-muted/50"
         >
-          <div className="flex min-w-0 flex-1 items-center gap-2">
-            <CategoryIcon name={t.categoryIcon ?? "circle-help"} size={20} />
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium">
-                {t.remark || t.categoryName || "?"}
-              </p>
-              <p className="truncate text-xs text-muted-foreground">
-                {t.type === "transfer" && t.toAccountName
-                  ? `${t.categoryName} · ${t.accountName} → ${t.toAccountName}`
-                  : `${t.categoryName} · ${t.accountName}`}
-                {" · "}
-                {formatTime(t.occurredAt)}
-              </p>
+          <div className="flex w-full items-center justify-between py-3">
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <CategoryIcon name={t.categoryIcon ?? "circle-help"} size={20} />
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium">
+                  {t.remark || t.categoryName || "?"}
+                </p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {t.type === "transfer" && t.toAccountName
+                    ? `${t.categoryName} · ${t.accountName} → ${t.toAccountName}`
+                    : `${t.categoryName} · ${t.accountName}`}
+                  {" · "}
+                  {formatTime(t.occurredAt)}
+                </p>
+              </div>
             </div>
+            <p
+              data-amount
+              className={cn(
+                "shrink-0 text-sm font-semibold tabular-nums",
+                t.type === "income"
+                  ? "text-[var(--success)]"
+                  : t.type === "transfer"
+                    ? "text-muted-foreground"
+                    : "text-[var(--danger)]",
+              )}
+            >
+              {t.type === "income" ? "+" : t.type === "transfer" ? "" : "−"}
+              {formatAmount(t.amount)}
+            </p>
           </div>
-          <p
-            data-amount
-            className={`shrink-0 text-sm font-semibold tabular-nums ${
-              t.type === "income"
-                ? "text-[var(--success)]"
-                : t.type === "transfer"
-                  ? "text-muted-foreground"
-                  : "text-[var(--danger)]"
-            }`}
-          >
-            {t.type === "income" ? "+" : t.type === "transfer" ? "" : "−"}
-            {formatAmount(t.amount)}
-          </p>
-        </button>
-      ))}
-    </div>
+        </ListBox.Item>
+      )}
+    </ListBox>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Pencil, Archive, ArchiveRestore, MoreHorizontal } from "lucide-react";
+import { ListBox } from "@heroui/react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -40,10 +41,12 @@ export function AccountItem({
     : "CNY";
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // 菜单项点击:执行回调后关闭菜单
-  const run = (fn?: (id: string) => void) => {
+  // 菜单动作分发
+  const handleAction = (key: React.Key) => {
     setMenuOpen(false);
-    fn?.(account.id);
+    if (key === "edit") onEdit(account.id);
+    else if (key === "archive") onArchive(account.id);
+    else if (key === "unarchive") onUnarchive(account.id);
   };
 
   return (
@@ -85,33 +88,37 @@ export function AccountItem({
         </PopoverTrigger>
         <PopoverContent align="end" className="w-40 p-1">
           {!isArchived ? (
-            <div className="flex flex-col">
-              <button
-                type="button"
-                onClick={() => run(onEdit)}
-                className="flex min-h-[40px] items-center gap-2 rounded-sm px-2 text-sm hover:bg-accent"
-              >
-                <Pencil className="h-4 w-4 text-muted-foreground" />
-                编辑
-              </button>
-              <button
-                type="button"
-                onClick={() => run(onArchive)}
-                className="flex min-h-[40px] items-center gap-2 rounded-sm px-2 text-sm text-destructive hover:bg-accent"
-              >
-                <Archive className="h-4 w-4" />
-                归档
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => run(onUnarchive)}
-              className="flex min-h-[40px] w-full items-center gap-2 rounded-sm px-2 text-sm hover:bg-accent"
+            <ListBox
+              aria-label={`${account.name} 操作菜单`}
+              selectionMode="none"
+              onAction={handleAction}
             >
-              <ArchiveRestore className="h-4 w-4 text-muted-foreground" />
-              取消归档
-            </button>
+              <ListBox.Item id="edit" textValue="编辑">
+                <div className="flex min-h-[36px] items-center gap-2 rounded-sm px-2 text-sm hover:bg-accent">
+                  <Pencil className="h-4 w-4 text-muted-foreground" />
+                  编辑
+                </div>
+              </ListBox.Item>
+              <ListBox.Item id="archive" textValue="归档">
+                <div className="flex min-h-[36px] items-center gap-2 rounded-sm px-2 text-sm text-destructive hover:bg-accent">
+                  <Archive className="h-4 w-4" />
+                  归档
+                </div>
+              </ListBox.Item>
+            </ListBox>
+          ) : (
+            <ListBox
+              aria-label={`${account.name} 操作菜单`}
+              selectionMode="none"
+              onAction={handleAction}
+            >
+              <ListBox.Item id="unarchive" textValue="取消归档">
+                <div className="flex min-h-[36px] w-full items-center gap-2 rounded-sm px-2 text-sm hover:bg-accent">
+                  <ArchiveRestore className="h-4 w-4 text-muted-foreground" />
+                  取消归档
+                </div>
+              </ListBox.Item>
+            </ListBox>
           )}
         </PopoverContent>
       </Popover>

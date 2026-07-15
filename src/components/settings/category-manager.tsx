@@ -3,28 +3,12 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { TRPCClientError } from "@trpc/client";
-import {
-  DndContext,
-  PointerSensor,
-  KeyboardSensor,
-  closestCenter,
-  type DragEndEvent,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core";
-import {
-  SortableContext,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Tags } from "lucide-react";
+import { Tags } from "lucide-react";
+import { Tabs, Checkbox } from "@heroui/react";
 import { trpc } from "@/lib/trpc/client";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/feedback/empty-state";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -68,7 +52,8 @@ function findNode(nodes: CategoryNode[], id: string): CategoryNode | undefined {
  * US2: create mutation (server-first) + create form modal.
  * US3: update mutation (server-first) + edit form modal.
  * US4: archive/unarchive (server-first with cascade toast).
- * US5: drag-drop reorder (TODO — requires @dnd-kit wrapping).
+ * US5: 上移/下移排序(替代原 @dnd-kit 拖拽 —— HeroUI ListBox 不支持 DnD,
+ *      改用 ⋯ 菜单内的上移/下移,复用 sortOrder 插值逻辑)。
  */
 export function CategoryManager() {
   const utils = trpc.useUtils();
@@ -150,7 +135,7 @@ export function CategoryManager() {
     },
   });
 
-  // ─── US5: reorder mutations ───
+  // ─── US5: reorder mutations(原 DnD,改上移/下移) ───
   const updateForReorderMutation = trpc.category.update.useMutation({
     onSuccess: () => utils.category.list.invalidate(),
     onError: (err) => {
@@ -169,47 +154,31 @@ export function CategoryManager() {
     },
   });
 
-  // ─── US5: DnD sensors ───
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { delay: 200, tolerance: 5 },
-    }),
-    useSensor(KeyboardSensor),
-  );
-
-  // ─── US5: onDragEnd handler ───
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id || !tree) return;
-
-    // Only top-level (not children) are draggable
+  // ─── US5: 上移/下移(复用原 onDragEnd 的 sortOrder 插值逻辑) ───
+  const handleMove = async (id: string, dir: "up" | "down") => {
+    if (!tree) return;
+    // 仅顶级自定义 + 未归档项参与排序
     const topLevel = tree.filter((n) => !n.isBuiltIn && n.archivedAt === null);
-    const oldIndex = topLevel.findIndex((n) => n.id === active.id);
-    const newIndex = topLevel.findIndex((n) => n.id === over.id);
-    if (oldIndex === -1 || newIndex === -1) return;
-
-    // Determine prev/next sortOrder at the new position
     const sorted = [...topLevel].sort((a, b) => a.sortOrder - b.sortOrder);
-    const prev = newIndex === 0 ? { sortOrder: 0 } : sorted[newIndex - 1]!;
-    const next =
-      newIndex >= sorted.length
-        ? { sortOrder: sorted[sorted.length - 1]!.sortOrder + 100 }
-        : sorted[newIndex]!;
+    const oldIndex = sorted.findIndex((n) => n.id === id);
+    if (oldIndex === -1) return;
+    const newIndex = dir === "up" ? oldIndex - 1 : oldIndex + 1;
+    if (newIndex < 0 || newIndex >= sorted.length) return; // 边界
 
+    // 在新位置插入:取新位置相邻两项的 sortOrder 中值
+    const reordered = sorted.filter((n) => n.id !== id);
+    const moved = sorted[oldIndex]!;
+    reordered.splice(newIndex, 0, moved);
+    const prev = newIndex === 0 ? { sortOrder: 0 } : reordered[newIndex - 1]!;
+    const next =
+      newIndex >= reordered.length - 1
+        ? { sortOrder: reordered[reordered.length - 1]!.sortOrder + 100 }
+        : reordered[newIndex + 1]!;
     const mid = computeSortOrder(prev.sortOrder, next.sortOrder);
     if (!Number.isNaN(mid)) {
-      // Single update — interval fits
-      await updateForReorderMutation.mutateAsync({
-        id: active.id as string,
-        sortOrder: mid,
-      });
+      await updateForReorderMutation.mutateAsync({ id, sortOrder: mid });
     } else {
-      // Full renumber — interval exhausted
       const newOrders = renumberSortOrders(sorted.length);
-      // Reconstruct item order with active moved to newIndex
-      const reordered = sorted.filter((n) => n.id !== active.id);
-      const moved = sorted[oldIndex]!;
-      reordered.splice(newIndex, 0, moved);
       await reorderBatchMutation.mutateAsync({
         items: reordered.map((n, i) => ({ id: n.id, sortOrder: newOrders[i]! })),
       });
@@ -227,7 +196,6 @@ export function CategoryManager() {
   };
 
   const onArchive = (id: string, childCount: number) => {
-    // 仅记录目标,确认动作交给 AlertDialog(避免 window.confirm 的原生弹窗)
     setArchiveTarget({ id, childCount });
   };
 
@@ -245,36 +213,40 @@ export function CategoryManager() {
     ? findNode(tree, editingCategoryId)
     : undefined;
 
+  // 排序上下文:计算每个顶级项能否上移/下移(供 CategoryItem 的 ⋯ 菜单)
+  const movableIds = useMemo(() => {
+    if (!tree) return new Set<string>();
+    const topLevel = tree.filter((n) => !n.isBuiltIn && n.archivedAt === null);
+    return new Set(topLevel.map((n) => n.id));
+  }, [tree]);
+
   return (
     <div>
-      {/* type radio + includeArchived toggle */}
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <div className="flex rounded-md border border-border p-0.5">
-          {(["expense", "income"] as const).map((t) => (
-            <button
-              key={t}
-              type="button"
-              className={`px-3 py-1 text-sm rounded transition-colors ${
-                type === t
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-              onClick={() => setType(t)}
-            >
-              {t === "expense" ? "支出" : "收入"}
-            </button>
-          ))}
-        </div>
-        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-          <Checkbox
-            id="include-archived"
-            checked={includeArchived}
-            onCheckedChange={(v) => setIncludeArchived(v === true)}
-          />
-          <Label htmlFor="include-archived" className="cursor-pointer">
+      {/* type 切换:HeroUI Tabs(替代手写 button 组)+ includeArchived toggle */}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <Tabs
+          aria-label="分类类型"
+          selectedKey={type}
+          onSelectionChange={(k) => setType(k as "income" | "expense")}
+        >
+          <Tabs.List>
+            <Tabs.Tab id="expense">支出</Tabs.Tab>
+            <Tabs.Tab id="income">收入</Tabs.Tab>
+          </Tabs.List>
+        </Tabs>
+        <Checkbox
+          aria-label="显示已归档"
+          isSelected={includeArchived}
+          onChange={setIncludeArchived}
+          className="flex items-center gap-1.5 text-sm text-muted-foreground"
+        >
+          <Checkbox.Content className="flex items-center gap-1.5 cursor-pointer">
+            <Checkbox.Control>
+              <Checkbox.Indicator />
+            </Checkbox.Control>
             显示已归档
-          </Label>
-        </div>
+          </Checkbox.Content>
+        </Checkbox>
       </div>
 
       {/* 新增按钮(列表为空时隐藏:EmptyState 内已有同款 CTA,避免重复) */}
@@ -296,7 +268,7 @@ export function CategoryManager() {
         </div>
       )}
 
-      {/* 列表 */}
+      {/* 列表 —— HeroUI ListBox */}
       {isLoading ? (
         <div className="space-y-2">
           {[1, 2, 3].map((i) => (
@@ -320,28 +292,22 @@ export function CategoryManager() {
           className="min-h-[24vh]"
         />
       ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext
-            items={tree.map((n) => n.id)}
-            strategy={verticalListSortingStrategy}
-          >
-            <div className="rounded-md border border-border bg-card">
-              {tree.map((node) => (
-                <SortableCategoryItem
-                  key={node.id}
-                  node={node}
-                  onEdit={setEditingCategoryId}
-                  onArchive={onArchive}
-                  onUnarchive={onUnarchive}
-                />
-              ))}
-            </div>
-          </SortableContext>
-        </DndContext>
+        /* 分类列表 —— 普通 div + map。
+           不用 ListBox:CategoryItem 行内有独立的 ⋯ Popover 菜单(上移/下移/
+           编辑/归档/恢复),嵌套在 ListBox.Item(可聚焦 Option)内会拦截点击、
+           破坏 focus 链,导致 Popover 打不开。ListBox 仅适合"整行单一动作"。 */
+        <div className="rounded-md border border-border bg-card">
+          {tree.map((node) => (
+            <CategoryItem
+              key={node.id}
+              node={node}
+              onEdit={setEditingCategoryId}
+              onArchive={onArchive}
+              onUnarchive={onUnarchive}
+              onMove={movableIds.has(node.id) ? handleMove : undefined}
+            />
+          ))}
+        </div>
       )}
 
       {/* create form dialog (024 US2: shadcn Dialog, replaces Modal) */}
@@ -412,53 +378,6 @@ export function CategoryManager() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
-  );
-}
-
-/** SortableCategoryItem (US5): wraps CategoryItem with @dnd-kit useSortable. */
-function SortableCategoryItem({
-  node,
-  onEdit,
-  onArchive,
-  onUnarchive,
-}: {
-  node: CategoryNode;
-  onEdit: (id: string) => void;
-  onArchive: (id: string, childCount: number) => void;
-  onUnarchive: (id: string, childCount: number) => void;
-}) {
-  const canDrag = !node.isBuiltIn && node.archivedAt === null;
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: node.id, disabled: !canDrag });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-  const handle = canDrag ? (
-    <button
-      type="button"
-      className="cursor-grab text-muted-foreground hover:text-foreground touch-none"
-      aria-label="拖拽排序"
-      {...attributes}
-      {...listeners}
-    >
-      <GripVertical className="h-4 w-4" />
-    </button>
-  ) : undefined;
-
-  return (
-    <div ref={setNodeRef} style={style}>
-      <CategoryItem
-        node={node}
-        dragHandle={handle}
-        onEdit={onEdit}
-        onArchive={onArchive}
-        onUnarchive={onUnarchive}
-      />
     </div>
   );
 }

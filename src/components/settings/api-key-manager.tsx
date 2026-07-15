@@ -149,7 +149,9 @@ export function ApiKeyManager() {
         />
       ) : (
         <>
-          {/* 有效 key 列表 */}
+          {/* 有效 key 列表 —— 普通 div + map。
+              不用 ListBox:KeyRow 行内有独立的吊销按钮 + ⋯ 菜单等交互控件,
+              嵌套在 ListBox.Item 内会拦截点击、破坏 focus 链。 */}
           <div className="space-y-1">
             {activeKeys.map((k) => (
               <KeyRow key={k.id} k={k} onRevoke={() => setRevokeTarget(k)} />

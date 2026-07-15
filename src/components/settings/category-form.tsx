@@ -3,11 +3,11 @@
 import { useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { RadioGroup, Radio } from "@heroui/react";
 import { categoryCreateSchema, type CategoryCreateValues } from "@/lib/validators/category";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
@@ -110,7 +110,9 @@ export function CategoryForm({
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      {/* type radio group (024 US2: shadcn RadioGroup) */}
+      {/* 类型 —— HeroUI RadioGroup(支出/收入二选一)。
+          用原生复合 API(Radio.Content + Control + Indicator),shadcn 适配器
+          的 RadioGroupItem 未渲染 Content/Control/Indicator 导致无法勾选。 */}
       <div>
         <Label className="mb-1 block">类型</Label>
         <Controller
@@ -119,18 +121,27 @@ export function CategoryForm({
           render={({ field }) => (
             <RadioGroup
               value={field.value}
-              onValueChange={(v) => setValue("type", v as "expense" | "income", { shouldValidate: true })}
-              disabled={typeDisabled}
-              className="flex gap-4"
+              onChange={(v) => setValue("type", v as "expense" | "income", { shouldValidate: true })}
+              isDisabled={typeDisabled}
+              orientation="horizontal"
+              className="items-center gap-6"
             >
-              <div className="flex items-center gap-2">
-                <RadioGroupItem value="expense" id="type-expense" />
-                <Label htmlFor="type-expense">支出</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <RadioGroupItem value="income" id="type-income" />
-                <Label htmlFor="type-income">收入</Label>
-              </div>
+              <Radio value="expense">
+                <Radio.Content className="flex cursor-pointer items-center gap-2 text-sm">
+                  <Radio.Control>
+                    <Radio.Indicator />
+                  </Radio.Control>
+                  支出
+                </Radio.Content>
+              </Radio>
+              <Radio value="income">
+                <Radio.Content className="flex cursor-pointer items-center gap-2 text-sm">
+                  <Radio.Control>
+                    <Radio.Indicator />
+                  </Radio.Control>
+                  收入
+                </Radio.Content>
+              </Radio>
             </RadioGroup>
           )}
         />

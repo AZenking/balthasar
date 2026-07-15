@@ -3,20 +3,20 @@
 /**
  * NicknameEditor — 026 Cream/Amber US7 (FR-E002 / FR-E003).
  *
- * Inline nickname row with a Dialog form. The server resolves the
- * target member from `ctx.session.user.id` (cross-user isolation, FR-E003);
- * `memberId` is accepted as a prop purely for future/audit wiring — it is
- * NOT sent to the mutation (server ignores any client-supplied id).
+ * 图标按钮 + Dialog 弹窗。调用方把昵称文字直接展示在头像区,本组件
+ * 只渲染一个铅笔图标按钮(触发器)+ 修改弹窗,不再重复显示昵称。
+ *
+ * Server resolves the target member from `ctx.session.user.id` (cross-user
+ * isolation, FR-E003); `memberId` is accepted as a prop purely for future/
+ * audit wiring — it is NOT sent to the mutation.
  *
  * Contract: specs/026-cream-amber-revamp/contracts/auth-update-nickname.md
- *
- * 一致性:与 category/account 等同类表单统一用 shadcn Dialog 外壳 + 适配器
- * Button/Input/Label(原 HeroUI 原生 Modal 复合 API + 原生 Button/Input/Label 样板冗余)。
  */
 
 import { useEffect, useState } from "react";
 import { TRPCClientError } from "@trpc/client";
 import { toast } from "sonner";
+import { Pencil } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -64,20 +64,16 @@ export function NicknameEditor({
 
   const updateNickname = trpc.auth.updateNickname.useMutation({
     onSuccess: (data) => {
-      // Contract §5: invalidate auth.me so the greeting / settings row
-      // re-render with the fresh displayName.
       utils.auth.me.invalidate();
       toast.success("昵称已更新");
       setIsOpen(false);
       onUpdated?.(data.member.displayName);
     },
     onError: (err) => {
-      // Server zod errors carry a localized message; surface it verbatim.
       if (err instanceof TRPCClientError) {
         toast.error(err.message || "更新失败");
         return;
       }
-      // Network / unknown transport errors.
       toast.error("网络错误,请稍后再试");
     },
   });
@@ -89,7 +85,8 @@ export function NicknameEditor({
     return null;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
     const trimmed = value.trim();
     const msg = validate(trimmed);
     if (msg) {
@@ -108,14 +105,16 @@ export function NicknameEditor({
   const isInvalid = error !== null;
 
   return (
-    <div className="flex items-center justify-between border-b py-3">
-      <div>
-        <p className="text-sm font-medium">昵称</p>
-        <p className="text-xs text-muted-foreground">{currentDisplayName}</p>
-      </div>
-
-      <Button size="sm" variant="outline" onClick={() => setIsOpen(true)}>
-        编辑
+    <>
+      {/* 图标触发器:铅笔,紧贴昵称文字旁 */}
+      <Button
+        size="icon"
+        variant="ghost"
+        className="h-7 w-7 cursor-pointer text-muted-foreground hover:text-foreground"
+        aria-label="修改昵称"
+        onClick={() => setIsOpen(true)}
+      >
+        <Pencil className="h-3.5 w-3.5" />
       </Button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -123,7 +122,7 @@ export function NicknameEditor({
           <DialogHeader>
             <DialogTitle>修改昵称</DialogTitle>
           </DialogHeader>
-          <div className="space-y-2">
+          <form onSubmit={handleSubmit} className="grid gap-2">
             <Label htmlFor="nickname">昵称</Label>
             <Input
               id="nickname"
@@ -151,26 +150,25 @@ export function NicknameEditor({
                 {error}
               </p>
             )}
-          </div>
-          <DialogFooter className="gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleCancel}
-              disabled={updateNickname.isPending}
-            >
-              取消
-            </Button>
-            <Button
-              type="button"
-              onClick={handleSubmit}
-              disabled={updateNickname.isPending}
-            >
-              {updateNickname.isPending ? "保存中..." : "保存"}
-            </Button>
-          </DialogFooter>
+            <DialogFooter className="gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCancel}
+                disabled={updateNickname.isPending}
+              >
+                取消
+              </Button>
+              <Button
+                type="submit"
+                disabled={updateNickname.isPending}
+              >
+                {updateNickname.isPending ? "保存中..." : "保存"}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

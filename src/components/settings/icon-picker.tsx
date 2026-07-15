@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { ChevronDown } from "lucide-react";
+import { TagGroup, Tag } from "@heroui/react";
 import { CATEGORY_ICON_GROUPS } from "@/lib/constants/category-icons";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { CategoryIcon } from "@/components/category/category-icon";
 
@@ -90,30 +90,42 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
           />
         </div>
 
-        {/* tabs (hidden when searching) */}
+        {/* 分组选择 —— HeroUI TagGroup(单选 chip 组,搜索时隐藏)。
+            比 Tabs 更紧凑、更像"分类筛选"语义;可横向滚动。 */}
         {search.trim().length === 0 ? (
-          <Tabs value={activeGroup} onValueChange={setActiveGroup}>
-            <TabsList className="flex w-full flex-nowrap justify-start overflow-x-auto rounded-none bg-transparent p-1 h-auto">
-              {CATEGORY_ICON_GROUPS.map((g) => (
-                <TabsTrigger
-                  key={g.id}
-                  value={g.id}
-                  className="data-[state=active]:bg-accent data-[state=active]:text-foreground shrink-0 text-xs"
-                >
-                  {g.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-            {CATEGORY_ICON_GROUPS.map((g) => (
-              <TabsContent key={g.id} value={g.id} className="mt-0">
-                <IconGrid
-                  icons={g.icons.map((icon) => ({ icon }))}
-                  value={value}
-                  onSelect={handleSelect}
-                />
-              </TabsContent>
-            ))}
-          </Tabs>
+          <>
+            <TagGroup
+              aria-label="图标分组"
+              selectionMode="single"
+              selectedKeys={new Set([activeGroup])}
+              onSelectionChange={(keys) => {
+                if (keys === "all") return;
+                const next = Array.from(keys)[0];
+                if (next != null) setActiveGroup(String(next));
+              }}
+            >
+              <TagGroup.List className="flex w-full flex-nowrap gap-1 overflow-x-auto p-1">
+                {CATEGORY_ICON_GROUPS.map((g) => (
+                  <Tag
+                    key={g.id}
+                    id={g.id}
+                    className="shrink-0 cursor-pointer whitespace-nowrap text-xs"
+                  >
+                    {g.label}
+                  </Tag>
+                ))}
+              </TagGroup.List>
+            </TagGroup>
+            <IconGrid
+              icons={
+                CATEGORY_ICON_GROUPS.find((g) => g.id === activeGroup)?.icons.map(
+                  (icon) => ({ icon }),
+                ) ?? []
+              }
+              value={value}
+              onSelect={handleSelect}
+            />
+          </>
         ) : (
           <IconGrid
             icons={filteredIcons}
