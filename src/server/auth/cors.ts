@@ -1,6 +1,6 @@
 export function setCorsHeaders(res: Response): Response {
   res.headers.set("Access-Control-Allow-Origin", "*");
-  res.headers.set("Access-Control-Allow-Methods", "POST, PATCH, OPTIONS");
+  res.headers.set("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS");
   res.headers.set("Access-Control-Allow-Headers", "Authorization, Content-Type, X-API-Key");
   return res;
 }
