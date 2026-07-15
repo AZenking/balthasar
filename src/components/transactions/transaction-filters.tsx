@@ -80,8 +80,10 @@ export function TransactionFilters({
       {/* 更多筛选(账户 / 分类):低频,折叠展开。 */}
       <div>
         <button
+          type="button"
           onClick={() => setExpanded(!expanded)}
-          className="flex items-center gap-1 text-sm text-[var(--muted-foreground)]"
+          aria-expanded={expanded}
+          className="flex h-11 items-center gap-1 rounded-md px-1 text-sm text-[var(--muted-foreground)] hover:bg-[var(--muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <span>{expanded ? "▼" : "▶"}</span>
           更多筛选
@@ -104,7 +106,7 @@ export function TransactionFilters({
                 })
               }
             >
-              <SelectTrigger className="h-9 w-full">
+              <SelectTrigger className="h-11 w-full">
                 <SelectValue placeholder="全部账户" />
               </SelectTrigger>
               <SelectContent>
@@ -128,7 +130,7 @@ export function TransactionFilters({
                   })
                 }
               >
-                <SelectTrigger className="h-9 w-full">
+                <SelectTrigger className="h-11 w-full">
                   <SelectValue placeholder="全部分类" />
                 </SelectTrigger>
                 <SelectContent>

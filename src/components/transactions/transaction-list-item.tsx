@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { CategoryIcon } from "@/components/category/category-icon";
 
@@ -13,12 +14,13 @@ const formatDate = (date: string | Date) => {
  * TransactionListItem (线稿对齐)。
  *
  * 线稿口径:轻量流水行,无常驻编辑/删除按钮(视觉噪声大)。
- * 整行可点击进入编辑;删除在编辑页内完成。
+ * 整行用 <Link> 进入编辑(可中键/⌘点击新标签、可右键复制链接)。
+ * 删除在编辑页内完成。
  * 转账行显示 账户A → 账户B。
  */
 export function TransactionListItem({
   transaction,
-  onEdit,
+  editHref,
 }: {
   transaction: {
     id: string;
@@ -31,15 +33,14 @@ export function TransactionListItem({
     categoryName: string | null;
     categoryIcon: string | null;
   };
-  onEdit: (id: string) => void;
-  onDelete?: (id: string) => void; // 保留接口兼容,但默认不渲染按钮
+  // 完整编辑链接(含筛选 qs),由父组件构造。用 Link 而非 onClick router.push。
+  editHref: string;
 }) {
   const isTransfer = transaction.type === "transfer";
   return (
-    <button
-      type="button"
-      onClick={() => onEdit(transaction.id)}
-      className="flex w-full items-center justify-between border-b border-[var(--border)] py-3 text-left"
+    <Link
+      href={editHref}
+      className="flex w-full items-center justify-between border-b border-[var(--border)] py-3 text-left outline-none transition-colors focus-visible:bg-[var(--muted)]"
       aria-label={`编辑 ${transaction.categoryName ?? "交易"}`}
     >
       <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -68,9 +69,10 @@ export function TransactionListItem({
               : "text-[var(--danger)]",
         )}
       >
-        {transaction.type === "income" ? "+" : isTransfer ? "" : "−"}
+        {/* 收入 +、支出 −、转账 →(颜色之外加符号,避免仅靠颜色区分) */}
+        {transaction.type === "income" ? "+" : isTransfer ? "→" : "−"}
         {formatAmount(transaction.amount)}
       </p>
-    </button>
+    </Link>
   );
 }

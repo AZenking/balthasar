@@ -113,12 +113,11 @@ function formatCents(cents: number): string {
 
 export function TransactionDayGroup({
   items,
-  onEdit,
-  onDelete,
+  buildEditHref,
 }: {
   items: DayGroupTx[];
-  onEdit: (id: string) => void;
-  onDelete: (id: string) => void;
+  // 由 id 构造编辑链接(含筛选 qs),传给 ListItem 用 <Link> 渲染。
+  buildEditHref: (id: string) => string;
 }) {
   const groups = groupByUtcDay(items);
   return (
@@ -142,8 +141,7 @@ export function TransactionDayGroup({
               <TransactionListItem
                 key={t.id}
                 transaction={t}
-                onEdit={onEdit}
-                onDelete={onDelete}
+                editHref={buildEditHref(t.id)}
               />
             ))}
           </div>
