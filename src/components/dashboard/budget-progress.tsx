@@ -9,6 +9,7 @@ import {
   Label,
   TagGroup,
   Tag,
+  Meter,
 } from "@heroui/react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc/client";
@@ -21,8 +22,9 @@ import { trpc } from "@/lib/trpc/client";
  *
  * 设计文档 §3.1-3 + §4.3:已用金额、剩余、使用百分比、时间进度对照。
  *
- * HeroUI v3:无原生 Progress;用 div+rounded-full 自绘进度条(与
- * CategoryTopList 一致)。设置入口用 Modal + NumberField。
+ * 进度条用 HeroUI `Meter`(react-aria 底层,原生 role=meter + ARIA)。
+ * 三态着色:normal → success / warning / overspent → danger;Meter 自动
+ * clamp value>100 到满格。设置入口用 Modal + NumberField。
  *
  * 数据来源:dashboard.summary.budget(BudgetSummary | null)。
  * null = 查询失败降级(SC-008),显示"预算加载失败 重试"。
@@ -137,13 +139,6 @@ export function BudgetProgress({
   const now = new Date();
   const daysInMonth = new Date(now.getUTCFullYear(), now.getUTCMonth() + 1, 0).getUTCDate();
   const monthProgressPercent = Math.round((now.getUTCDate() / daysInMonth) * 100);
-  const barColor =
-    budget.status === "overspent"
-      ? "var(--danger)"
-      : budget.status === "warning"
-        ? "var(--danger)"
-        : "var(--success)";
-  const fillWidth = Math.min(usagePercent, 100);
 
   return (
     <section aria-label="预算进度" className="pt-4">
@@ -169,20 +164,20 @@ export function BudgetProgress({
             )}
           </div>
 
-          {/* 进度条(div 自绘,与 CategoryTopList 一致) */}
-          <div
-            className="mt-2 h-2 overflow-hidden rounded-full bg-[var(--muted)]"
-            role="progressbar"
-            aria-valuenow={usagePercent}
-            aria-valuemin={0}
-            aria-valuemax={100}
+          {/* 进度条:HeroUI Meter(normal→success / warning·overspent→danger) */}
+          <Meter
+            value={usagePercent}
+            minValue={0}
+            maxValue={100}
+            color={isOverspent || budget.status === "warning" ? "danger" : "success"}
+            size="md"
+            className="mt-2"
             aria-label={`预算已使用百分之 ${usagePercent}`}
           >
-            <span
-              className="block h-full rounded-full transition-all"
-              style={{ width: `${fillWidth}%`, backgroundColor: barColor }}
-            />
-          </div>
+            <Meter.Track>
+              <Meter.Fill />
+            </Meter.Track>
+          </Meter>
 
           <p
             className="mt-1 text-xs text-muted-foreground"

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Card } from "@heroui/react";
+import { Card, ListBox, Meter } from "@heroui/react";
 import type { CategoryItem } from "./category-donut";
 import { categoryColor } from "./palette";
 import { CategoryIcon } from "@/components/category/category-icon";
@@ -26,6 +26,56 @@ function formatAmount(cents: number): string {
   return `¥${(cents / 100).toFixed(2)}`;
 }
 
+/** 单行分类内容:色点 + 图标 + 名称 + 金额 + 占比 + 视觉条(从原 button 内容抽出)。 */
+function CategoryRowContent({ item, index }: { item: CategoryItem; index: number }) {
+  return (
+    <div className="flex w-full flex-col gap-2 py-3" aria-label={`${item.categoryName} 支出 ${formatAmount(item.amount)} 占比百分之 ${item.percentage}`}>
+      <span className="flex items-center justify-between gap-2">
+        <span className="flex min-w-0 items-center gap-2 text-sm">
+          {/* 同色 dot:与环形图段一一对应(共享 ./palette)。 */}
+          <span
+            className="inline-block h-2 w-2 shrink-0 rounded-sm"
+            style={{ backgroundColor: categoryColor(index) }}
+            aria-hidden="true"
+          />
+          {item.categoryIcon ? (
+            <CategoryIcon name={item.categoryIcon} size={20} />
+          ) : null}
+          <span className="truncate text-foreground">
+            {item.categoryName}
+          </span>
+        </span>
+        <span className="flex shrink-0 items-baseline gap-1 text-sm tabular-nums">
+          <span
+            className="font-medium text-foreground"
+            data-amount
+            data-amount-cents={item.amount}
+          >
+            {formatAmount(item.amount)}
+          </span>
+          <span className="text-muted-foreground">
+            ({item.percentage}%)
+          </span>
+        </span>
+      </span>
+      {/* 占比视觉条:HeroUI Meter,fill 用 categoryColor 与 dot/
+          环形图同色(共享 ./palette),由 Fill inline style 覆盖默认色。
+          列表项内装饰条,数据已由 aria-label/文字表达,故 aria-hidden。 */}
+      <Meter
+        value={item.percentage}
+        minValue={0}
+        maxValue={100}
+        size="sm"
+        aria-hidden="true"
+      >
+        <Meter.Track>
+          <Meter.Fill style={{ backgroundColor: categoryColor(index) }} />
+        </Meter.Track>
+      </Meter>
+    </div>
+  );
+}
+
 export function CategoryBreakdownCard({ items, onCategoryClick }: Props) {
   const clickable = Boolean(onCategoryClick);
 
@@ -40,68 +90,29 @@ export function CategoryBreakdownCard({ items, onCategoryClick }: Props) {
             本月无支出
           </p>
         ) : (
-          <ul className="divide-y divide-border">
-            {items.map((item, index) => (
-              <li key={item.categoryId}>
-                <button
-                  type="button"
-                  onClick={
-                    clickable
-                      ? () => onCategoryClick?.(item.categoryId)
-                      : undefined
-                  }
-                  disabled={!clickable}
-                  // 移动端 ≥ 44px 命中区域(spec FR-A007);禁用时降回 auto
-                  className="flex w-full flex-col gap-2 py-3 text-left disabled:cursor-default enabled:cursor-pointer enabled:hover:bg-muted/50 enabled:active:bg-muted transition-colors"
-                  aria-label={`${item.categoryName} 支出 ${formatAmount(item.amount)} 占比百分之 ${item.percentage}${clickable ? ",点击查看明细" : ""}`}
-                >
-                  <span className="flex items-center justify-between gap-2">
-                    <span className="flex min-w-0 items-center gap-2 text-sm">
-                      {/* 同色 dot:与环形图段一一对应(共享 ./palette)。 */}
-                      <span
-                        className="inline-block h-2 w-2 shrink-0 rounded-sm"
-                        style={{ backgroundColor: categoryColor(index) }}
-                        aria-hidden="true"
-                      />
-                      {item.categoryIcon ? (
-                        <CategoryIcon name={item.categoryIcon} size={20} />
-                      ) : null}
-                      <span className="truncate text-foreground">
-                        {item.categoryName}
-                      </span>
-                    </span>
-                    <span className="flex shrink-0 items-baseline gap-1 text-sm tabular-nums">
-                      <span
-                        className="font-medium text-foreground"
-                        data-amount
-                        data-amount-cents={item.amount}
-                      >
-                        {formatAmount(item.amount)}
-                      </span>
-                      <span className="text-muted-foreground">
-                        ({item.percentage}%)
-                      </span>
-                    </span>
-                  </span>
-                  {/* 占比视觉条:track + fill,fill 用 categoryColor 与 dot/
-                      环形图同色(共享 ./palette),宽度直接取 percentage。
-                      ui-ux-pro-max「对比类目 → 横向条」比纯数字更直观/accessible。 */}
-                  <span
-                    className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
-                    role="presentation"
-                  >
-                    <span
-                      className="block h-full rounded-full transition-all"
-                      style={{
-                        backgroundColor: categoryColor(index),
-                        width: `${item.percentage}%`,
-                      }}
-                    />
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
+          <ListBox
+            aria-label="分类分析列表"
+            selectionMode="none"
+            items={items}
+            onAction={(key) => {
+              if (clickable) onCategoryClick?.(String(key));
+            }}
+            className="-mx-1 divide-y divide-border"
+          >
+            {(item) => (
+              <ListBox.Item
+                key={item.categoryId}
+                id={item.categoryId}
+                textValue={item.categoryName}
+                className="cursor-pointer outline-none data-[focus-visible]:bg-muted/50"
+              >
+                <CategoryRowContent
+                  item={item}
+                  index={items.findIndex((i) => i.categoryId === item.categoryId)}
+                />
+              </ListBox.Item>
+            )}
+          </ListBox>
         )}
       </Card.Content>
     </Card>

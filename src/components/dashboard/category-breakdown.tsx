@@ -1,4 +1,5 @@
 import { PieChart } from "lucide-react";
+import { Meter } from "@heroui/react";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { CategoryIcon } from "@/components/category/category-icon";
 
@@ -37,9 +38,19 @@ export function CategoryBreakdown({ items }: { items: CategoryItem[] }) {
               {formatAmount(c.amount)} · {c.percentage}%
             </span>
           </div>
-          <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-            <div className="h-full rounded-full bg-primary" style={{ width: `${c.percentage}%` }} />
-          </div>
+          <Meter
+            value={c.percentage}
+            minValue={0}
+            maxValue={100}
+            color="accent"
+            size="sm"
+            aria-hidden="true"
+            className="mt-1"
+          >
+            <Meter.Track>
+              <Meter.Fill />
+            </Meter.Track>
+          </Meter>
         </div>
       ))}
     </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Card } from "@heroui/react";
+import { Card, Meter } from "@heroui/react";
 import { CategoryIcon } from "@/components/category/category-icon";
 
 /**
@@ -14,8 +14,8 @@ import { CategoryIcon } from "@/components/category/category-icon";
  * 分类占比;展示分类名称和金额;点击分类进入带有月份与分类筛选条件
  * 的账单列表"。
  *
- * HeroUI v3:Card 组合式。进度条用纯 div(tailwind rounded-full bg),
- * 不引入额外图表库(YAGNI)。金额挂 data-amount 走隐私遮蔽。
+ * HeroUI v3:Card 组合式。占比横条用 HeroUI `Meter`(`color="danger"`
+ * 呈支出语义),不引入额外图表库(YAGNI)。金额挂 data-amount 走隐私遮蔽。
  */
 function formatCents(cents: number): string {
   const yuan = cents / 100;
@@ -80,12 +80,19 @@ export function CategoryTopList({
                       <span className="min-w-0 max-w-[5rem] shrink truncate text-sm text-foreground">
                         {item.categoryName}
                       </span>
-                      <span className="mx-1 h-1.5 min-w-8 flex-1 overflow-hidden rounded-full bg-[var(--muted)]">
-                        <span
-                          className="block h-full rounded-full bg-[var(--danger)]"
-                          style={{ width: `${widthPct}%` }}
-                        />
-                      </span>
+                      <Meter
+                        value={widthPct}
+                        minValue={0}
+                        maxValue={100}
+                        color="danger"
+                        size="sm"
+                        aria-hidden="true"
+                        className="mx-1 min-w-8 flex-1"
+                      >
+                        <Meter.Track>
+                          <Meter.Fill />
+                        </Meter.Track>
+                      </Meter>
                       <span
                         data-amount
                         className="shrink-0 text-right text-sm font-medium tabular-nums text-foreground"
