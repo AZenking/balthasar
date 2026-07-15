@@ -124,6 +124,10 @@ export function BudgetProgress({
   // normal / warning / overspent
   const isOverspent = budget.status === "overspent";
   const usagePercent = budget.usagePercent;
+  // 本月已过百分比(时间进度):当前日 / 当月天数
+  const now = new Date();
+  const daysInMonth = new Date(now.getUTCFullYear(), now.getUTCMonth() + 1, 0).getUTCDate();
+  const monthProgressPercent = Math.round((now.getUTCDate() / daysInMonth) * 100);
   const barColor =
     budget.status === "overspent"
       ? "var(--danger)"
@@ -172,12 +176,13 @@ export function BudgetProgress({
           </div>
 
           <p
-            data-amount
-            className={`mt-1 text-xs tabular-nums ${isOverspent ? "text-[var(--danger)]" : "text-muted-foreground"}`}
+            className="mt-1 text-xs text-muted-foreground"
           >
-            预算使用 {usagePercent}%
-            {budget.status === "warning" && " · 接近超支"}
-            {isOverspent && " · 已超支"}
+            <span>
+              本月已过 {monthProgressPercent}% · 预算使用 {usagePercent}%
+            </span>
+            {budget.status === "warning" && <span className="text-[var(--danger)]"> · 接近超支</span>}
+            {isOverspent && <span className="text-[var(--danger)]"> · 已超支</span>}
           </p>
         </Card.Content>
       </Card>

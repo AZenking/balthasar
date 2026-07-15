@@ -116,7 +116,7 @@ function TrendSection({
   );
 }
 
-/** 最近流水(FR-006)。固定最新 5 条,不受月份影响(FR-003)。 */
+/** 最近账单(FR-006)。固定最新 5 条,不受月份影响(FR-003)。 */
 function RecentSection({
   transactions,
 }: {
@@ -124,7 +124,15 @@ function RecentSection({
 }) {
   return (
     <section aria-label="最近账单" className="pt-2">
-      <h2 className="pb-1 pt-2 text-sm font-medium text-foreground">最近账单</h2>
+      <div className="flex items-center justify-between pb-1 pt-2">
+        <h2 className="text-sm font-medium text-foreground">最近账单</h2>
+        <a
+          href="/transactions"
+          className="text-xs text-muted-foreground hover:text-foreground"
+        >
+          查看明细
+        </a>
+      </div>
       <RecentTransactions transactions={transactions} isLoading={false} />
     </section>
   );

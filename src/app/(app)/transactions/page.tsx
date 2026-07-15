@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { TRPCClientError } from "@trpc/client";
 import { toast } from "sonner";
-import { ReceiptText } from "lucide-react";
+import { ReceiptText, Search, CalendarDays, SlidersHorizontal, ChevronLeft, ChevronRight } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { getUtcMonthRange } from "@/lib/date-ranges";
 import { Card } from "@heroui/react";
@@ -16,7 +16,6 @@ import { TransactionSummary } from "@/components/transactions/transaction-summar
 import { TransactionDayGroup } from "@/components/transactions/transaction-day-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { PageHeader } from "@/components/layout/page-header";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -136,6 +135,7 @@ export default function TransactionsPage() {
 
   // ── Delete confirm state (025: AlertDialog state-driven, replaces native confirm) ──
   const [confirmingTxId, setConfirmingTxId] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
 
   // ── Pagination state ──
   const [cursor, setCursor] = useState<string | undefined>(undefined);
@@ -256,14 +256,49 @@ export default function TransactionsPage() {
 
   return (
     <div>
-      {/* 026 US6 + 026-switch:Header 用 PageHeader,Card 仅承载 summary */}
-      <PageHeader
-        title="明细"
-        description={filterDescription}
-        actions={
-          <span className="text-xs text-muted-foreground">{items.length} 笔</span>
-        }
-      />
+      {/* 线稿对齐:第一行 标题 + 搜索/日历 */}
+      <div className="flex items-center justify-between pt-2">
+        <h1 className="text-lg font-medium">明细</h1>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => toast.info("搜索功能即将上线")}
+            aria-label="搜索"
+            className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-[var(--muted)]"
+          >
+            <Search className="h-5 w-5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => toast.info("日历视图即将上线")}
+            aria-label="日历"
+            className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-[var(--muted)]"
+          >
+            <CalendarDays className="h-5 w-5" />
+          </button>
+        </div>
+      </div>
+
+      {/* 第二行:‹ 年月 › + 筛选 */}
+      <div className="flex items-center justify-between py-3">
+        <MonthSwitcher
+          monthRaw={urlFilters.monthRaw}
+          onMonthChange={(y, m) => {
+            const qs = new URLSearchParams(searchParams.toString());
+            qs.set("month", `${y}-${String(m).padStart(2, "0")}`);
+            router.push(`/transactions?${qs.toString()}`);
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => setExpanded(!expanded)}
+          className="flex items-center gap-1 text-sm text-muted-foreground"
+          aria-label="筛选"
+        >
+          <SlidersHorizontal className="h-4 w-4" />
+          筛选
+        </button>
+      </div>
 
       {summary && (
         <Card className="mt-2">
@@ -277,7 +312,10 @@ export default function TransactionsPage() {
         </Card>
       )}
 
-      <TransactionFilters filters={filters} onChange={handleFiltersChange} />
+      {/* 筛选区(展开时显示) */}
+      {expanded && (
+        <TransactionFilters filters={filters} onChange={handleFiltersChange} />
+      )}
 
       <div className={`${isRefetching ? "opacity-50" : ""}`}>
         {items.length === 0 ? (
@@ -352,6 +390,69 @@ export default function TransactionsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  );
+}
+
+/** ‹ 2026 年 7 月 › 月份切换(线稿口径,非 Drawer)。 */
+function MonthSwitcher({
+  monthRaw,
+  onMonthChange,
+}: {
+  monthRaw: string | null;
+  onMonthChange: (year: number, month: number) => void;
+}) {
+  const now = new Date();
+  const currentY = now.getUTCFullYear();
+  const currentM = now.getUTCMonth() + 1;
+
+  let y = currentY;
+  let m = currentM;
+  if (monthRaw) {
+    const match = monthRaw.match(/^(\d{4})-(\d{2})$/);
+    if (match) {
+      y = Number(match[1]);
+      m = Number(match[2]);
+    }
+  }
+
+  const isCurrent = y === currentY && m === currentM;
+  const goPrev = () => {
+    if (m === 1) onMonthChange(y - 1, 12);
+    else onMonthChange(y, m - 1);
+  };
+  const goNext = () => {
+    if (isCurrent) return;
+    if (m === 12) onMonthChange(y + 1, 1);
+    else onMonthChange(y, m + 1);
+  };
+
+  return (
+    <div className="flex items-center gap-1">
+      <button
+        type="button"
+        onClick={goPrev}
+        aria-label="上个月"
+        className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-[var(--muted)]"
+      >
+        <ChevronLeft className="h-5 w-5" />
+      </button>
+      <span className="min-w-[5.5rem] text-center text-sm font-medium tabular-nums">
+        {y} 年 {m} 月
+      </span>
+      <button
+        type="button"
+        onClick={goNext}
+        disabled={isCurrent}
+        aria-label="下个月"
+        className={`flex h-9 w-9 items-center justify-center rounded-md ${
+          isCurrent
+            ? "cursor-not-allowed text-muted-foreground/40"
+            : "text-muted-foreground hover:bg-[var(--muted)]"
+        }`}
+      >
+        <ChevronRight className="h-5 w-5" />
+      </button>
     </div>
   );
 }

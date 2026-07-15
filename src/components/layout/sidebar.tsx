@@ -7,7 +7,7 @@ import {
   Home,
   Plus,
   Receipt,
-  User,
+  Settings,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -50,7 +50,7 @@ const ENTRIES: readonly Entry[] = [
   { href: "/transactions", label: "账单", Icon: Receipt },
   { href: "/transaction/new", label: "记一笔", Icon: Plus, exact: true },
   { href: "/reports", label: "报表", Icon: BarChart3 },
-  { href: "/settings", label: "我的", Icon: User },
+  { href: "/settings", label: "设置", Icon: Settings },
 ] as const;
 
 function isEntryActive(pathname: string, href: string, exact?: boolean): boolean {

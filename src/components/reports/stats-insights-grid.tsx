@@ -16,8 +16,10 @@ import { Card } from "@heroui/react";
  */
 
 export interface StatsInsights {
-  /** 最高支出日(UTC),格式 "M 月 D 日";无数据 → null。 */
+  /** 最高支出日(UTC),格式 "M/D";无数据 → null。 */
   maxExpenseDay: string | null;
+  /** 最高支出日金额(分);无数据 → null。 */
+  maxExpenseDayAmount: number | null;
   /** 最大单笔支出(分);无数据 → null。 */
   maxSingleExpense: number | null;
   /** 最大单笔的分类名;无数据 → null。 */
@@ -63,8 +65,8 @@ export function StatsInsightsGrid({ insights }: { insights: StatsInsights }) {
           label="最高支出日"
           value={hasData && insights.maxExpenseDay ? insights.maxExpenseDay : "—"}
           sub={
-            hasData && insights.maxSingleExpense != null
-              ? formatCents(0)
+            hasData && insights.maxExpenseDayAmount != null
+              ? formatCents(insights.maxExpenseDayAmount)
               : ""
           }
         />
@@ -103,6 +105,7 @@ export function computeInsights(
   if (expenses.length === 0) {
     return {
       maxExpenseDay: null,
+      maxExpenseDayAmount: null,
       maxSingleExpense: null,
       maxSingleCategory: null,
       expenseCount: 0,
@@ -133,6 +136,7 @@ export function computeInsights(
 
   return {
     maxExpenseDay: maxDay ? `${maxDay}` : null,
+    maxExpenseDayAmount: maxDayAmount > 0 ? maxDayAmount : null,
     maxSingleExpense: Math.abs(maxSingle.amount),
     maxSingleCategory: maxSingle.categoryName,
     expenseCount: expenses.length,

@@ -1,45 +1,30 @@
 "use client";
 
 import { useRef } from "react";
-import { ChevronLeft, ChevronRight, Bell } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ChevronLeft, ChevronRight, Bell, UserRound } from "lucide-react";
 import { toast } from "sonner";
+import { trpc } from "@/lib/trpc/client";
 import { PrivacyToggle } from "@/components/privacy-toggle";
 import { cn } from "@/lib/utils";
 
 /**
- * DashboardTopNav (027-mobile-home-revamp FR-002).
+ * DashboardTopNav (027-mobile-home-revamp,线稿对齐)。
  *
- * 首页顶部导航:账本名称 + 年月 + 上月/下月箭头 + 左右滑动手势 +
- * 消息占位 + 隐私开关。
+ * 线稿两行结构:
+ *   第一行:[头像 下午好,昵称 / 我的账本 ›]          [🔔 消息]
+ *   第二行:[‹ 2026 年 7 月 ›]                       [👁 隐私]
  *
- * 设计文档 §3.1-1:"账本名称;当前年月;上月、下月切换入口;消息入口"。
- * §4.1:"用户可以点击箭头或左右滑动切换月份;未来月份不可选择"。
- *
- * 与 026 的差异:026 用 PageHeader(标题"首页"+问候)+ MonthSelect
- * (Calendar Drawer)。027 改为本组件:账本名 + 箭头切月 + 滑动手势,
- * 符合设计稿的 `‹ 2026 年 7 月 ›` 形态。
- *
- * HeroUI v3:用原生 button + tailwind;无 HeroUI 原生 MonthNav。
- * 滑动手势:轻量 touchstart/touchend X 位移判定(无新依赖,research R7
- * 同款降级路径)。
+ * 原实现把 5 组信息压一行(390px 拥挤);改回线稿两行。
  */
-
-/** 当前 UTC 年月(边界判断用)。 */
-function currentUtcYearMonth(): { year: number; month: number } {
-  const now = new Date();
-  return { year: now.getUTCFullYear(), month: now.getUTCMonth() + 1 };
+function greetingByUtcHour(hour: number): string {
+  if (hour >= 6 && hour < 12) return "早上好";
+  if (hour >= 12 && hour < 18) return "下午好";
+  return "晚上好";
 }
 
-/** 上一月(跨年自动回滚)。 */
-function prevMonth(y: number, m: number): { year: number; month: number } {
-  if (m === 1) return { year: y - 1, month: 12 };
-  return { year: y, month: m - 1 };
-}
-
-/** 下一月(跨年自动前进)。 */
-function nextMonth(y: number, m: number): { year: number; month: number } {
-  if (m === 12) return { year: y + 1, month: 1 };
-  return { year: y, month: m + 1 };
+function prevMonth(y: number, m: number) {
+  return m === 1 ? { year: y - 1, month: 12 } : { year: y, month: m - 1 };
 }
 
 export function DashboardTopNav({
@@ -49,26 +34,34 @@ export function DashboardTopNav({
 }: {
   yearMonth: { year: number; month: number };
   onChange: (year: number, month: number) => void;
-  /** 账本名称;默认"我的账本"(单成员 MVP 暂无多账本,取固定文案)。 */
   ledgerName?: string;
 }) {
+  const router = useRouter();
   const touchStartX = useRef<number | null>(null);
-  const now = currentUtcYearMonth();
-  // 未来月份不可选(FR-002 / §4.1):当前月 = 边界,下月按钮在当前月时禁用。
-  const isCurrentMonth =
-    yearMonth.year === now.year && yearMonth.month === now.month;
-  const isFuture =
-    yearMonth.year > now.year ||
-    (yearMonth.year === now.year && yearMonth.month > now.month);
+  const meQuery = trpc.auth.me.useQuery();
+  const displayName = meQuery.data?.member?.displayName ?? "";
 
-  const goPrev = () => onChange(prevMonth(yearMonth.year, yearMonth.month).year, prevMonth(yearMonth.year, yearMonth.month).month);
+  const now = new Date();
+  const nowYm = { year: now.getUTCFullYear(), month: now.getUTCMonth() + 1 };
+  const isCurrentMonth =
+    yearMonth.year === nowYm.year && yearMonth.month === nowYm.month;
+  const isFuture =
+    yearMonth.year > nowYm.year ||
+    (yearMonth.year === nowYm.year && yearMonth.month > nowYm.month);
+
+  const goPrev = () => {
+    const p = prevMonth(yearMonth.year, yearMonth.month);
+    onChange(p.year, p.month);
+  };
   const goNext = () => {
-    if (isCurrentMonth || isFuture) return; // 边界禁用
-    const n = nextMonth(yearMonth.year, yearMonth.month);
+    if (isCurrentMonth || isFuture) return;
+    const n =
+      yearMonth.month === 12
+        ? { year: yearMonth.year + 1, month: 1 }
+        : { year: yearMonth.year, month: yearMonth.month + 1 };
     onChange(n.year, n.month);
   };
 
-  // 左右滑动:touchstart 记 X,touchend 比 X 位移 > 阈值则切月。
   const onTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0]?.clientX ?? null;
   };
@@ -76,67 +69,82 @@ export function DashboardTopNav({
     if (touchStartX.current == null) return;
     const endX = e.changedTouches[0]?.clientX ?? touchStartX.current;
     const dx = endX - touchStartX.current;
-    const threshold = 40;
-    if (dx > threshold) goPrev(); // 右滑 = 上月
-    else if (dx < -threshold) goNext(); // 左滑 = 下月
+    if (dx > 40) goPrev();
+    else if (dx < -40) goNext();
     touchStartX.current = null;
   };
 
+  const greeting = greetingByUtcHour(now.getUTCHours());
+
   return (
-    <div className="flex items-center justify-between gap-2 pt-2">
-      {/* 左:账本名称(点击预留进账本管理,V2) */}
-      <button
-        type="button"
-        className="min-w-0 truncate text-sm font-medium text-foreground"
-        aria-label={`账本:${ledgerName}`}
-      >
-        <span className="truncate">{ledgerName}</span>
-      </button>
-
-      {/* 中:月份切换 ‹ 2026 年 7 月 › + 滑动手势 */}
-      <div
-        className="flex items-center gap-1"
-        onTouchStart={onTouchStart}
-        onTouchEnd={onTouchEnd}
-      >
+    <div className="pt-2">
+      {/* 第一行:头像 + 问候 + 账本 | 消息 */}
+      <div className="flex items-center justify-between">
         <button
           type="button"
-          onClick={goPrev}
-          aria-label="上个月"
-          className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-[var(--muted)] hover:text-foreground"
+          onClick={() => router.push("/settings")}
+          className="flex min-w-0 items-center gap-2"
+          aria-label="进入设置"
         >
-          <ChevronLeft className="h-5 w-5" />
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--muted)]">
+            <UserRound className="h-5 w-5 text-muted-foreground" aria-hidden />
+          </span>
+          <span className="min-w-0 text-left">
+            <span className="block truncate text-sm font-medium text-foreground">
+              {greeting}
+              {displayName ? `，${displayName}` : ""}
+            </span>
+            <span className="block truncate text-xs text-muted-foreground">
+              {ledgerName}
+            </span>
+          </span>
         </button>
-        <span className="min-w-[5.5rem] text-center text-sm font-medium tabular-nums">
-          {yearMonth.year} 年 {yearMonth.month} 月
-        </span>
-        <button
-          type="button"
-          onClick={goNext}
-          disabled={isCurrentMonth || isFuture}
-          aria-label="下个月"
-          aria-disabled={isCurrentMonth || isFuture}
-          className={cn(
-            "flex h-9 w-9 items-center justify-center rounded-md",
-            (isCurrentMonth || isFuture)
-              ? "cursor-not-allowed text-muted-foreground/40"
-              : "text-muted-foreground hover:bg-[var(--muted)] hover:text-foreground",
-          )}
-        >
-          <ChevronRight className="h-5 w-5" />
-        </button>
-      </div>
 
-      {/* 右:消息占位 + 隐私开关 */}
-      <div className="flex items-center gap-1">
         <button
           type="button"
           onClick={() => toast.info("暂无消息")}
           aria-label="消息"
-          className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-[var(--muted)] hover:text-foreground"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-[var(--muted)]"
         >
           <Bell className="h-5 w-5" />
         </button>
+      </div>
+
+      {/* 第二行:‹ 年月 › | 隐私 */}
+      <div
+        className="mt-2 flex items-center justify-between"
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+      >
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={goPrev}
+            aria-label="上个月"
+            className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-[var(--muted)]"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <span className="min-w-[5.5rem] text-center text-sm font-medium tabular-nums">
+            {yearMonth.year} 年 {yearMonth.month} 月
+          </span>
+          <button
+            type="button"
+            onClick={goNext}
+            disabled={isCurrentMonth || isFuture}
+            aria-label="下个月"
+            aria-disabled={isCurrentMonth || isFuture}
+            className={cn(
+              "flex h-9 w-9 items-center justify-center rounded-md",
+              isCurrentMonth || isFuture
+                ? "cursor-not-allowed text-muted-foreground/40"
+                : "text-muted-foreground hover:bg-[var(--muted)]",
+            )}
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+        </div>
+
         <PrivacyToggle />
       </div>
     </div>

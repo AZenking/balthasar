@@ -6,7 +6,7 @@ import {
   BarChart3,
   Home,
   Receipt,
-  User,
+  Settings,
   type LucideIcon,
 } from "lucide-react";
 import { TransactionDrawer } from "@/components/transaction/transaction-drawer";
@@ -40,7 +40,7 @@ const ENTRIES: readonly Entry[] = [
   { href: "/dashboard", label: "首页", Icon: Home },
   { href: "/transactions", label: "明细", Icon: Receipt },
   { href: "/reports", label: "统计", Icon: BarChart3 },
-  { href: "/settings", label: "我的", Icon: User },
+  { href: "/settings", label: "设置", Icon: Settings },
 ] as const;
 
 function isEntryActive(pathname: string, href: string): boolean {
