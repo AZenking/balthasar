@@ -43,6 +43,13 @@
       "when": 1740000005000,
       "tag": "0006_category_v15_extensions",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1784077710923,
+      "tag": "0006_slim_madripoor",
+      "breakpoints": true
     }
   ]
 }

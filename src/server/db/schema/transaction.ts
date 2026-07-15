@@ -30,7 +30,11 @@ import { uuidv7 } from "uuidv7";
  * - (family_id, account_id) — filter by account
  * - (family_id, category_id) — filter by category
  */
-export const transactionType = pgEnum("transaction_type", ["income", "expense"]);
+export const transactionType = pgEnum("transaction_type", [
+  "income",
+  "expense",
+  "transfer", // 027: 转账(不计入收支聚合,research R1)
+]);
 
 export const transaction = pgTable(
   "transactions",
@@ -43,6 +47,11 @@ export const transaction = pgTable(
     accountId: uuid("account_id")
       .notNull()
       .references(() => account.id, { onDelete: "restrict" }),
+    // 027 (research R1 / data-model §1.1): transfer 时 = 转入账户;
+    // income/expense 时 NULL。procedure 强不变量(type guard)。
+    toAccountId: uuid("to_account_id").references(() => account.id, {
+      onDelete: "restrict",
+    }),
     categoryId: uuid("category_id")
       .notNull()
       .references(() => category.id, { onDelete: "restrict" }),

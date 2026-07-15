@@ -16,6 +16,9 @@ import type { TransactionType } from "@/server/db/schema";
  *
  * Per Clarification Q1: income stores positive, expense stores negative.
  * Frontend always sends positive; server applies sign based on type.
+ *
+ * 027 (research R1): transfer stores +abs(正数)。余额计算时转出账户减、
+ * 转入账户(toAccountId)加。applySign 对 transfer 返回 abs。
  */
 export function applySign(type: TransactionType, amount: number): number {
   if (amount === 0) return 0;
@@ -27,6 +30,23 @@ export function applySign(type: TransactionType, amount: number): number {
  */
 export function toDisplayAmount(signedAmount: number): number {
   return Math.abs(signedAmount);
+}
+
+/**
+ * Validate a transfer's source/target accounts (027 FR-014)。
+ *
+ * 转出账户与转入账户为同一账户时拒绝(避免自转)。
+ * 账户存在性 / 同 family / 未归档校验由 procedure 层 validateAccountAndCategory
+ * 负责(需 DB 访问);本纯函数只校验"不同 id"这一条无 IO 不变量。
+ */
+export function validateTransfer(
+  accountId: string,
+  toAccountId: string,
+): { ok: boolean; reason?: "same_account" } {
+  if (accountId === toAccountId) {
+    return { ok: false, reason: "same_account" };
+  }
+  return { ok: true };
 }
 
 export const REMARK_MAX_LENGTH = 200;

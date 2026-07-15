@@ -16,13 +16,14 @@ import {
 import { writeTransactionEvent } from "@/server/db/queries/transaction-events";
 import {
   applySign,
+  validateTransfer,
   validateOccurredAt,
   validateRemark,
   REMARK_MAX_LENGTH,
 } from "@/server/domain/transaction/validate";
 import { transactionType } from "@/server/db/schema";
 import { eq, and } from "drizzle-orm";
-import { transaction } from "@/server/db/schema";
+import { transaction, account } from "@/server/db/schema";
 
 /**
  * Transaction router (004-transaction) — 5 procedures:
@@ -32,16 +33,43 @@ import { transaction } from "@/server/db/schema";
  *   - update: LWW, type change revalidates categoryId
  *   - delete: hard delete, audit survives via SET NULL FK
  */
-const typeSchema = z.enum(["income", "expense"]);
+const typeSchema = z.enum(["income", "expense", "transfer"]);
 
-const createInput = z.object({
-  type: typeSchema,
-  accountId: z.string().uuid(),
-  categoryId: z.string().uuid(),
-  amount: z.number().int().positive("金额必须 > 0"),
-  remark: z.string().max(REMARK_MAX_LENGTH).optional(),
-  occurredAt: z.string().datetime().optional(),
-});
+// 027 US4 (M3 决策):transfer 交易强制引用此系统内置"转账"分类 id。
+// UUID v5 由 "expense:转账" 派生(见 migration 0006 seed)。categoryId NOT NULL
+// 保持不变(026),transfer 用此 id 满足约束。
+const TRANSFER_CATEGORY_ID = "6206a8ba-b706-51ee-ace0-39299f1e39d5";
+
+// 027 US4 (C2 决策):退款 = type='expense' + isRefund=true,procedure 跳过
+// applySign、直接存 +abs(amount)。applySign 函数本身不改。
+const createInput = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("income"),
+    accountId: z.string().uuid(),
+    categoryId: z.string().uuid(),
+    amount: z.number().int().positive("金额必须 > 0"),
+    remark: z.string().max(REMARK_MAX_LENGTH).optional(),
+    occurredAt: z.string().datetime().optional(),
+  }),
+  z.object({
+    type: z.literal("expense"),
+    accountId: z.string().uuid(),
+    categoryId: z.string().uuid(),
+    amount: z.number().int().positive("金额必须 > 0"),
+    isRefund: z.boolean().default(false), // C2: 退款标志
+    remark: z.string().max(REMARK_MAX_LENGTH).optional(),
+    occurredAt: z.string().datetime().optional(),
+  }),
+  z.object({
+    type: z.literal("transfer"),
+    accountId: z.string().uuid(), // 转出账户
+    toAccountId: z.string().uuid(), // 转入账户(MUST !== accountId)
+    amount: z.number().int().positive("金额必须 > 0"),
+    remark: z.string().max(REMARK_MAX_LENGTH).optional(),
+    occurredAt: z.string().datetime().optional(),
+    // transfer 无需 categoryId —— procedure 强制用 TRANSFER_CATEGORY_ID(M3)
+  }),
+]);
 
 export const transactionRouter = router({
   /**
@@ -74,22 +102,78 @@ export const transactionRouter = router({
         });
       }
 
-      const signedAmount = applySign(input.type, input.amount);
+      // 027 US4:按 type 分派金额符号 / toAccountId / categoryId。
+      // - income/expense:applySign 取符号;退款(expense+isRefund)跳过 applySign
+      //   存 +abs(C2 决策);categoryId 用客户端传入。
+      // - transfer:applySign 返回 +abs(research R1);强制 categoryId =
+      //   TRANSFER_CATEGORY_ID(M3);toAccountId 必填且 !== accountId(FR-014)。
+      let signedAmount: number;
+      let toAccountId: string | null = null;
+      let categoryId: string;
+      if (input.type === "transfer") {
+        const transferCheck = validateTransfer(input.accountId, input.toAccountId);
+        if (!transferCheck.ok) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "转出账户与转入账户不能相同",
+          });
+        }
+        signedAmount = applySign("transfer", input.amount);
+        toAccountId = input.toAccountId;
+        categoryId = TRANSFER_CATEGORY_ID;
+      } else if (input.type === "expense" && input.isRefund) {
+        // C2:退款跳过 applySign,存 +abs(冲减原支出分类)。
+        signedAmount = Math.abs(input.amount);
+        categoryId = input.categoryId;
+      } else {
+        signedAmount = applySign(input.type, input.amount);
+        categoryId = input.categoryId;
+      }
 
       const created = await withTransaction(async (tx) => {
-        // Short-circuit validation chain (research.md Q2+Q6)
-        await validateAccountAndCategory(tx, {
-          accountId: input.accountId,
-          categoryId: input.categoryId,
-          familyId,
-          type: input.type,
-        });
+        // 027 US4:transfer 用内置"转账"分类(type=expense),与 transaction
+        // type=transfer 不匹配。validateAccountAndCategory 的 category-type 检查
+        // 对 transfer 跳过 —— transfer 的分类由 server 强制(M3),无需客户端匹配。
+        if (input.type === "transfer") {
+          // 仅校验转出账户(复用 validateAccountAndCategory 的账户校验,但传
+          // type=expense 让内置转账分类通过;categoryId 已是 TRANSFER_CATEGORY_ID)。
+          await validateAccountAndCategory(tx, {
+            accountId: input.accountId,
+            categoryId,
+            familyId,
+            type: "expense", // 内置转账分类是 expense 型;type-match 用 expense
+          });
+        } else {
+          await validateAccountAndCategory(tx, {
+            accountId: input.accountId,
+            categoryId,
+            familyId,
+            type: input.type,
+          });
+        }
+
+        // transfer:额外校验转入账户(toAccountId)同 family + 未归档。
+        if (toAccountId) {
+          const toAccount = await tx
+            .select({ id: account.id, familyId: account.familyId, archivedAt: account.archivedAt })
+            .from(account)
+            .where(eq(account.id, toAccountId))
+            .limit(1);
+          const toRow = toAccount[0];
+          if (!toRow || toRow.familyId !== familyId) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "转入账户不存在" });
+          }
+          if (toRow.archivedAt) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "转入账户已归档" });
+          }
+        }
 
         const row = await insertTransaction(tx, {
           familyId,
           type: input.type,
           accountId: input.accountId,
-          categoryId: input.categoryId,
+          toAccountId,
+          categoryId,
           amount: signedAmount,
           remark,
           occurredAt,
@@ -103,6 +187,7 @@ export const transactionRouter = router({
           after: {
             type: row.type,
             accountId: row.accountId,
+            toAccountId: row.toAccountId,
             categoryId: row.categoryId,
             amount: row.amount,
             remark: row.remark,
@@ -156,7 +241,7 @@ export const transactionRouter = router({
           limit: z.number().int().min(1).max(100).default(50),
           cursor: z.string().datetime().optional(),
           // 005 filters
-          type: z.enum(["income", "expense"]).optional(),
+          type: z.enum(["income", "expense", "transfer"]).optional(),
           accountId: z.string().uuid().optional(),
           categoryId: z.string().uuid().optional(),
           startDate: z.string().datetime().optional(),

@@ -18,13 +18,12 @@ const ALL_SENTINEL = "__all__";
 // Type tab ids — `__all__` 表示无类型筛选。
 type TypeTab = "__all__" | "expense" | "income" | "transfer";
 
-// US4(转账)落地前,transfer 类型在 DB/procedure 尚不存在(transaction.list
-// 的 type zod 仍为 ["income","expense"])。US4 合并后把此 flag 翻 true。
-// 027 US3 阶段:tab 不渲染,避免传非法 type 触发 400。
-export const TRANSFER_TAB_ENABLED = false;
+// US4(转账)已落地:transfer 类型在 DB/procedure 已支持。flag 翻 true。
+// transaction.list 的 type zod 需同步加 transfer(见 router list input)。
+export const TRANSFER_TAB_ENABLED = true;
 
 export interface FilterValues {
-  type: "income" | "expense" | undefined;
+  type: "income" | "expense" | "transfer" | undefined;
   accountId: string | undefined;
   categoryId: string | undefined;
 }
@@ -38,9 +37,12 @@ export function TransactionFilters({
 }) {
   const [expanded, setExpanded] = useState(false);
   const { data: accounts } = trpc.account.list.useQuery();
-  const { data: categories } = trpc.category.list.useQuery(
-    filters.type ? { type: filters.type } : undefined,
-  );
+  // category.list type 是 income|expense;transfer 无分类,不传 type。
+  const catQueryType =
+    filters.type === "income" || filters.type === "expense"
+      ? { type: filters.type }
+      : undefined;
+  const { data: categories } = trpc.category.list.useQuery(catQueryType);
 
   const unarchivedAccounts = (accounts ?? []).filter((a) => a.archivedAt === null);
 
@@ -51,12 +53,7 @@ export function TransactionFilters({
     const tab = String(key) as TypeTab;
     onChange({
       ...filters,
-      // transfer 在 US4 前不是合法 FilterValues.type(DB 无此类型);
-      // tab 虽不渲染(TRANSFER_TAB_ENABLED=false),此处仍收紧类型防御。
-      type:
-        tab === "__all__" || tab === "transfer"
-          ? undefined
-          : tab,
+      type: tab === "__all__" ? undefined : tab,
       // 切类型时清空分类(分类是 type-scoped)。
       categoryId: undefined,
     });

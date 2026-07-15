@@ -36,25 +36,33 @@ Better-Auth 的 `User` 与业务聚合 `Family` 解耦:
 - Account.archivedAt IS NOT NULL 时不可编辑 (002 FR-011)
 - AccountEvents 是 Account 聚合的审计日志,与 AuthEvents 解耦 (002 Q1)
 
-## Transaction (后续 feature)
+## Transaction
 
 - id
-- type(income|expense)
-- amount
+- type(income|expense|transfer) — 027: 新增 transfer
+- amount(signed: income +, expense −, transfer +正数)
 - accountId
-- categoryId
+- toAccountId — 027: transfer 时为转入账户;income/expense 时 NULL
+- categoryId — transfer 时强制 = 内置"转账"分类(M3)
 - memberId
 - remark
 - occurredAt
 - createdAt
 - updatedAt
 
+### 027 转账语义 (transfer)
+
+- 转账关联转出账户(accountId)与转入账户(toAccountId),金额在两账户间等额移动。
+- 转账**不计入月度收入或支出统计**(type-driven 聚合排除 transfer)。
+- 退款 = type='expense' + isRefund=true,amount 存 +正数(跳过 applySign),
+  冲减原支出分类(同分类正负 ABS 相加后净额下降)。
+- 转出/转入同一账户被拒(FR-014)。
+
 ## 后续聚合 (路线图解锁)
 
-Asset
-Debt
-Budget
-Investment
+Budget — 027 已解锁(Family 聚合内,按月)
+Asset/Debt — 027 用 Account.type(asset/debt)推导,不新增表
+Investment — 仍属范围外
 
 ## Category (003-category + 018-custom-category) — 内置字典 + 家庭自定义
 

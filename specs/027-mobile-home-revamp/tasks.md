@@ -121,20 +121,20 @@
 
 ### Tests for US4 (TDD)
 
-- [ ] T027 [P] [US4] 单元测试 `applySign` 扩展 transfer(返回正)+ `validateTransfer` 同账户拒绝在 `src/tests/unit/domain/transaction/transfer-validate.test.ts`
-- [ ] T028 [P] [US4] 集成测试:转账不进收支聚合 + 双账户余额变化在 `src/tests/integration/transaction/transfer.test.ts`(对应 contracts/transaction-create.md Test Scenarios 4-7)
+- [X] T027 [P] [US4] 单元测试 `applySign` 扩展 transfer(返回正)+ `validateTransfer` 同账户拒绝在 `src/tests/unit/domain/transaction/transfer-validate.test.ts`
+- [X] T028 [P] [US4] 集成测试:转账不进收支聚合 + 双账户余额变化在 `src/tests/integration/transaction/transfer.test.ts`(对应 contracts/transaction-create.md Test Scenarios 4-7)
 
 ### Implementation for US4
 
-- [ ] T029 [US4] 生成 Drizzle migration:`transactions.type` 枚举增 `transfer` + 新增 `to_account_id` 列 + **seed 系统内置"转账"分类**(M3 决策,name="转账",所有 family 各一条或全局共享,由实现定;transfer 强制引用);验证 down 路径(DROP COLUMN + 删 seed 行;PG 枚举 REMOVE VALUE 需重建类型,见 data-model §1.1)
-- [ ] T030 [US4] 更新 `src/server/db/schema/transaction.ts`:`transactionType` 加 `transfer`;新增 `toAccountId` 字段(FK → account,ON DELETE RESTRICT)
-- [ ] T031 [US4] 扩展 `src/server/domain/transaction/validate.ts`:`applySign` 加 transfer 分支(返回 abs);新增 `validateTransfer(accountId, toAccountId)` 拒绝同账户(data-model §3.2-3.3)
-- [ ] T032 [US4] 扩展 `src/server/api/routers/transaction.ts` `create`:input 改 `z.discriminatedUnion("type", [...])` 含 transfer 模式;transfer 时校验 toAccountId + validateTransfer + 写 to_account_id + **强制 categoryId = 内置"转账"分类 id**(M3,忽略客户端传入,contracts §Business Rule 6);expense 分支加 `isRefund` 标志(C2 退款决策)
-- [ ] T033 [US4] 扩展 `src/server/db/queries/dashboard.ts` `getMonthSummary`:SQL 改 type-driven 聚合(`SUM(CASE WHEN type='income'...)` / `SUM(CASE WHEN type='expense' THEN ABS...)`),排除 transfer + 含退款(research R9)
-- [ ] T034 [US4] 更新 `src/server/db/queries/transaction.ts` `serializeTransaction`:输出含 toAccountId/toAccountName JOIN
-- [ ] T035 [US4] 扩展 `src/components/transaction/transaction-form.tsx`:加 transfer 模式(转出/转入账户选择,toAccountId);mode-row 三态。**执行前 `/heroui-react`**
-- [ ] T036 [US4] 更新 `src/components/transactions/transaction-filters.tsx`:启用"转账" tab(Phase 4 T021 预留)
-- [ ] T037 [US4] 更新 `docs/DOMAIN.md` + `docs/DATABASE.md`:transfer 语义 + to_account_id 列(宪章开发流程 3)
+- [X] T029 [US4] 生成 Drizzle migration:`transactions.type` 枚举增 `transfer` + 新增 `to_account_id` 列 + **seed 系统内置"转账"分类**(M3 决策,name="转账",所有 family 各一条或全局共享,由实现定;transfer 强制引用);验证 down 路径(DROP COLUMN + 删 seed 行;PG 枚举 REMOVE VALUE 需重建类型,见 data-model §1.1)
+- [X] T030 [US4] 更新 `src/server/db/schema/transaction.ts`:`transactionType` 加 `transfer`;新增 `toAccountId` 字段(FK → account,ON DELETE RESTRICT)
+- [X] T031 [US4] 扩展 `src/server/domain/transaction/validate.ts`:`applySign` 加 transfer 分支(返回 abs);新增 `validateTransfer(accountId, toAccountId)` 拒绝同账户(data-model §3.2-3.3)
+- [X] T032 [US4] 扩展 `src/server/api/routers/transaction.ts` `create`:input 改 `z.discriminatedUnion("type", [...])` 含 transfer 模式;transfer 时校验 toAccountId + validateTransfer + 写 to_account_id + **强制 categoryId = 内置"转账"分类 id**(M3,忽略客户端传入,contracts §Business Rule 6);expense 分支加 `isRefund` 标志(C2 退款决策)
+- [X] T033 [US4] 扩展 `src/server/db/queries/dashboard.ts` `getMonthSummary`:SQL 改 type-driven 聚合(`SUM(CASE WHEN type='income'...)` / `SUM(CASE WHEN type='expense' THEN ABS...)`),排除 transfer + 含退款(research R9)
+- [X] T034 [US4] 更新 `src/server/db/queries/transaction.ts` `serializeTransaction`:输出含 toAccountId/toAccountName JOIN
+- [X] T035 [US4] 扩展 `src/components/transaction/transaction-form.tsx`:加 transfer 模式(转出/转入账户选择,toAccountId);mode-row 三态。**执行前 `/heroui-react`**
+- [X] T036 [US4] 更新 `src/components/transactions/transaction-filters.tsx`:启用"转账" tab(Phase 4 T021 预留)
+- [X] T037 [US4] 更新 `docs/DOMAIN.md` + `docs/DATABASE.md`:transfer 语义 + to_account_id 列(宪章开发流程 3)
 
 **Checkpoint**: 转账端到端可用;SC-006(转账隔离 100%)达成。
 

@@ -50,7 +50,7 @@ type TransactionItem = {
 // Uses the categories/accounts list to resolve ids to display names.
 function useFilterDescription(
   urlMonth: string | null,
-  type: "income" | "expense" | undefined,
+  type: "income" | "expense" | "transfer" | undefined,
   categoryId: string | undefined,
   accountId: string | undefined
 ): string {
@@ -64,6 +64,7 @@ function useFilterDescription(
   }
   if (type === "income") parts.push("仅收入");
   else if (type === "expense") parts.push("仅支出");
+  else if (type === "transfer") parts.push("仅转账");
 
   if (categoryId) {
     const c = (categories ?? []).find((x) => x.id === categoryId);

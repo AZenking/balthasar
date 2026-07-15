@@ -2,10 +2,14 @@ import "server-only";
 import { db } from "@/server/db/client";
 import { transaction, account, category } from "@/server/db/schema";
 import { eq, and, gte, lt, desc, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import {
   padDailyBuckets,
   getUtcWeeksInMonth,
 } from "@/lib/date-ranges";
+
+// 027 US4:转账的转入账户别名(与 account 同表,join 时区分)。
+const toAccount = alias(account, "to_account");
 
 /**
  * Dashboard queries (006-dashboard). 3 independent aggregation functions
@@ -14,7 +18,12 @@ import {
 
 /**
  * 1. Month summary: SUM income + expense for the given month range.
- * Uses signed bigint (004 Q1): income = SUM(positive), expense = SUM(ABS(negative)).
+ *
+ * 027 US4 (research R9):改 type-driven 聚合(原 sign-driven)。
+ *   - income = SUM(CASE WHEN type='income' THEN amount ELSE 0 END)
+ *     (type-driven,防 transfer 正 amount 误入)
+ *   - expense = SUM(CASE WHEN type='expense' THEN ABS(amount) ELSE 0 END)
+ *     (type-driven + ABS,含退款 +正 amount;transfer 排除)
  */
 export async function getMonthSummary(opts: {
   familyId: string;
@@ -23,8 +32,8 @@ export async function getMonthSummary(opts: {
 }): Promise<{ income: number; expense: number }> {
   const rows = await db
     .select({
-      income: sql<number>`COALESCE(SUM(CASE WHEN ${transaction.amount} > 0 THEN ${transaction.amount} ELSE 0 END), 0)`,
-      expense: sql<number>`COALESCE(SUM(CASE WHEN ${transaction.amount} < 0 THEN ABS(${transaction.amount}) ELSE 0 END), 0)`,
+      income: sql<number>`COALESCE(SUM(CASE WHEN ${transaction.type} = 'income' THEN ${transaction.amount} ELSE 0 END), 0)`,
+      expense: sql<number>`COALESCE(SUM(CASE WHEN ${transaction.type} = 'expense' THEN ABS(${transaction.amount}) ELSE 0 END), 0)`,
     })
     .from(transaction)
     .where(
@@ -55,6 +64,7 @@ export async function getRecentTransactions(opts: {
       familyId: transaction.familyId,
       type: transaction.type,
       accountId: transaction.accountId,
+      toAccountId: transaction.toAccountId, // 027 US4
       categoryId: transaction.categoryId,
       amount: transaction.amount,
       remark: transaction.remark,
@@ -62,11 +72,13 @@ export async function getRecentTransactions(opts: {
       createdAt: transaction.createdAt,
       updatedAt: transaction.updatedAt,
       accountName: account.name,
+      toAccountName: toAccount.name, // 027 US4
       categoryName: category.name,
       categoryIcon: category.icon,
     })
     .from(transaction)
     .leftJoin(account, eq(transaction.accountId, account.id))
+    .leftJoin(toAccount, eq(transaction.toAccountId, toAccount.id)) // 027 US4
     .leftJoin(category, eq(transaction.categoryId, category.id))
     .where(eq(transaction.familyId, opts.familyId))
     .orderBy(desc(transaction.occurredAt))

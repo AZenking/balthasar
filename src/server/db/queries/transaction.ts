@@ -7,7 +7,11 @@ import {
   type TransactionType,
 } from "@/server/db/schema";
 import { eq, and, isNull, desc, lt, gte, lte, ilike, sql, type SQL } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { TRPCError } from "@trpc/server";
+
+// 027 US4:转账的转入账户别名(与 account 同表,join 时区分)。
+const toAccount = alias(account, "to_account");
 
 /**
  * Transaction queries (004-transaction, T015 + T024).
@@ -100,6 +104,7 @@ export async function getTransactionById(opts: {
       familyId: transaction.familyId,
       type: transaction.type,
       accountId: transaction.accountId,
+      toAccountId: transaction.toAccountId, // 027 US4
       categoryId: transaction.categoryId,
       amount: transaction.amount,
       remark: transaction.remark,
@@ -107,11 +112,13 @@ export async function getTransactionById(opts: {
       createdAt: transaction.createdAt,
       updatedAt: transaction.updatedAt,
       accountName: account.name,
+      toAccountName: toAccount.name, // 027 US4
       categoryName: category.name,
       categoryIcon: category.icon,
     })
     .from(transaction)
     .leftJoin(account, eq(transaction.accountId, account.id))
+    .leftJoin(toAccount, eq(transaction.toAccountId, toAccount.id)) // 027 US4
     .leftJoin(category, eq(transaction.categoryId, category.id))
     .where(
       and(
@@ -168,6 +175,7 @@ const transactionSelectFields = {
   familyId: transaction.familyId,
   type: transaction.type,
   accountId: transaction.accountId,
+  toAccountId: transaction.toAccountId, // 027 US4
   categoryId: transaction.categoryId,
   amount: transaction.amount,
   remark: transaction.remark,
@@ -175,6 +183,7 @@ const transactionSelectFields = {
   createdAt: transaction.createdAt,
   updatedAt: transaction.updatedAt,
   accountName: account.name,
+  toAccountName: toAccount.name, // 027 US4 (leftJoin alias)
   categoryName: category.name,
   categoryIcon: category.icon,
 };
@@ -197,6 +206,7 @@ export async function listTransactions(opts: {
     .select(transactionSelectFields)
     .from(transaction)
     .leftJoin(account, eq(transaction.accountId, account.id))
+    .leftJoin(toAccount, eq(transaction.toAccountId, toAccount.id)) // 027 US4
     .leftJoin(category, eq(transaction.categoryId, category.id))
     .where(and(...conditions))
     .orderBy(desc(transaction.occurredAt))
@@ -266,6 +276,7 @@ export function serializeTransaction(row: {
   familyId: string;
   type: TransactionType;
   accountId: string;
+  toAccountId: string | null; // 027 US4
   categoryId: string;
   amount: number;
   remark: string;
@@ -273,6 +284,7 @@ export function serializeTransaction(row: {
   createdAt: Date;
   updatedAt: Date;
   accountName: string | null;
+  toAccountName: string | null; // 027 US4
   categoryName: string | null;
   categoryIcon: string | null;
 }) {
@@ -281,6 +293,7 @@ export function serializeTransaction(row: {
     familyId: row.familyId,
     type: row.type,
     accountId: row.accountId,
+    toAccountId: row.toAccountId, // 027 US4
     categoryId: row.categoryId,
     amount: Math.abs(row.amount), // Q1: signed → display positive
     remark: row.remark,
@@ -288,6 +301,7 @@ export function serializeTransaction(row: {
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     accountName: row.accountName,
+    toAccountName: row.toAccountName, // 027 US4
     categoryName: row.categoryName,
     categoryIcon: row.categoryIcon,
   };

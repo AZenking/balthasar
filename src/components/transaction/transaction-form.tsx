@@ -62,13 +62,15 @@ export function TransactionForm({
   const isEditMode = !!editId;
 
   const { data: accounts } = trpc.account.list.useQuery();
-  const [selectedType, setSelectedType] = useState<"income" | "expense">(
+  const [selectedType, setSelectedType] = useState<"income" | "expense" | "transfer">(
     "expense"
   );
+  // 027 US4:转账转入账户(独立于 RHF,因 transfer 无 categoryId,字段集不同)。
+  const [toAccountId, setToAccountId] = useState<string>("");
 
-  const { data: _categories } = trpc.category.list.useQuery({
-    type: selectedType,
-  });
+  const { data: _categories } = trpc.category.list.useQuery(
+    selectedType === "transfer" ? undefined : { type: selectedType },
+  );
   // 023-category-ui US6: CategorySelect now handles list + grouping internally.
   // _categories unused here; CategorySelect fetches its own data.
   void _categories;
@@ -103,7 +105,9 @@ export function TransactionForm({
     if (!editData) return;
     setSelectedType(editData.type);
     reset({
-      type: editData.type,
+      // TransactionFormValues.type 是 income|expense(validator);transfer 编辑
+      // 在 onSubmit 中被拒绝(转账暂不支持编辑),此处 cast 保证类型通过。
+      type: editData.type as "income" | "expense",
       accountId: editData.accountId,
       categoryId: editData.categoryId,
       amount: (editData.amount / 100).toFixed(2),
@@ -185,18 +189,48 @@ export function TransactionForm({
     );
   }
 
-  const handleTypeSwitch = (type: "income" | "expense") => {
+  const handleTypeSwitch = (type: "income" | "expense" | "transfer") => {
     setSelectedType(type);
-    setValue("type", type);
+    // validator type 是 income|expense;transfer 走独立提交路径(不走 RHF type 字段)。
+    if (type !== "transfer") setValue("type", type);
     setValue("categoryId", ""); // Clear category (old may not match new type)
   };
+
+  const isTransfer = selectedType === "transfer";
 
   const onSubmit = async (data: TransactionFormValues) => {
     setServerError("");
     try {
+      const baseAccountId = data.accountId || unarchivedAccounts[0]!.id;
+      if (isTransfer) {
+        // 027 US4:转账 —— 无 categoryId,需 toAccountId,且 !== accountId。
+        if (!toAccountId) {
+          setServerError("请选择转入账户");
+          return;
+        }
+        if (toAccountId === baseAccountId) {
+          setServerError("转出账户与转入账户不能相同");
+          return;
+        }
+        const transferPayload = {
+          type: "transfer" as const,
+          accountId: baseAccountId,
+          toAccountId,
+          amount: yuanToCents(data.amount),
+          remark: data.remark || "",
+          occurredAt: new Date(data.occurredAt).toISOString(),
+        };
+        if (isEditMode && editId) {
+          // update procedure 暂未支持 transfer 切换(留后续),降级提示。
+          setServerError("转账暂不支持编辑,请删除后重建");
+          return;
+        }
+        await createMutation.mutateAsync(transferPayload);
+        return;
+      }
       const payload = {
         type: data.type,
-        accountId: data.accountId || unarchivedAccounts[0]!.id,
+        accountId: baseAccountId,
         categoryId: data.categoryId,
         amount: yuanToCents(data.amount),
         remark: data.remark || "",
@@ -217,17 +251,18 @@ export function TransactionForm({
   // 表单字段(embedded / page 模式共用)
   const formFields = (
     <>
-      {/* Type Switch — HeroUI Tabs */}
+      {/* Type Switch — HeroUI Tabs(027 US4:加转账) */}
       <Tabs
         aria-label="交易类型"
         selectedKey={selectedType}
         onSelectionChange={(key) =>
-          handleTypeSwitch(key as "income" | "expense")
+          handleTypeSwitch(key as "income" | "expense" | "transfer")
         }
       >
         <Tabs.List>
           <Tabs.Tab id="expense">支出</Tabs.Tab>
           <Tabs.Tab id="income">收入</Tabs.Tab>
+          <Tabs.Tab id="transfer">转账</Tabs.Tab>
         </Tabs.List>
       </Tabs>
       <input type="hidden" {...register("type")} />
@@ -265,9 +300,9 @@ export function TransactionForm({
         )}
       />
 
-      {/* Account */}
+      {/* Account(转账时为"转出账户") */}
       <div className="space-y-2">
-        <Label htmlFor="accountId">账户</Label>
+        <Label htmlFor="accountId">{isTransfer ? "转出账户" : "账户"}</Label>
         <Controller
           control={control}
           name="accountId"
@@ -293,20 +328,41 @@ export function TransactionForm({
         )}
       </div>
 
-      {/* Category */}
-      <div className="space-y-2">
-        <Label htmlFor="categoryId">分类</Label>
-        <CategorySelect
-          type={selectedType}
-          value={watch("categoryId")}
-          onChange={(id) => setValue("categoryId", id, { shouldValidate: true })}
-        />
-        {errors.categoryId && (
-          <p className="text-xs text-[var(--danger)]">
-            {errors.categoryId.message}
-          </p>
-        )}
-      </div>
+      {/* 027 US4:转账转入账户(仅 transfer 模式) */}
+      {isTransfer && (
+        <div className="space-y-2">
+          <Label htmlFor="toAccountId">转入账户</Label>
+          <Select value={toAccountId} onValueChange={setToAccountId}>
+            <SelectTrigger id="toAccountId">
+              <SelectValue placeholder="选择转入账户" />
+            </SelectTrigger>
+            <SelectContent>
+              {unarchivedAccounts.map((a) => (
+                <SelectItem key={a.id} value={a.id}>
+                  {a.name} (¥{(a.initialBalance / 100).toFixed(2)})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {/* Category(转账模式无分类,强制内置转账分类 by server) */}
+      {!isTransfer && (
+        <div className="space-y-2">
+          <Label htmlFor="categoryId">分类</Label>
+          <CategorySelect
+            type={selectedType}
+            value={watch("categoryId")}
+            onChange={(id) => setValue("categoryId", id, { shouldValidate: true })}
+          />
+          {errors.categoryId && (
+            <p className="text-xs text-[var(--danger)]">
+              {errors.categoryId.message}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Remark */}
       <div className="space-y-2">

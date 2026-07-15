@@ -63,6 +63,10 @@ Investment
 - `0006_category_v15_extensions.sql` —— 018-custom-category: ALTER
   categories 加 4 字段 (family_id/parent_id/archived_at/updated_at) +
   2 索引 + 新建 category_events 审计表 + 003 内置 updated_at 回填
+- `0006_slim_madripoor.sql` —— 027-mobile-home-revamp US4:全量快照迁移
+  (drizzle-kit 增量检测视为全新库)。关键 027 变更:transactions.type
+  枚举增 `transfer` + 新增 `to_account_id` 列(FK accounts,RESTRICT);
+  seed 系统内置"转账"分类(id=6206a8ba-...,type=expense,M3 决策)。
 - 通过 `pnpm db:generate` (drizzle-kit) 生成,`pnpm db:migrate` 应用
 - 集成测试自动通过 `drizzle-orm/node-postgres/migrator` 应用最新迁移
 
