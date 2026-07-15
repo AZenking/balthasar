@@ -319,7 +319,10 @@ export default function SettingsPage() {
                 onClick={async () => {
                   const { authClient } = await import("@/server/auth/client");
                   await authClient.signOut();
-                  router.push("/login");
+                  // 全页跳转(非 router.push):确保 (auth) layout 的
+                  // getSession 服务端检查重新执行,避免客户端导航缓存
+                  // 残留会话导致 redirect 回 /dashboard。
+                  window.location.href = "/login";
                 }}
               >
                 退出登录
