@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PieChart, ChevronLeft, ChevronRight } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
-import { Card } from "@heroui/react";
+import { Card, Separator, Skeleton } from "@heroui/react";
 import {
   StatsPeriodToggle,
   periodLabels,
@@ -304,9 +304,26 @@ export default function ReportsPage() {
       </div>
 
       {isLoading ? (
-        <div className="space-y-4 pt-2">
-          <div className="h-28 animate-pulse rounded-2xl bg-[var(--muted)]" />
-          <div className="h-44 animate-pulse rounded-2xl bg-[var(--muted)]" />
+        // Skeleton(shimmer)贴近实际布局:摘要卡(标题行+大数字+三宫格)
+        // + 趋势卡(标题+图表区)。父级挂 skeleton--shimmer 使多块同步扫光。
+        <div className="skeleton--shimmer space-y-4 pt-2">
+          <Card>
+            <Card.Content className="space-y-3 p-4">
+              <Skeleton animationType="none" className="h-3 w-16" />
+              <Skeleton animationType="none" className="h-8 w-40" />
+              <div className="grid grid-cols-3 gap-2 pt-1">
+                <Skeleton animationType="none" className="h-10" />
+                <Skeleton animationType="none" className="h-10" />
+                <Skeleton animationType="none" className="h-10" />
+              </div>
+            </Card.Content>
+          </Card>
+          <Card>
+            <Card.Content className="space-y-3 p-4">
+              <Skeleton animationType="none" className="h-4 w-28" />
+              <Skeleton animationType="none" className="h-36 w-full" />
+            </Card.Content>
+          </Card>
         </div>
       ) : (
         <>
@@ -321,14 +338,15 @@ export default function ReportsPage() {
                 >
                   {formatCents(targetExpense)}
                 </p>
-                <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
-                  <div>
+                <div className="mt-3 flex items-stretch gap-3 text-sm">
+                  <div className="min-w-0 flex-1">
                     <p className="text-xs text-muted-foreground">{labels.average}</p>
                     <p data-amount className="font-medium tabular-nums">
                       {formatCents(avgValue)}
                     </p>
                   </div>
-                  <div className="border-l border-[var(--border)] pl-2">
+                  <Separator orientation="vertical" />
+                  <div className="min-w-0 flex-1">
                     <p className="text-xs text-muted-foreground">{labels.comparison}</p>
                     {prevExpense != null && prevExpense > 0 ? (
                       <p
@@ -348,7 +366,8 @@ export default function ReportsPage() {
                       <p className="text-xs text-muted-foreground">暂无对比</p>
                     )}
                   </div>
-                  <div className="border-l border-[var(--border)] pl-2">
+                  <Separator orientation="vertical" />
+                  <div className="min-w-0 flex-1">
                     <p className="text-xs text-muted-foreground">支出笔数</p>
                     <p className="font-medium tabular-nums">{insights.expenseCount} 笔</p>
                   </div>
