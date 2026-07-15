@@ -48,11 +48,14 @@ export function AppShell({
       {/* 桌面端侧栏:fixed 在左侧,移动端隐藏 */}
       <Sidebar className="hidden md:flex md:fixed md:inset-y-0 md:left-0 md:z-30" />
 
-      {/* 主内容:md+ 左侧让出 240px,移动端全宽;统一容器宽度与 padding */}
+      {/* 主内容:md+ 左侧让出 240px,移动端全宽;统一容器宽度与 padding。
+          移动端底部留白 = 底栏高度(64px) + safe-area + 一点呼吸距离:
+          pb-24(96px) 在带 home indicator 的 iPhone 上会被底栏遮住内容,
+          改用 calc 动态留白。 */}
       <main className="md:pl-60">
         <div
           className={cn(
-            "mx-auto max-w-[1120px] px-4 py-4 pb-24 md:pb-8",
+            "mx-auto max-w-[1120px] px-4 py-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-8",
             className,
           )}
         >
@@ -60,11 +63,10 @@ export function AppShell({
         </div>
       </main>
 
-      {/* 移动端底栏:fixed bottom,带 safe-area-inset-bottom */}
-      <div
-        className="md:hidden"
-        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
-      >
+      {/* 移动端底栏:fixed bottom。
+          safe-area-inset-bottom 已在 BottomNavigation 内部处理(minHeight
+          + paddingBottom),外层不再重复注入(重复 padding 对 fixed 元素无意义)。 */}
+      <div className="md:hidden">
         <BottomNavigation />
       </div>
     </div>

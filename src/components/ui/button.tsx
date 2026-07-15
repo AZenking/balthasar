@@ -106,7 +106,10 @@ const heroSizeMap: Record<ShadcnSize, HeroUIButtonProps["size"]> = {
  * - `size`     : shadcn size set (`default | sm | lg | icon`) — mapped to
  *                HeroUI; `icon` enables `isIconOnly`.
  * - `onClick`  : shadcn click handler — bridged onto HeroUI's `onPress`.
- * - `asChild`  : accepted for API parity (currently a no-op).
+ *
+ * NOTE: shadcn 的 `asChild` 在此适配器上**不支持**(HeroUI Button 无法把
+ * 渲染委托给单一子元素)。需要"按钮样式的链接"等场景请用原生 `<Link>`/
+ * `<a>` + `buttonVariants(...)`(见 categories/page.tsx)。
  *
  * The HeroUI props `variant`, `size`, `onPress`, `onClick`, `children` are
  * shadowed/re-defined here so the shadcn API surface stays clean.
@@ -129,8 +132,6 @@ export interface ButtonProps
   variant?: ShadcnVariant;
   /** shadcn size set, mapped to HeroUI internally. `icon` enables `isIconOnly`. */
   size?: ShadcnSize;
-  /** shadcn passthrough — accepted for API parity, currently a no-op. */
-  asChild?: boolean;
   /** Mirrors the native `disabled` attribute (alias for HeroUI `isDisabled`). */
   disabled?: boolean;
   /** shadcn click handler — bridged onto HeroUI's `onPress`. */
@@ -166,7 +167,6 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       className,
       variant = "default",
       size = "default",
-      asChild = false,
       disabled,
       onClick,
       children,
@@ -187,7 +187,6 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
             ? (onClick as unknown as HeroUIButtonProps["onPress"])
             : undefined
         }
-        data-aschild={asChild ? "true" : undefined}
         {...rest}
       >
         {children}

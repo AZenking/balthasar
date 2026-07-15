@@ -12,11 +12,14 @@ import { cn } from "@/lib/utils";
  *   - 桌面 / 移动共用同一行布局(`flex items-start justify-between`)
  *   - h1 字号 `text-xl font-bold`,描述 `text-sm text-muted-foreground`
  *   - actions 与标题之间 `gap-2`,容器 `gap-3`
+ *   - leading(可选):标题左侧槽位,常用于返回按钮,与标题正文垂直居中
  */
 interface PageHeaderProps {
   title: string;
   /** 副标题/描述:支持字符串或 JSX(dashboard 传 Greeting 组件)。 */
   description?: React.ReactNode;
+  /** 标题左侧槽位:返回按钮等。 */
+  leading?: React.ReactNode;
   actions?: React.ReactNode;
   className?: string;
 }
@@ -24,6 +27,7 @@ interface PageHeaderProps {
 export function PageHeader({
   title,
   description,
+  leading,
   actions,
   className,
 }: PageHeaderProps) {
@@ -34,13 +38,16 @@ export function PageHeader({
         className,
       )}
     >
-      <div className="min-w-0">
-        <h1 className="text-xl font-bold leading-tight">{title}</h1>
-        {description && (
-          <div className="mt-0.5 truncate text-sm text-muted-foreground">
-            {description}
-          </div>
-        )}
+      <div className="flex min-w-0 items-center gap-2">
+        {leading}
+        <div className="min-w-0">
+          <h1 className="text-xl font-bold leading-tight">{title}</h1>
+          {description && (
+            <div className="mt-0.5 truncate text-sm text-muted-foreground">
+              {description}
+            </div>
+          )}
+        </div>
       </div>
       {actions && (
         <div className="flex shrink-0 items-center gap-2">{actions}</div>

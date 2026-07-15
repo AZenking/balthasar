@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { Card } from "@heroui/react";
+import { CategoryIcon } from "@/components/category/category-icon";
 
 /**
  * CategoryTopList (027-mobile-home-revamp FR-004).
@@ -75,10 +76,11 @@ export function CategoryTopList({
                       className="flex w-full items-center gap-3 text-left"
                       aria-label={`查看 ${item.categoryName} 分类明细`}
                     >
-                      <span className="w-12 shrink-0 truncate text-sm text-foreground">
-                        {item.categoryIcon ?? ""} {item.categoryName}
+                      <CategoryIcon name={item.categoryIcon ?? "circle-help"} size={16} className="shrink-0" />
+                      <span className="min-w-0 max-w-[5rem] shrink truncate text-sm text-foreground">
+                        {item.categoryName}
                       </span>
-                      <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--muted)]">
+                      <span className="mx-1 h-1.5 min-w-8 flex-1 overflow-hidden rounded-full bg-[var(--muted)]">
                         <span
                           className="block h-full rounded-full bg-[var(--danger)]"
                           style={{ width: `${widthPct}%` }}
@@ -86,7 +88,7 @@ export function CategoryTopList({
                       </span>
                       <span
                         data-amount
-                        className="w-16 shrink-0 text-right text-sm font-medium tabular-nums text-foreground"
+                        className="shrink-0 text-right text-sm font-medium tabular-nums text-foreground"
                       >
                         {formatCents(item.amount)}
                       </span>

@@ -65,8 +65,9 @@ export function BottomNavigation() {
         <NavEntry entry={ENTRIES[0]!} active={isEntryActive(pathname, ENTRIES[0]!.href)} />
         <NavEntry entry={ENTRIES[1]!} active={isEntryActive(pathname, ENTRIES[1]!.href)} />
 
-        {/* 中央 FAB 占位(等宽 flex,内容为 FAB) */}
-        <div className="flex h-16 flex-1 items-start justify-center">
+        {/* 中央 FAB 占位:固定宽度 flex-none,把空间还给左右 4 个导航入口
+            (原 flex-1 与导航项等宽,FAB 仅 48px 圆却占 ~72px,挤压标签) */}
+        <div className="flex h-16 w-16 flex-none items-start justify-center">
           <TransactionDrawer />
         </div>
 
@@ -91,7 +92,20 @@ function NavEntry({ entry, active }: { entry: Entry; active: boolean }) {
           : "text-muted-foreground hover:text-foreground",
       )}
     >
-      <Icon className="h-5 w-5" aria-hidden />
+      {/* 选中态:顶部短指示条 + 图标背景药丸。
+          旧实现仅 font-semibold text-primary,浅色主题下 primary≈黑,
+          与 muted-foreground(中灰)差异极小,切换几乎看不出高亮。
+          补充可见指示后,两套主题下都能明确识别当前页。 */}
+      {active && (
+        <span
+          aria-hidden
+          className="absolute inset-x-0 top-0 mx-auto h-1 w-8 rounded-b-full bg-primary"
+        />
+      )}
+      <Icon
+        className={cn("h-5 w-5", active && "text-primary")}
+        aria-hidden
+      />
       <span>{label}</span>
     </Link>
   );

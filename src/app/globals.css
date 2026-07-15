@@ -216,3 +216,38 @@ html, body {
     font-variant-numeric: tabular-nums;
   }
 }
+
+/*
+ * Drawer 内表单字段平滑显隐(027-mobile-home-revamp)。
+ *
+ * 问题:"记一笔" Drawer 内切换 支出/收入/转账 Tab 时,"转入账户"字段
+ *   (isTransfer &&)与"分类"字段(!isTransfer &&)互斥进出 DOM,
+ *   .drawer__body(flex:1; overflow-y:auto)高度突变 + 滚动条显隐
+ *   → 小屏可见的闪烁/重绘。
+ *
+ * 方案:给这些条件渲染块加 enter 过渡(透明度 + 轻微下移),让新增
+ *   字段平滑淡入而非瞬现。卸载阶段 React 直接移除节点无法过渡,但
+ *   进入阶段占主导感知,足以消除"闪一下"。
+ *   用 CSS animation(非 transition)——无需挂载态管理,首次渲染即触发。
+ */
+@keyframes field-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.drawer__body [data-field-animate] {
+  animation: field-fade-in 0.18s ease-out;
+}
+
+/*
+ * prefers-reduced-motion —— 关闭 HeroUI Tabs 指示器位移动画与表单淡入。
+ * .tabs__indicator 默认 transition: translate/width/height .25s,在 reduce-motion
+ * 场景应即时切换;上方 field-fade-in 同理。
+ */
+@media (prefers-reduced-motion: reduce) {
+  .drawer__body [data-field-animate] {
+    animation: none;
+  }
+  .tabs__indicator {
+    transition: none !important;
+  }
+}

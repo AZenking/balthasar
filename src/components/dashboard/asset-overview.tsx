@@ -93,14 +93,14 @@ export function AssetOverview({ assets }: { assets: AssetsSummary | null }) {
             </p>
           </div>
 
-          <div className="mt-3 flex gap-4 text-sm">
-            <div>
+          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm">
+            <div className="min-w-0 flex-1">
               <p className="text-xs text-muted-foreground">总资产</p>
-              <p data-amount className="font-medium tabular-nums">
+              <p data-amount className="truncate font-medium tabular-nums">
                 {formatCents(assets.totalAssets)}
               </p>
             </div>
-            <div>
+            <div className="min-w-0 flex-1">
               <p className="text-xs text-muted-foreground">总负债</p>
               <p data-amount className="font-medium tabular-nums text-[var(--danger)]">
                 {formatCents(assets.totalLiabilities)}

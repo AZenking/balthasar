@@ -157,8 +157,8 @@ function RecentSection({
   transactions: React.ComponentProps<typeof RecentTransactions>["transactions"];
 }) {
   return (
-    <section aria-label="最近账单" className="pt-2">
-      <div className="flex items-center justify-between pb-1 pt-2">
+    <section aria-label="最近账单" className="pt-4">
+      <div className="flex items-center justify-between pb-1">
         <h2 className="text-sm font-medium text-foreground">最近账单</h2>
         <a
           href="/transactions"
@@ -175,7 +175,7 @@ function RecentSection({
 /** 加载态:用 Skeleton 复刻各区块高度,避免数据到位后布局跳动。 */
 function DashboardSkeleton() {
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div className="pt-4">
         <Skeleton className="h-28 w-full rounded-2xl" />
       </div>

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Drawer } from "@heroui/react";
 import { Plus } from "lucide-react";
-import { buttonVariants } from "@heroui/react";
+import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { TransactionForm } from "./transaction-form";
 
@@ -46,9 +46,8 @@ export function TransactionDrawer() {
         <span
           className={cn(
             buttonVariants({
-              variant: "primary",
-              size: "lg",
-              isIconOnly: true,
+              variant: "default",
+              size: "icon",
             }),
             "h-12 w-12 rounded-full shadow-lg",
           )}

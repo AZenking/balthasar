@@ -125,7 +125,7 @@ export function DashboardTopNav({
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
-          <span className="min-w-[5.5rem] text-center text-sm font-medium tabular-nums">
+          <span className="min-w-[5.5rem] whitespace-nowrap text-center text-sm font-medium tabular-nums">
             {yearMonth.year} 年 {yearMonth.month} 月
           </span>
           <button
@@ -145,7 +145,9 @@ export function DashboardTopNav({
           </button>
         </div>
 
-        <PrivacyToggle />
+        <div className="[&>button]:h-9 [&>button]:w-9">
+          <PrivacyToggle />
+        </div>
       </div>
     </div>
   );

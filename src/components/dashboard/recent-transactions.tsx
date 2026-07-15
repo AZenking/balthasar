@@ -5,6 +5,7 @@ import { ReceiptText } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { cn } from "@/lib/utils";
+import { CategoryIcon } from "@/components/category/category-icon";
 
 /**
  * RecentTransactions (027-mobile-home-revamp FR-006,线稿对齐)。
@@ -43,8 +44,8 @@ export function RecentTransactions({
 
   if (isLoading) {
     return (
-      <div className="space-y-2 px-4">
-        {[1, 2, 3, 4, 5].map((i) => (
+      <div className="space-y-2">
+        {[1, 2, 3].map((i) => (
           <Skeleton key={i} className="h-14 w-full" />
         ))}
       </div>
@@ -71,7 +72,7 @@ export function RecentTransactions({
   const displayItems = maxItems ? transactions.slice(0, maxItems) : transactions;
 
   return (
-    <div className="divide-y px-4">
+    <div className="divide-y">
       {displayItems.map((t) => (
         <button
           key={t.id}
@@ -83,7 +84,7 @@ export function RecentTransactions({
           aria-label={`编辑 ${t.categoryName ?? "交易"}`}
         >
           <div className="flex min-w-0 flex-1 items-center gap-2">
-            <span className="text-xl">{t.categoryIcon}</span>
+            <CategoryIcon name={t.categoryIcon ?? "circle-help"} size={20} />
             <div className="min-w-0">
               <p className="truncate text-sm font-medium">
                 {t.remark || t.categoryName || "?"}

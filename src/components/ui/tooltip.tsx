@@ -109,7 +109,7 @@ export interface TooltipTriggerProps {
 export const TooltipTrigger = React.forwardRef<
   HTMLDivElement,
   TooltipTriggerProps
->(({ children, ...props }, ref) => (
+>(({ children, asChild: _asChild, ...props }, ref) => (
   <HeroUITooltip.Trigger ref={ref} {...props}>
     {children}
   </HeroUITooltip.Trigger>

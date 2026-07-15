@@ -34,8 +34,7 @@ export function SummaryHeroCard({
           <p className="text-xs text-muted-foreground">本月支出</p>
           <p
             data-amount
-            className="mt-1 text-amount tabular-nums text-[var(--danger)]"
-            style={{ fontSize: "2.25rem", lineHeight: "2.75rem" }}
+            className="mt-1 text-2xl font-semibold tabular-nums text-[var(--danger)] sm:text-3xl"
           >
             {formatCents(monthExpense)}
           </p>
