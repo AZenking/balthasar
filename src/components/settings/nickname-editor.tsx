@@ -3,20 +3,32 @@
 /**
  * NicknameEditor — 026 Cream/Amber US7 (FR-E002 / FR-E003).
  *
- * Inline nickname row with a HeroUI Modal form. The server resolves the
+ * Inline nickname row with a Dialog form. The server resolves the
  * target member from `ctx.session.user.id` (cross-user isolation, FR-E003);
  * `memberId` is accepted as a prop purely for future/audit wiring — it is
  * NOT sent to the mutation (server ignores any client-supplied id).
  *
  * Contract: specs/026-cream-amber-revamp/contracts/auth-update-nickname.md
+ *
+ * 一致性:与 category/account 等同类表单统一用 shadcn Dialog 外壳 + 适配器
+ * Button/Input/Label(原 HeroUI 原生 Modal 复合 API + 原生 Button/Input/Label 样板冗余)。
  */
 
 import { useEffect, useState } from "react";
 import { TRPCClientError } from "@trpc/client";
-import { Modal, Button, Input, Label } from "@heroui/react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 const NICKNAME_MAX = 30;
 
@@ -42,7 +54,7 @@ export function NicknameEditor({
   const [value, setValue] = useState(currentDisplayName);
   const [error, setError] = useState<string | null>(null);
 
-  // Reset the form whenever the modal opens so stale edits don't linger.
+  // Reset the form whenever the dialog opens so stale edits don't linger.
   useEffect(() => {
     if (isOpen) {
       setValue(currentDisplayName);
@@ -102,72 +114,63 @@ export function NicknameEditor({
         <p className="text-xs text-muted-foreground">{currentDisplayName}</p>
       </div>
 
-      <Modal.Root isOpen={isOpen} onOpenChange={setIsOpen}>
-        <Modal.Trigger>
-          <Button size="sm" variant="outline">
-            编辑
-          </Button>
-        </Modal.Trigger>
-        <Modal.Backdrop>
-          <Modal.Container>
-            <Modal.Dialog>
-              <Modal.Header>
-                <Modal.Heading className="text-base font-semibold">
-                  修改昵称
-                </Modal.Heading>
-              </Modal.Header>
-              <Modal.Body className="space-y-2">
-                <Label htmlFor="nickname" isInvalid={isInvalid}>
-                  昵称
-                </Label>
-                <Input
-                  id="nickname"
-                  value={value}
-                  onChange={(e) => {
-                    setValue(e.target.value);
-                    if (error) setError(null);
-                  }}
-                  maxLength={NICKNAME_MAX}
-                  autoFocus
-                  aria-invalid={isInvalid || undefined}
-                  aria-describedby={isInvalid ? "nickname-error" : undefined}
-                  placeholder="请输入昵称"
-                  className={cn(
-                    isInvalid &&
-                      "border-destructive ring-destructive focus-visible:ring-destructive",
-                  )}
-                />
-                {isInvalid && (
-                  <p
-                    id="nickname-error"
-                    className="text-xs text-destructive"
-                    role="alert"
-                  >
-                    {error}
-                  </p>
-                )}
-              </Modal.Body>
-              <Modal.Footer className="flex justify-end gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onPress={handleCancel}
-                  isDisabled={updateNickname.isPending}
-                >
-                  取消
-                </Button>
-                <Button
-                  size="sm"
-                  onPress={handleSubmit}
-                  isDisabled={updateNickname.isPending}
-                >
-                  {updateNickname.isPending ? "保存中..." : "保存"}
-                </Button>
-              </Modal.Footer>
-            </Modal.Dialog>
-          </Modal.Container>
-        </Modal.Backdrop>
-      </Modal.Root>
+      <Button size="sm" variant="outline" onClick={() => setIsOpen(true)}>
+        编辑
+      </Button>
+
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>修改昵称</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="nickname">昵称</Label>
+            <Input
+              id="nickname"
+              value={value}
+              onChange={(e) => {
+                setValue(e.target.value);
+                if (error) setError(null);
+              }}
+              maxLength={NICKNAME_MAX}
+              autoFocus
+              aria-invalid={isInvalid || undefined}
+              aria-describedby={isInvalid ? "nickname-error" : undefined}
+              placeholder="请输入昵称"
+              className={cn(
+                isInvalid &&
+                  "border-destructive ring-destructive focus-visible:ring-destructive",
+              )}
+            />
+            {isInvalid && (
+              <p
+                id="nickname-error"
+                className="text-xs text-destructive"
+                role="alert"
+              >
+                {error}
+              </p>
+            )}
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCancel}
+              disabled={updateNickname.isPending}
+            >
+              取消
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSubmit}
+              disabled={updateNickname.isPending}
+            >
+              {updateNickname.isPending ? "保存中..." : "保存"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -20,28 +20,27 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Wallet,
-  NotebookTabs,
   Gauge,
   Tags,
   EyeOff,
-  BellRing,
-  Landmark,
   Palette,
-  Cloud,
-  DatabaseBackup,
   ArrowDownUp,
   CircleHelp,
   Info,
   ChevronRight,
+  ChevronDown,
   Trash2,
   type LucideIcon,
 } from "lucide-react";
+// TODO v2: 以下图标随账本管理/记账提醒/默认账户/云同步/本地备份 一并恢复
+// NotebookTabs, BellRing, Landmark, Cloud, DatabaseBackup
 import { toast } from "sonner";
+import { TRPCClientError } from "@trpc/client";
 import { trpc } from "@/lib/trpc/client";
 import { isPrivacyOn, setPrivacy } from "@/lib/privacy";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { NicknameEditor } from "@/components/settings/nickname-editor";
-import { AccountForm, type AccountFormValues } from "@/components/settings/account-form";
+import { AccountForm } from "@/components/settings/account-form";
 import { AccountItem } from "@/components/settings/account-item";
 import { ApiKeyManager } from "@/components/settings/api-key-manager";
 import {
@@ -57,6 +56,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import packageJson from "@/../package.json";
@@ -75,20 +80,25 @@ export default function SettingsPage() {
   const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [showApiKey, setShowApiKey] = useState(false);
 
   const createMutation = trpc.account.create.useMutation({
     onSuccess: () => {
       utils.account.list.invalidate();
       utils.dashboard.summary.invalidate();
       setShowCreateForm(false);
+      toast.success("已创建");
     },
+    onError: (err) =>
+      toast.error(err instanceof TRPCClientError ? err.message : "创建失败"),
   });
   const updateMutation = trpc.account.update.useMutation({
     onSuccess: () => {
       utils.account.list.invalidate();
       setEditingAccountId(null);
+      toast.success("已保存");
     },
+    onError: (err) =>
+      toast.error(err instanceof TRPCClientError ? err.message : "保存失败"),
   });
   const archiveMutation = trpc.account.archive.useMutation({
     onSuccess: () => {
@@ -194,47 +204,23 @@ export default function SettingsPage() {
           onClick={() => {}}
           expandable
         >
-          {showCreateForm && (
-            <AccountForm
-              mode="create"
-              onSubmit={(v: AccountFormValues) =>
-                createMutation.mutate({
-                  name: v.name,
-                  currency: v.currency as any,
-                  initialBalance: v.initialBalanceCents ?? 0,
-                  type: v.type,
-                })
-              }
-              onCancel={() => setShowCreateForm(false)}
-            />
-          )}
-          {!showCreateForm && !isLoading && (
+          {!isLoading && (
             <>
-              {activeAccounts.map((acc) =>
-                editingAccountId === acc.id ? (
-                  <AccountForm
-                    key={acc.id}
-                    mode="edit"
-                    defaultValues={{ name: acc.name, currency: acc.currency, type: acc.type }}
-                    onSubmit={(v: AccountFormValues) =>
-                      updateMutation.mutate({
-                        id: acc.id,
-                        name: v.name,
-                        currency: v.currency as any,
-                        type: v.type,
-                      })
-                    }
-                    onCancel={() => setEditingAccountId(null)}
-                  />
-                ) : (
-                  <AccountItem
-                    key={acc.id}
-                    account={acc}
-                    onEdit={setEditingAccountId}
-                    onArchive={(id) => archiveMutation.mutate({ id })}
-                    onUnarchive={(id) => unarchiveMutation.mutate({ id })}
-                  />
-                ),
+              {/* 列表常驻:新建/编辑改用 Dialog 弹窗(对齐 category-manager),
+                  不再用 showCreateForm 替换整列,以便新建时仍可参照已有账户。 */}
+              {activeAccounts.map((acc) => (
+                <AccountItem
+                  key={acc.id}
+                  account={acc}
+                  onEdit={setEditingAccountId}
+                  onArchive={(id) => archiveMutation.mutate({ id })}
+                  onUnarchive={(id) => unarchiveMutation.mutate({ id })}
+                />
+              ))}
+              {activeAccounts.length === 0 && (
+                <p className="py-2 text-xs text-muted-foreground">
+                  还没有账户,点「新建账户」开始。
+                </p>
               )}
               <Button
                 size="sm"
@@ -247,7 +233,8 @@ export default function SettingsPage() {
             </>
           )}
         </SettingsRow>
-        <SettingsRow icon={NotebookTabs} label="账本管理" value="我的账本" onClick={v2Toast} />
+        {/* TODO v2: 账本管理(下个版本) */}
+        {/* <SettingsRow icon={NotebookTabs} label="账本管理" value="我的账本" onClick={v2Toast} /> */}
         <SettingsLinkRow icon={Tags} label="分类与标签" href="/settings/categories" />
         <SettingsRow icon={Gauge} label="预算设置" value={budgetAmount != null ? formatCents(budgetAmount) : "未设置"} onClick={() => router.push("/dashboard")} />
       </SettingsGroup>
@@ -257,8 +244,9 @@ export default function SettingsPage() {
         <SettingsToggleRow icon={EyeOff} label="隐私保护">
           <PrivacyToggleInline />
         </SettingsToggleRow>
-        <SettingsRow icon={BellRing} label="记账提醒" value="未开启" onClick={v2Toast} />
-        <SettingsRow icon={Landmark} label="默认账户" value="未设置" onClick={v2Toast} />
+        {/* TODO v2: 记账提醒 + 默认账户(下个版本) */}
+        {/* <SettingsRow icon={BellRing} label="记账提醒" value="未开启" onClick={v2Toast} /> */}
+        {/* <SettingsRow icon={Landmark} label="默认账户" value="未设置" onClick={v2Toast} /> */}
         <SettingsRow
           icon={Palette}
           label="外观主题"
@@ -274,13 +262,14 @@ export default function SettingsPage() {
 
       {/* ── 数据与同步 ── */}
       <SettingsGroup title="数据与同步">
-        <SettingsRow
+        {/* TODO v2: 云同步 + 本地备份(下个版本) */}
+        {/* <SettingsRow
           icon={Cloud}
           label="云同步"
           value={email ? "已同步" : "登录后开启"}
           onClick={v2Toast}
-        />
-        <SettingsRow icon={DatabaseBackup} label="本地备份" value="从未备份" onClick={v2Toast} />
+        /> */}
+        {/* <SettingsRow icon={DatabaseBackup} label="本地备份" value="从未备份" onClick={v2Toast} /> */}
         <SettingsRow icon={ArrowDownUp} label="导入与导出" onClick={v2Toast} />
       </SettingsGroup>
 
@@ -295,10 +284,14 @@ export default function SettingsPage() {
         <SettingsRow
           icon={Tags}
           label="API Key 管理"
-          onClick={() => setShowApiKey(!showApiKey)}
+          onClick={() => {}}
           expandable
         >
-          {showApiKey && <ApiKeyManager />}
+          {/* expandable 行:展开/收起由 SettingsRow 内部 isOpen 管理。
+              旧实现套了 {showApiKey && ...} 门控,但 expandable 分支不调
+              onClick → showApiKey 永远为 false → 展开后内容为空,看着像"点了没反应"。
+              对齐"外观主题/账户管理"行:children 直接渲染即可。 */}
+          <ApiKeyManager />
         </SettingsRow>
       </SettingsGroup>
 
@@ -328,6 +321,60 @@ export default function SettingsPage() {
         <p className="font-medium">BALTHASAR</p>
         <p className="mt-1">版本 v{packageJson.version}</p>
       </div>
+
+      {/* ── 账户管理:新建/编辑 Dialog(对齐 category-manager) ── */}
+      <Dialog open={showCreateForm} onOpenChange={setShowCreateForm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>新建账户</DialogTitle>
+          </DialogHeader>
+          <AccountForm
+            mode="create"
+            submitting={createMutation.isPending}
+            onSubmit={(v) =>
+              createMutation.mutate({
+                name: v.name,
+                currency: v.currency,
+                initialBalance: v.initialBalanceCents,
+                type: v.type,
+              })
+            }
+            onCancel={() => setShowCreateForm(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!editingAccountId}
+        onOpenChange={(v) => { if (!v) setEditingAccountId(null); }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>编辑账户</DialogTitle>
+          </DialogHeader>
+          {editingAccount && (
+            <AccountForm
+              key={editingAccount.id}
+              mode="edit"
+              submitting={updateMutation.isPending}
+              defaultValues={{
+                name: editingAccount.name,
+                currency: editingAccount.currency,
+                type: editingAccount.type,
+              }}
+              onSubmit={(v) =>
+                updateMutation.mutate({
+                  id: editingAccount.id,
+                  name: v.name,
+                  currency: v.currency,
+                  type: v.type,
+                })
+              }
+              onCancel={() => setEditingAccountId(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
         <AlertDialogContent>
@@ -466,8 +513,19 @@ function SettingsRow({
           <Icon className="h-4 w-4 text-muted-foreground" />
           {label}
         </span>
-        {value && <span className="text-xs text-muted-foreground">{value}</span>}
-        {!expandable && <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+        <span className="flex items-center gap-2">
+          {value && <span className="text-xs text-muted-foreground">{value}</span>}
+          {expandable ? (
+            <ChevronDown
+              className={cn(
+                "h-4 w-4 text-muted-foreground transition-transform",
+                isOpen && "rotate-180",
+              )}
+            />
+          ) : (
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          )}
+        </span>
       </button>
       {isOpen && children && <div className="px-4 pb-3">{children}</div>}
     </div>

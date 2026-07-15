@@ -7,7 +7,11 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { formatBalance } from "@/server/domain/account/currency";
+import {
+  formatBalance,
+  isSupportedCurrency,
+  type Currency,
+} from "@/server/domain/account/currency";
 import { cn } from "@/lib/utils";
 
 export function AccountItem({
@@ -29,6 +33,10 @@ export function AccountItem({
   onUnarchive: (id: string) => void;
 }) {
   const isArchived = account.archivedAt !== null;
+  // 收窄 currency 到 Currency 白名单;非白名单回退展示原始值(formatBalance 需要合法币种)。
+  const currency: Currency = isSupportedCurrency(account.currency)
+    ? account.currency
+    : "CNY";
   return (
     <div className={cn(
       "flex items-center justify-between border-b py-3",
@@ -47,7 +55,7 @@ export function AccountItem({
           </span>
         </div>
         <p className="text-xs text-muted-foreground tabular-nums">
-          {account.currency} · {formatBalance(account.initialBalance, account.currency as any)}
+          {account.currency} · {formatBalance(account.initialBalance, currency)}
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
