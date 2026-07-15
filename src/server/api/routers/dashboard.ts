@@ -8,6 +8,12 @@ import {
   getDailyTrend,
   getWeeklyTrend,
 } from "@/server/db/queries/dashboard";
+import {
+  getBudget,
+  upsertBudget,
+  deleteBudget,
+} from "@/server/db/queries/budget";
+import { computeBudgetStatus } from "@/server/domain/dashboard/budget-status";
 import { getUtcMonthRange } from "@/lib/date-ranges";
 import { serializeTransaction } from "@/server/db/queries/transaction";
 
@@ -85,6 +91,18 @@ export const dashboardRouter = router({
       const monthNet = summary.income - summary.expense;
       const monthExpense = summary.expense;
 
+      // 027 US5 (research R2):预算降级查询 —— 失败时 budget=null(SC-008)。
+      // 注意:getBudget 返回 null(未设置)与 catch null 必须区分:
+      // 用独立 try/catch,null(未设置)→ computeBudgetStatus(unset);
+      // 抛错 → null(降级)。
+      let budget: ReturnType<typeof computeBudgetStatus> | null;
+      try {
+        const budgetRow = await getBudget({ familyId, year, month });
+        budget = computeBudgetStatus(monthExpense, budgetRow?.amount ?? null);
+      } catch {
+        budget = null;
+      }
+
       // Top 4 categories (027-mobile-home-revamp FR-004; was Top 2 in 026).
       // getCategoryBreakdown already orders by amount DESC; we add a
       // tie-breaker on categoryName ASC (stable) before slicing.
@@ -105,6 +123,8 @@ export const dashboardRouter = router({
               : 0,
         }));
 
+      // budget 已在上方 try/catch 中计算(四态或降级 null)。
+
       return {
         queriedYearMonth: { year, month },
         monthIncome: summary.income,
@@ -113,8 +133,71 @@ export const dashboardRouter = router({
         topExpenseCategories,
         recentTransactions: recent.map(serializeTransaction),
         expenseTrend: trend,
+        budget, // 027 US5:BudgetSummary | null
       };
     }),
+
+  /**
+   * `dashboard.budget` — 027 US5 月预算 CRUD。
+   * contracts/dashboard-budget.md。仅月周期(clarify Q3)。
+   * 四态由 summary 内联 computeBudgetStatus 派生;本子路由只返回原始 amount。
+   */
+  budget: router({
+    /** 查询单月预算(未设置 → null)。 */
+    get: protectedProcedure
+      .input(
+        z.object({
+          year: z.number().int().min(2020).max(new Date().getUTCFullYear()),
+          month: z.number().int().min(1).max(12),
+        }),
+      )
+      .query(async ({ ctx, input }) => {
+        const familyId = await loadFamilyIdByUserId(ctx.session.user.id);
+        return getBudget({
+          familyId,
+          year: input.year,
+          month: input.month,
+        });
+      }),
+
+    /** 设置/更新预算(upsert;依赖 UNIQUE 索引 ON CONFLICT)。 */
+    set: protectedProcedure
+      .input(
+        z.object({
+          year: z.number().int().min(2020).max(new Date().getUTCFullYear()),
+          month: z.number().int().min(1).max(12),
+          amount: z.number().int().positive("预算必须 > 0"),
+        }),
+      )
+      .mutation(async ({ ctx, input }) => {
+        const familyId = await loadFamilyIdByUserId(ctx.session.user.id);
+        const result = await upsertBudget({
+          familyId,
+          year: input.year,
+          month: input.month,
+          amount: input.amount,
+        });
+        return { success: true as const, amount: result.amount };
+      }),
+
+    /** 删除单月预算(幂等)。 */
+    delete: protectedProcedure
+      .input(
+        z.object({
+          year: z.number().int().min(2020).max(new Date().getUTCFullYear()),
+          month: z.number().int().min(1).max(12),
+        }),
+      )
+      .mutation(async ({ ctx, input }) => {
+        const familyId = await loadFamilyIdByUserId(ctx.session.user.id);
+        await deleteBudget({
+          familyId,
+          year: input.year,
+          month: input.month,
+        });
+        return { success: true as const };
+      }),
+  }),
 
   /**
    * `dashboard.report` — 026 Phase 2b Foundational.

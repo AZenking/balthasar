@@ -148,19 +148,19 @@
 
 ### Tests for US5 (TDD)
 
-- [ ] T038 [P] [US5] 单元测试 `computeBudgetStatus` 四态边界(50/79.9/80/99.9/100/120/unset)在 `src/tests/unit/domain/dashboard/budget-status.test.ts`(对应 research R4)
-- [ ] T039 [P] [US5] 集成测试:预算 upsert + 四态 + 跨家庭隔离在 `src/tests/integration/dashboard/budget.test.ts`(对应 contracts/dashboard-budget.md Test Scenarios)
+- [X] T038 [P] [US5] 单元测试 `computeBudgetStatus` 四态边界(50/79.9/80/99.9/100/120/unset)在 `src/tests/unit/domain/dashboard/budget-status.test.ts`(对应 research R4)
+- [X] T039 [P] [US5] 集成测试:预算 upsert + 四态 + 跨家庭隔离在 `src/tests/integration/dashboard/budget.test.ts`(对应 contracts/dashboard-budget.md Test Scenarios)
 
 ### Implementation for US5
 
-- [ ] T040 [US5] 生成 Drizzle migration:`budgets` 表 + UNIQUE(family_id, year, month) 索引(`drizzle-kit generate`);验证 down(DROP TABLE)
-- [ ] T041 [US5] 新建 `src/server/db/schema/budget.ts`:`budget` pgTable(data-model §1.3);在 `src/server/db/schema/index.ts` re-export
-- [ ] T042 [US5] 新建 `src/server/domain/dashboard/budget-status.ts`:`computeBudgetStatus(usedAmount, budgetAmount | null)` 纯函数(research R4,data-model §3.1)
-- [ ] T043 [US5] 新建 `src/server/db/queries/budget.ts`:`getBudget(familyId, year, month)` / `upsertBudget` / `deleteBudget`
-- [ ] T044 [US5] 扩展 `src/server/api/routers/dashboard.ts`:新增 `budget.get` / `budget.set` / `budget.delete` procedure(contracts/dashboard-budget.md);扩展 `summary` 内联调用 getBudget + computeBudgetStatus(research R2,`.catch(() => null)` 降级)
-- [ ] T045 [US5] 新建 `src/components/dashboard/budget-progress.tsx`:四态进度条 + "设置预算"引导(FR-016..FR-019)。**执行前 `/heroui-react` 查 Progress/进度组件**
-- [ ] T046 [US5] 更新 `src/app/(app)/dashboard/page.tsx`:装配 BudgetProgress(在收支卡与分类之间);新增预算设置入口(Modal 或轻量引导,`/heroui-react` 定)
-- [ ] T047 [US5] 更新 `docs/DOMAIN.md` + `docs/DATABASE.md`:Budget 实体 + 四态规则(宪章开发流程 3)
+- [X] T040 [US5] 生成 Drizzle migration:`budgets` 表 + UNIQUE(family_id, year, month) 索引(`drizzle-kit generate`);验证 down(DROP TABLE)
+- [X] T041 [US5] 新建 `src/server/db/schema/budget.ts`:`budget` pgTable(data-model §1.3);在 `src/server/db/schema/index.ts` re-export
+- [X] T042 [US5] 新建 `src/server/domain/dashboard/budget-status.ts`:`computeBudgetStatus(usedAmount, budgetAmount | null)` 纯函数(research R4,data-model §3.1)
+- [X] T043 [US5] 新建 `src/server/db/queries/budget.ts`:`getBudget(familyId, year, month)` / `upsertBudget` / `deleteBudget`
+- [X] T044 [US5] 扩展 `src/server/api/routers/dashboard.ts`:新增 `budget.get` / `budget.set` / `budget.delete` procedure(contracts/dashboard-budget.md);扩展 `summary` 内联调用 getBudget + computeBudgetStatus(research R2,`.catch(() => null)` 降级)
+- [X] T045 [US5] 新建 `src/components/dashboard/budget-progress.tsx`:四态进度条 + "设置预算"引导(FR-016..FR-019)。**执行前 `/heroui-react` 查 Progress/进度组件**
+- [X] T046 [US5] 更新 `src/app/(app)/dashboard/page.tsx`:装配 BudgetProgress(在收支卡与分类之间);新增预算设置入口(Modal 或轻量引导,`/heroui-react` 定)
+- [X] T047 [US5] 更新 `docs/DOMAIN.md` + `docs/DATABASE.md`:Budget 实体 + 四态规则(宪章开发流程 3)
 
 **Checkpoint**: 预算端到端可用;SC-007(80%/100% 状态)达成。
 

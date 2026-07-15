@@ -64,6 +64,15 @@ Budget — 027 已解锁(Family 聚合内,按月)
 Asset/Debt — 027 用 Account.type(asset/debt)推导,不新增表
 Investment — 仍属范围外
 
+## Budget (027-mobile-home-revamp US5)
+
+- id, familyId, year, month(1-12), amount(分), createdAt, updatedAt
+- (familyId, year, month) 唯一 —— 一个家庭一个月份只有一条预算
+- 仅月预算(clarify Q3);无年预算
+- 四态(computeBudgetStatus 纯函数):unset(未设置)/ normal(<80%)/
+  warning(≥80% <100%)/ overspent(≥100%);阈值 80% 硬编码(设计 §4.3)
+- usagePercent = usedAmount / budgetAmount,一位小数
+
 ## Category (003-category + 018-custom-category) — 内置字典 + 家庭自定义
 
 003 内置分类 (20 条,read-only):

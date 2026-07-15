@@ -50,6 +50,13 @@
       "when": 1784077710923,
       "tag": "0006_slim_madripoor",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1784080666968,
+      "tag": "0007_wandering_fixer",
+      "breakpoints": true
     }
   ]
 }
