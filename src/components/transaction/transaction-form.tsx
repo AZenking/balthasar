@@ -11,22 +11,15 @@ import {
   type TransactionFormValues,
 } from "@/lib/validators/transaction";
 import { trpc } from "@/lib/trpc/client";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { CategorySelect } from "@/components/category/category-select";
 import {
   Tabs,
@@ -36,8 +29,77 @@ import {
   Calendar,
   Card,
   Label as HeroUILabel,
+  Select as HeroUISelect,
+  ListBox,
+  Description,
+  TextArea,
+  type Key,
 } from "@heroui/react";
 import { CalendarDate, parseDate } from "@internationalized/date";
+
+/**
+ * 交易类型视觉映射 —— 复用 HeroUI 注入的语义色 token:
+ *   支出 → --danger(红)   收入 → --success(绿)   转账 → --accent(蓝)
+ *
+ * indicatorCls    —— Tabs 选中态滑块软底色,挂到每个 Tabs.Indicator
+ *                   (仅选中 Tab 的 Indicator 可见,故按类型着色即整组变色)。
+ * selectedTextCls —— 选中 Tab 文字色。@heroui/styles 注入的
+ *                   `.tabs__tab[data-selected] { text-segment-foreground }`
+ *                   在样式表中,工具类需 `!` 提权才能稳定覆盖(不受 @layer
+ *                   顺序影响);data-[selected=true] 仅在选中时生效。
+ * submitCls       —— 提交按钮(实色底 + 前景字)
+ */
+const TYPE_META: Record<
+  "expense" | "income" | "transfer",
+  {
+    label: string;
+    indicatorCls: string;
+    selectedTextCls: string;
+    submitCls: string;
+  }
+> = {
+  expense: {
+    label: "支出",
+    indicatorCls: "!bg-[var(--danger-soft)]",
+    selectedTextCls: "data-[selected=true]:!text-[var(--danger)]",
+    submitCls:
+      "!bg-[var(--danger)] !text-[var(--danger-foreground)] hover:!bg-[var(--danger-hover)]",
+  },
+  income: {
+    label: "收入",
+    indicatorCls: "!bg-[var(--success-soft)]",
+    selectedTextCls: "data-[selected=true]:!text-[var(--success)]",
+    submitCls:
+      "!bg-[var(--success)] !text-[var(--success-foreground)] hover:!bg-[var(--success-hover)]",
+  },
+  transfer: {
+    label: "转账",
+    indicatorCls: "!bg-[var(--accent-soft)]",
+    selectedTextCls: "data-[selected=true]:!text-[var(--accent)]",
+    submitCls:
+      "!bg-[var(--accent)] !text-[var(--accent-foreground)] hover:!bg-[var(--accent-hover)]",
+  },
+};
+
+/**
+ * AccountTriggerLabel —— 账户下拉触发器里展示的「账户名 + 余额」。
+ * 供 HeroUI Select.Value 的 render-prop 复用(转出/转入账户两处)。
+ * 仅依赖 name + initialBalance,避免与 tRPC 序列化后的 Account 整体类型耦合。
+ */
+function AccountTriggerLabel({
+  account,
+}: {
+  account: { name: string; initialBalance: number };
+}) {
+  return (
+    <span className="flex items-center gap-2">
+      <span className="truncate">{account.name}</span>
+      <span className="text-xs text-muted-foreground">
+        ¥{(account.initialBalance / 100).toFixed(2)}
+      </span>
+    </span>
+  );
+}
 
 export function TransactionForm({
   editId,
@@ -252,6 +314,8 @@ export function TransactionForm({
   const formFields = (
     <>
       {/* Type Switch — HeroUI Tabs(027 US4:加转账) */}
+      {/* 选中态滑块软底色 + 选中文字色按交易类型语义色着色
+          (TYPE_META: 支出红 / 收入绿 / 转账蓝)。 */}
       <Tabs
         aria-label="交易类型"
         selectedKey={selectedType}
@@ -260,9 +324,27 @@ export function TransactionForm({
         }
       >
         <Tabs.List>
-          <Tabs.Tab id="expense">支出</Tabs.Tab>
-          <Tabs.Tab id="income">收入</Tabs.Tab>
-          <Tabs.Tab id="transfer">转账</Tabs.Tab>
+          <Tabs.Tab
+            id="expense"
+            className={TYPE_META.expense.selectedTextCls}
+          >
+            支出
+            <Tabs.Indicator className={TYPE_META.expense.indicatorCls} />
+          </Tabs.Tab>
+          <Tabs.Tab
+            id="income"
+            className={TYPE_META.income.selectedTextCls}
+          >
+            收入
+            <Tabs.Indicator className={TYPE_META.income.indicatorCls} />
+          </Tabs.Tab>
+          <Tabs.Tab
+            id="transfer"
+            className={TYPE_META.transfer.selectedTextCls}
+          >
+            转账
+            <Tabs.Indicator className={TYPE_META.transfer.indicatorCls} />
+          </Tabs.Tab>
         </Tabs.List>
       </Tabs>
       <input type="hidden" {...register("type")} />
@@ -302,23 +384,48 @@ export function TransactionForm({
 
       {/* Account(转账时为"转出账户") */}
       <div className="space-y-2">
-        <Label htmlFor="accountId">{isTransfer ? "转出账户" : "账户"}</Label>
+        <HeroUILabel htmlFor="accountId">
+          {isTransfer ? "转出账户" : "账户"}
+        </HeroUILabel>
         <Controller
           control={control}
           name="accountId"
           render={({ field }) => (
-            <Select value={field.value ?? ""} onValueChange={field.onChange}>
-              <SelectTrigger id="accountId">
-                <SelectValue placeholder="选择账户" />
-              </SelectTrigger>
-              <SelectContent>
-                {unarchivedAccounts.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.name} (¥{(a.initialBalance / 100).toFixed(2)})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <HeroUISelect
+              // RHF 的 accountId 是 string;空串视为未选 → null。HeroUI 的
+              // value 接受 Key|null,onChange 回传 Key|null。
+              value={(field.value || null) as Key | null}
+              onChange={(key) => field.onChange(key === null ? "" : String(key))}
+              placeholder="选择账户"
+            >
+              <HeroUISelect.Trigger id="accountId">
+                <HeroUISelect.Value>
+                  {({ state, isPlaceholder, defaultChildren }) => {
+                    if (isPlaceholder) return defaultChildren;
+                    const selected = state.selectedItems[0]?.key;
+                    const acc = unarchivedAccounts.find(
+                      (a) => a.id === selected,
+                    );
+                    if (!acc) return defaultChildren;
+                    return <AccountTriggerLabel account={acc} />;
+                  }}
+                </HeroUISelect.Value>
+                <HeroUISelect.Indicator />
+              </HeroUISelect.Trigger>
+              <HeroUISelect.Popover>
+                <ListBox>
+                  {unarchivedAccounts.map((a) => (
+                    <ListBox.Item key={a.id} id={a.id} textValue={a.name}>
+                      <HeroUILabel>{a.name}</HeroUILabel>
+                      <Description>
+                        ¥{(a.initialBalance / 100).toFixed(2)}
+                      </Description>
+                      <ListBox.ItemIndicator />
+                    </ListBox.Item>
+                  ))}
+                </ListBox>
+              </HeroUISelect.Popover>
+            </HeroUISelect>
           )}
         />
         {errors.accountId && (
@@ -331,19 +438,40 @@ export function TransactionForm({
       {/* 027 US4:转账转入账户(仅 transfer 模式) */}
       {isTransfer && (
         <div className="space-y-2">
-          <Label htmlFor="toAccountId">转入账户</Label>
-          <Select value={toAccountId} onValueChange={setToAccountId}>
-            <SelectTrigger id="toAccountId">
-              <SelectValue placeholder="选择转入账户" />
-            </SelectTrigger>
-            <SelectContent>
-              {unarchivedAccounts.map((a) => (
-                <SelectItem key={a.id} value={a.id}>
-                  {a.name} (¥{(a.initialBalance / 100).toFixed(2)})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <HeroUILabel htmlFor="toAccountId">转入账户</HeroUILabel>
+          <HeroUISelect
+            value={(toAccountId || null) as Key | null}
+            onChange={(key) => setToAccountId(key === null ? "" : String(key))}
+            placeholder="选择转入账户"
+          >
+            <HeroUISelect.Trigger id="toAccountId">
+              <HeroUISelect.Value>
+                {({ state, isPlaceholder, defaultChildren }) => {
+                  if (isPlaceholder) return defaultChildren;
+                  const selected = state.selectedItems[0]?.key;
+                  const acc = unarchivedAccounts.find(
+                    (a) => a.id === selected,
+                  );
+                  if (!acc) return defaultChildren;
+                  return <AccountTriggerLabel account={acc} />;
+                }}
+              </HeroUISelect.Value>
+              <HeroUISelect.Indicator />
+            </HeroUISelect.Trigger>
+            <HeroUISelect.Popover>
+              <ListBox>
+                {unarchivedAccounts.map((a) => (
+                  <ListBox.Item key={a.id} id={a.id} textValue={a.name}>
+                    <HeroUILabel>{a.name}</HeroUILabel>
+                    <Description>
+                      ¥{(a.initialBalance / 100).toFixed(2)}
+                    </Description>
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                ))}
+              </ListBox>
+            </HeroUISelect.Popover>
+          </HeroUISelect>
         </div>
       )}
 
@@ -367,11 +495,12 @@ export function TransactionForm({
       {/* Remark */}
       <div className="space-y-2">
         <Label htmlFor="remark">备注 (选填)</Label>
-        <Input
+        <TextArea
           id="remark"
-          type="text"
           placeholder="如:午餐咖啡"
+          rows={3}
           maxLength={200}
+          className="w-full resize-none"
           {...register("remark")}
         />
       </div>
@@ -389,7 +518,9 @@ export function TransactionForm({
             aria-label="日期"
           >
             <HeroUILabel>日期</HeroUILabel>
-            <DateField.Group fullWidth>
+            {/* 不加 fullWidth:日期框按 年/月/日 + 日历图标 自适应宽度,
+                不随整行撑满(与金额/账户等可填满整行的字段区分)。 */}
+            <DateField.Group>
               <DateField.Input>
                 {(segment) => <DateField.Segment segment={segment} />}
               </DateField.Input>
@@ -431,9 +562,15 @@ export function TransactionForm({
     </>
   );
 
-  // 提交按钮(embedded / page 模式共用)
+  // 提交按钮(embedded / page 模式共用)—— 底色随交易类型变化
+  // (TYPE_META: 支出红 / 收入绿 / 转账蓝)。`!` 提权以稳定覆盖 HeroUI
+  // .button--primary 的 --button-bg。
   const submitButton = (
-    <Button type="submit" className="w-full" disabled={isSubmitting}>
+    <Button
+      type="submit"
+      className={cn("w-full", TYPE_META[selectedType].submitCls)}
+      disabled={isSubmitting}
+    >
       {isSubmitting
         ? "提交中..."
         : isEditMode

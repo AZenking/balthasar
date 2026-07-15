@@ -1,7 +1,11 @@
 "use client";
 
+import { Chip } from "@heroui/react";
+import { keepPreviousData } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
+import { CategoryIcon } from "@/components/category/category-icon";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { Category } from "@/server/db/schema";
 
 /**
@@ -31,9 +35,16 @@ export interface CategorySelectProps {
 }
 
 export function CategorySelect({ value, onChange, type }: CategorySelectProps) {
-  // 018 returns tree (CategoryTreeNode[]) when no parentId
-  const query = trpc.category.list.useQuery({ type });
+  // 018 returns tree (CategoryTreeNode[]) when no parentId.
+  // placeholderData: keepPreviousData —— 切换 支出/收入 Tab 时 type 变化触发
+  // 新 query key,旧实现会在数据未到时 tree=[] 渲染"暂无分类"再跳回列表,
+  // 造成小屏 Drawer 内明显的空白闪烁。keepPreviousData 保留上次结果直到新数据
+  // 到达,实现无缝替换;isLoading 仅在首次(无缓存)时为 true,显示骨架兜底。
+  const query = trpc.category.list.useQuery({ type }, {
+    placeholderData: keepPreviousData,
+  });
   const tree = (query.data ?? []) as CategoryNode[];
+  const isInitialLoading = query.isLoading;
 
   const builtIns = tree.filter((n) => n.isBuiltIn);
   const customs = tree.filter((n) => !n.isBuiltIn);
@@ -43,16 +54,20 @@ export function CategorySelect({ value, onChange, type }: CategorySelectProps) {
       key={cat.id}
       type="button"
       onClick={() => onChange(cat.id)}
-      className={cn(
-        "flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm transition-colors",
-        indent && "ml-4",
-        value === cat.id
-          ? "border-primary bg-primary/5 text-primary"
-          : "border-border text-muted-foreground hover:bg-accent",
-      )}
+      className={cn("inline-flex", indent && "ml-4")}
     >
-      <span>{cat.icon}</span>
-      {cat.name}
+      <Chip
+        size="sm"
+        color={value === cat.id ? "accent" : "default"}
+        variant={value === cat.id ? "soft" : "secondary"}
+        className={cn(
+          "cursor-pointer transition-colors",
+          value !== cat.id && "hover:bg-accent",
+        )}
+      >
+        <CategoryIcon name={cat.icon} size={16} />
+        <Chip.Label>{cat.name}</Chip.Label>
+      </Chip>
     </button>
   );
 
@@ -69,28 +84,46 @@ export function CategorySelect({ value, onChange, type }: CategorySelectProps) {
 
   return (
     <div className="space-y-3">
-      {/* 内置 */}
-      {builtIns.length > 0 && (
-        <div>
-          <p className="mb-1 text-xs font-medium text-muted-foreground">内置</p>
+      {isInitialLoading ? (
+        // 首次加载(无缓存)骨架:两行 Chip 占位,固定高度避免 Drawer 内重排闪烁
+        <div className="space-y-3">
           <div className="flex flex-wrap gap-2">
-            {builtIns.map((node) => renderChip(node))}
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-6 w-16 rounded-full" />
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="h-6 w-16 rounded-full" />
+            ))}
           </div>
         </div>
-      )}
+      ) : (
+        <>
+          {/* 内置 */}
+          {builtIns.length > 0 && (
+            <div>
+              <p className="mb-1 text-xs font-medium text-muted-foreground">内置</p>
+              <div className="flex flex-wrap gap-2">
+                {builtIns.map((node) => renderChip(node))}
+              </div>
+            </div>
+          )}
 
-      {/* 自定义 */}
-      {customs.length > 0 && (
-        <div>
-          <p className="mb-1 text-xs font-medium text-muted-foreground">自定义</p>
-          <div className="space-y-2">
-            {customs.map((node) => renderNode(node))}
-          </div>
-        </div>
-      )}
+          {/* 自定义 */}
+          {customs.length > 0 && (
+            <div>
+              <p className="mb-1 text-xs font-medium text-muted-foreground">自定义</p>
+              <div className="space-y-2">
+                {customs.map((node) => renderNode(node))}
+              </div>
+            </div>
+          )}
 
-      {builtIns.length === 0 && customs.length === 0 && (
-        <p className="text-xs text-muted-foreground">暂无分类</p>
+          {builtIns.length === 0 && customs.length === 0 && (
+            <p className="text-xs text-muted-foreground">暂无分类</p>
+          )}
+        </>
       )}
     </div>
   );

@@ -9,7 +9,7 @@ import {
   type ListBoxProps as HeroUIListBoxProps,
   type ListBoxItemProps as HeroUIListBoxItemProps,
 } from "@heroui/react";
-import { ChevronDown, ChevronUp, Check } from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -209,19 +209,17 @@ const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerProps>(
     return (
       <HeroUISelect.Trigger
         ref={ref}
+        // 不再覆盖 HeroUI 原生 .select__trigger(bg-field / rounded-field /
+        // shadow-field)。仅保留 value 容器的防溢出辅助类,以及透传调用方 className。
         className={cn(
-          "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+          "w-full [&_[data-slot=select-value]]:min-w-0 [&_[data-slot=select-value]]:truncate",
           className,
         )}
         id={id}
         {...props}
       >
-        <span className="flex items-center gap-2 [&>span]:line-clamp-1">
-          {children}
-          <HeroUISelect.Indicator>
-            <ChevronDown className="h-4 w-4 opacity-50" />
-          </HeroUISelect.Indicator>
-        </span>
+        {children}
+        <HeroUISelect.Indicator />
       </HeroUISelect.Trigger>
     );
   },
@@ -243,16 +241,12 @@ export interface SelectContentProps
 const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps>(
   ({ className, children, position: _position, ...props }, ref) => {
     return (
-      <HeroUISelect.Popover
-        className={cn(
-          "relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md",
-          className,
-        )}
-        offset={4}
-      >
+      // 不再覆盖 HeroUI 原生 .select__popover(bg-overlay / overflow-y-auto /
+      // box-shadow: var(--shadow-overlay) / min-w: --trigger-width)。Popover 由
+      // React Aria 自动 portal 到 document.body,无需手写 z-50 / overflow-hidden。
+      <HeroUISelect.Popover offset={4} className={className}>
         <HeroUIListBox
           ref={ref as React.Ref<HTMLDivElement>}
-          className="p-1"
           {...props}
         >
           {children}
@@ -298,23 +292,18 @@ export interface SelectItemProps
 const SelectItem = React.forwardRef<HTMLDivElement, SelectItemProps>(
   ({ className, value, textValue, disabled, children, ...props }, ref) => {
     return (
+      // 不再覆盖 HeroUI 原生 list-box-item 样式,也不手写 absolute <Check>——
+      // 原生 <ListBox.ItemIndicator> 已处理选中勾选(且在 trigger 中自动隐藏)。
       <HeroUIListBoxItem
         ref={ref}
         id={value}
         textValue={textValue}
         isDisabled={disabled}
-        className={cn(
-          "relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
-          className,
-        )}
+        className={className}
         {...props}
       >
-        <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
-          <HeroUIListBoxItem.Indicator>
-            <Check className="h-4 w-4" />
-          </HeroUIListBoxItem.Indicator>
-        </span>
         {children}
+        <HeroUIListBoxItem.Indicator />
       </HeroUIListBoxItem>
     );
   },
