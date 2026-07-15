@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@heroui/react";
 import { cn } from "@/lib/utils";
 import { CategoryIcon } from "@/components/category/category-icon";
 
@@ -75,9 +75,9 @@ export function TopCategoryCard({
     return (
       <div className="px-4 py-4">
         <Card>
-          <CardContent className="p-4 text-center text-sm text-muted-foreground">
+          <Card.Content className="p-4 text-center text-sm text-muted-foreground">
             本月无支出
-          </CardContent>
+          </Card.Content>
         </Card>
       </div>
     );
@@ -119,7 +119,7 @@ export function TopCategoryCard({
             "cursor-pointer transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           )}
         >
-          <CardContent className="p-3">
+          <Card.Content className="p-3">
             <div className="flex items-center gap-1.5 text-sm">
               {c.categoryIcon ? (
                 <CategoryIcon name={c.categoryIcon} size={18} />
@@ -133,7 +133,7 @@ export function TopCategoryCard({
               {formatAmount(c.amount)}
             </p>
             <p className="text-xs text-muted-foreground">占比 {c.percentage}%</p>
-          </CardContent>
+          </Card.Content>
         </Card>
       ))}
     </div>

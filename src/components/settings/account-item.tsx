@@ -1,12 +1,13 @@
 "use client";
 
-import { Pencil, Archive, ArchiveRestore } from "lucide-react";
+import { useState } from "react";
+import { Pencil, Archive, ArchiveRestore, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   formatBalance,
   isSupportedCurrency,
@@ -37,6 +38,14 @@ export function AccountItem({
   const currency: Currency = isSupportedCurrency(account.currency)
     ? account.currency
     : "CNY";
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  // 菜单项点击:执行回调后关闭菜单
+  const run = (fn?: (id: string) => void) => {
+    setMenuOpen(false);
+    fn?.(account.id);
+  };
+
   return (
     <div className={cn(
       "flex items-center justify-between border-b py-3",
@@ -58,58 +67,54 @@ export function AccountItem({
           {account.currency} · {formatBalance(account.initialBalance, currency)}
         </p>
       </div>
-      <div className="flex shrink-0 items-center gap-2">
-        {isArchived ? (
-          <>
-            <span className="text-xs text-muted-foreground">已归档</span>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="min-h-[44px] min-w-[44px]"
-                  onClick={() => onUnarchive(account.id)}
-                  aria-label={`取消归档 ${account.name}`}
-                >
-                  <ArchiveRestore className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>取消归档</TooltipContent>
-            </Tooltip>
-          </>
-        ) : (
-          <>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="min-h-[44px] min-w-[44px]"
-                  onClick={() => onEdit(account.id)}
-                  aria-label={`编辑 ${account.name}`}
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>编辑</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="destructive"
-                  size="icon"
-                  className="min-h-[44px] min-w-[44px]"
-                  onClick={() => onArchive(account.id)}
-                  aria-label={`归档 ${account.name}`}
-                >
-                  <Archive className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>归档</TooltipContent>
-            </Tooltip>
-          </>
-        )}
-      </div>
+
+      {isArchived ? (
+        <span className="shrink-0 text-xs text-muted-foreground">已归档</span>
+      ) : null}
+
+      <Popover open={menuOpen} onOpenChange={setMenuOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="shrink-0 min-h-[44px] min-w-[44px]"
+            aria-label={`${account.name} 操作`}
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="end" className="w-40 p-1">
+          {!isArchived ? (
+            <div className="flex flex-col">
+              <button
+                type="button"
+                onClick={() => run(onEdit)}
+                className="flex min-h-[40px] items-center gap-2 rounded-sm px-2 text-sm hover:bg-accent"
+              >
+                <Pencil className="h-4 w-4 text-muted-foreground" />
+                编辑
+              </button>
+              <button
+                type="button"
+                onClick={() => run(onArchive)}
+                className="flex min-h-[40px] items-center gap-2 rounded-sm px-2 text-sm text-destructive hover:bg-accent"
+              >
+                <Archive className="h-4 w-4" />
+                归档
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => run(onUnarchive)}
+              className="flex min-h-[40px] w-full items-center gap-2 rounded-sm px-2 text-sm hover:bg-accent"
+            >
+              <ArchiveRestore className="h-4 w-4 text-muted-foreground" />
+              取消归档
+            </button>
+          )}
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }

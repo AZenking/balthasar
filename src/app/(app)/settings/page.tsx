@@ -45,6 +45,7 @@ import { AccountItem } from "@/components/settings/account-item";
 import { ApiKeyManager } from "@/components/settings/api-key-manager";
 import {
   Card,
+  Switch,
 } from "@heroui/react";
 import {
   AlertDialog,
@@ -270,12 +271,12 @@ export default function SettingsPage() {
           onClick={v2Toast}
         /> */}
         {/* <SettingsRow icon={DatabaseBackup} label="本地备份" value="从未备份" onClick={v2Toast} /> */}
-        <SettingsRow icon={ArrowDownUp} label="导入与导出" onClick={v2Toast} />
+        <SettingsRow icon={ArrowDownUp} label="导入与导出" value="即将上线" onClick={v2Toast} />
       </SettingsGroup>
 
       {/* ── 其他 ── */}
       <SettingsGroup title="其他">
-        <SettingsRow icon={CircleHelp} label="帮助与反馈" onClick={v2Toast} />
+        <SettingsRow icon={CircleHelp} label="帮助与反馈" value="即将上线" onClick={v2Toast} />
         <SettingsRow icon={Info} label="关于" value={`v${packageJson.version}`} onClick={v2Toast} />
       </SettingsGroup>
 
@@ -295,14 +296,16 @@ export default function SettingsPage() {
         </SettingsRow>
       </SettingsGroup>
 
-      {/* ── 危险区 ── */}
+      {/* ── 危险区(占位:功能未上线,禁用避免误导) ── */}
       <div>
         <Card>
           <Card.Content className="divide-y p-0">
             <SettingsRow
               icon={Trash2}
               label="清空全部数据"
-              onClick={() => toast.error("此操作不可撤销,请确认后联系管理员")}
+              value="即将上线"
+              disabled
+              onClick={() => {}}
             />
           </Card.Content>
         </Card>
@@ -438,34 +441,23 @@ export default function SettingsPage() {
   );
 }
 
-// ── 隐私开关(内联 toggle,直接在设置页操作) ──
+// ── 隐私开关(内联 toggle,HeroUI Switch,直接在设置页操作) ──
 function PrivacyToggleInline() {
-  const [on, setOn] = useState(false);
-  useState(() => {
-    setOn(isPrivacyOn());
-  });
+  // 惰性初始化:消除旧实现"用 useState 当 effect"在 render 期 setState 的反模式。
+  const [on, setOn] = useState(() => isPrivacyOn());
   return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={on}
-      onClick={() => {
-        const next = !on;
-        setPrivacy(next);
-        setOn(next);
+    <Switch
+      aria-label="隐私保护"
+      isSelected={on}
+      onChange={(selected) => {
+        setPrivacy(selected);
+        setOn(selected);
       }}
-      className={cn(
-        "relative h-6 w-11 rounded-full transition-colors",
-        on ? "bg-[var(--primary)]" : "bg-[var(--muted)]",
-      )}
     >
-      <span
-        className={cn(
-          "absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform",
-          on ? "translate-x-5" : "translate-x-0.5",
-        )}
-      />
-    </button>
+      <Switch.Control>
+        <Switch.Thumb />
+      </Switch.Control>
+    </Switch>
   );
 }
 
@@ -488,6 +480,7 @@ function SettingsRow({
   value,
   onClick,
   expandable,
+  disabled,
   children,
 }: {
   icon: LucideIcon;
@@ -495,19 +488,31 @@ function SettingsRow({
   value?: string;
   onClick: () => void;
   expandable?: boolean;
+  disabled?: boolean;
   children?: React.ReactNode;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const handle = () => {
+    if (disabled) return;
     if (expandable) setIsOpen(!isOpen);
     else onClick();
   };
+  // 展开面板 id,用于 aria-controls 关联(屏幕阅读器感知展开状态)
+  const panelId = `${label}-panel`;
   return (
     <div>
       <button
         type="button"
         onClick={handle}
-        className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-[var(--muted)]"
+        disabled={disabled}
+        aria-expanded={expandable ? isOpen : undefined}
+        aria-controls={expandable ? panelId : undefined}
+        className={cn(
+          "flex w-full items-center justify-between px-4 py-3 text-left",
+          disabled
+            ? "cursor-not-allowed opacity-60"
+            : "hover:bg-[var(--muted)]",
+        )}
       >
         <span className="flex items-center gap-3 text-sm">
           <Icon className="h-4 w-4 text-muted-foreground" />
@@ -527,7 +532,9 @@ function SettingsRow({
           )}
         </span>
       </button>
-      {isOpen && children && <div className="px-4 pb-3">{children}</div>}
+      {isOpen && children && (
+        <div id={panelId} className="px-4 pb-3">{children}</div>
+      )}
     </div>
   );
 }

@@ -17,7 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { RadioGroup, Radio } from "@heroui/react";
 import {
   Select,
   SelectContent,
@@ -152,7 +152,10 @@ function AccountCreateFormBody({
         )}
       </div>
 
-      {/* 类型 —— RadioGroup(资产/负债二选一,与 category-form 一致) */}
+      {/* 类型 —— HeroUI RadioGroup(资产/负债二选一)。
+          HeroUI v3 Radio 是复合组件:必须用 Radio.Content(= react-aria
+          RadioButton,可点击 label)包裹 Control + Indicator + 文字,
+          否则无法勾选、布局错乱(无 RadioButton 容器)。 */}
       <div>
         <Label className="mb-1 block">账户类型</Label>
         <Controller
@@ -161,21 +164,26 @@ function AccountCreateFormBody({
           render={({ field }) => (
             <RadioGroup
               value={field.value}
-              onValueChange={(v) => field.onChange(v as "asset" | "debt")}
-              className="flex h-10 items-center gap-6"
+              onChange={(v) => field.onChange(v as "asset" | "debt")}
+              orientation="horizontal"
+              className="items-center gap-6"
             >
-              <div className="flex items-center gap-2">
-                <RadioGroupItem value="asset" id="account-type-asset" />
-                <Label htmlFor="account-type-asset" className="cursor-pointer">
+              <Radio value="asset">
+                <Radio.Content className="flex cursor-pointer items-center gap-2 text-sm">
+                  <Radio.Control>
+                    <Radio.Indicator />
+                  </Radio.Control>
                   资产(银行卡/现金)
-                </Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <RadioGroupItem value="debt" id="account-type-debt" />
-                <Label htmlFor="account-type-debt" className="cursor-pointer">
+                </Radio.Content>
+              </Radio>
+              <Radio value="debt">
+                <Radio.Content className="flex cursor-pointer items-center gap-2 text-sm">
+                  <Radio.Control>
+                    <Radio.Indicator />
+                  </Radio.Control>
                   负债(信用卡/贷款)
-                </Label>
-              </div>
+                </Radio.Content>
+              </Radio>
             </RadioGroup>
           )}
         />
@@ -298,21 +306,26 @@ function AccountEditFormBody({
           render={({ field }) => (
             <RadioGroup
               value={field.value}
-              onValueChange={(v) => field.onChange(v as "asset" | "debt")}
-              className="flex h-10 items-center gap-6"
+              onChange={(v) => field.onChange(v as "asset" | "debt")}
+              orientation="horizontal"
+              className="items-center gap-6"
             >
-              <div className="flex items-center gap-2">
-                <RadioGroupItem value="asset" id="account-type-edit-asset" />
-                <Label htmlFor="account-type-edit-asset" className="cursor-pointer">
+              <Radio value="asset">
+                <Radio.Content className="flex cursor-pointer items-center gap-2 text-sm">
+                  <Radio.Control>
+                    <Radio.Indicator />
+                  </Radio.Control>
                   资产(银行卡/现金)
-                </Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <RadioGroupItem value="debt" id="account-type-edit-debt" />
-                <Label htmlFor="account-type-edit-debt" className="cursor-pointer">
+                </Radio.Content>
+              </Radio>
+              <Radio value="debt">
+                <Radio.Content className="flex cursor-pointer items-center gap-2 text-sm">
+                  <Radio.Control>
+                    <Radio.Indicator />
+                  </Radio.Control>
                   负债(信用卡/贷款)
-                </Label>
-              </div>
+                </Radio.Content>
+              </Radio>
             </RadioGroup>
           )}
         />
