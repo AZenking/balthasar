@@ -98,11 +98,8 @@ export default function LoginPage() {
           <ShieldCheck className="h-8 w-8 text-foreground" aria-hidden />
         </div>
         <h1 className="mt-4 text-xl font-semibold text-foreground">
-          登录并同步数据
+          BALTHASAR
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          在设备之间安全同步账单与设置
-        </p>
       </div>
 
       {/* ── 表单(HeroUI v3 TextField 组合) ── */}
