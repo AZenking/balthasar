@@ -57,6 +57,13 @@
       "when": 1784080666968,
       "tag": "0007_wandering_fixer",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1784082226072,
+      "tag": "0008_old_kulan_gath",
+      "breakpoints": true
     }
   ]
 }

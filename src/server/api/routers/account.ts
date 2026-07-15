@@ -40,6 +40,8 @@ const createInput = z.object({
   initialBalance: z.number().refine((v) => validateInitialBalance(v).ok, {
     message: "初始余额必须是整数且在安全范围内",
   }),
+  // 027 US6:账户类型 asset(资产,默认)/ debt(负债)。
+  type: z.enum(["asset", "debt"]).default("asset"),
   // NOTE: familyId is intentionally NOT in input schema. Server-derived
   // from ctx.session.user.id via loadFamilyAndMemberIdsByUserId (FR-006).
 });
@@ -55,6 +57,7 @@ function serializeAccount(row: typeof account.$inferSelect) {
     name: row.name,
     currency: row.currency as Currency,
     initialBalance: row.initialBalance,
+    type: row.type, // 027 US6
     archivedAt: row.archivedAt,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -95,6 +98,7 @@ export const accountRouter = router({
             name: input.name,
             currency: input.currency,
             initialBalance: input.initialBalance,
+            type: input.type, // 027 US6
           })
           .returning();
 
@@ -177,11 +181,12 @@ export const accountRouter = router({
             .max(ACCOUNT_NAME_MAX_LENGTH)
             .optional(),
           currency: currencySchema.optional(),
+          type: z.enum(["asset", "debt"]).optional(), // 027 US6
         })
         .strict()
         // Require at least one mutable field
-        .refine((v) => v.name !== undefined || v.currency !== undefined, {
-          message: "至少需要修改一个字段 (name 或 currency)",
+        .refine((v) => v.name !== undefined || v.currency !== undefined || v.type !== undefined, {
+          message: "至少需要修改一个字段 (name、currency 或 type)",
         })
     )
     .mutation(async ({ input, ctx }) => {
@@ -218,10 +223,12 @@ export const accountRouter = router({
         const before = {
           name: row.name,
           currency: row.currency,
+          type: row.type, // 027 US6
         };
         const after = {
           name: input.name ?? row.name,
           currency: input.currency ?? row.currency,
+          type: input.type ?? row.type, // 027 US6
         };
 
         const [updatedRow] = await tx
@@ -229,6 +236,7 @@ export const accountRouter = router({
           .set({
             name: after.name,
             currency: after.currency,
+            type: after.type, // 027 US6
           })
           .where(eq(account.id, input.id))
           .returning();

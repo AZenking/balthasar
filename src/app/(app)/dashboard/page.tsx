@@ -6,6 +6,7 @@ import { Card, Skeleton } from "@heroui/react";
 import { DashboardTopNav } from "@/components/dashboard/dashboard-top-nav";
 import { SummaryHeroCard } from "@/components/dashboard/summary-hero-card";
 import { BudgetProgress } from "@/components/dashboard/budget-progress";
+import { AssetOverview } from "@/components/dashboard/asset-overview";
 import { CategoryTopList } from "@/components/dashboard/category-top-list";
 import { ExpenseTrendChart } from "@/components/dashboard/expense-trend-chart";
 import { RecentTransactions } from "@/components/dashboard/recent-transactions";
@@ -79,6 +80,7 @@ export default function DashboardPage() {
           topExpenseCategories={summaryQuery.data.topExpenseCategories}
           recentTransactions={summaryQuery.data.recentTransactions}
           budget={summaryQuery.data.budget}
+          assets={summaryQuery.data.assets}
           yearMonth={yearMonth}
           isPrivacy={isPrivacy}
         />
@@ -156,6 +158,7 @@ function DashboardBody({
   topExpenseCategories,
   recentTransactions,
   budget,
+  assets,
   yearMonth,
   isPrivacy,
 }: {
@@ -166,6 +169,7 @@ function DashboardBody({
   topExpenseCategories: React.ComponentProps<typeof CategoryTopList>["items"];
   recentTransactions: React.ComponentProps<typeof RecentTransactions>["transactions"];
   budget: React.ComponentProps<typeof BudgetProgress>["budget"];
+  assets: React.ComponentProps<typeof AssetOverview>["assets"];
   yearMonth: { year: number; month: number };
   isPrivacy: boolean;
 }) {
@@ -184,6 +188,7 @@ function DashboardBody({
       <CategoryTopList items={topExpenseCategories} yearMonth={yearMonth} />
       <TrendSection trend={expenseTrend} isPrivacy={isPrivacy} />
       <RecentSection transactions={recentTransactions} />
+      <AssetOverview assets={assets} />
     </>
   );
 }

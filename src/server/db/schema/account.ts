@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, bigint, timestamp, index } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, bigint, timestamp, index, pgEnum } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { family } from "./family";
 import { uuidv7 } from "uuidv7";
@@ -13,7 +13,13 @@ import { uuidv7 } from "uuidv7";
  * - 001 research.md Q11: `updated_at` via Drizzle `.$onUpdate` (no DB trigger)
  *
  * MVP invariant: account belongs to family (not member). V2 may add private.
+ *
+ * 027 US6 (data-model §1.2):新增 `type`(asset/debt)列,显式区分资产/负债。
+ * DEFAULT 'asset' 向后兼容(存量账户全为 asset)。净资产/总资产/总负债按
+ * type 分组聚合(research R5)。
  */
+export const accountType = pgEnum("account_type", ["asset", "debt"]);
+
 export const account = pgTable(
   "accounts",
   {
@@ -26,6 +32,8 @@ export const account = pgTable(
     initialBalance: bigint("initial_balance", { mode: "number" })
       .notNull()
       .default(0),
+    // 027 US6:asset(资产,默认)/ debt(负债)。向后兼容。
+    type: accountType("type").notNull().default("asset"),
     archivedAt: timestamp("archived_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
@@ -47,3 +55,5 @@ export const account = pgTable(
 
 export type Account = typeof account.$inferSelect;
 export type NewAccount = typeof account.$inferInsert;
+export type AccountType = (typeof accountType.enumValues)[number];
+

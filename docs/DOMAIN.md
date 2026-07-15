@@ -16,15 +16,24 @@ Better-Auth 的 `User` 与业务聚合 `Family` 解耦:
 - `Family.ownerUserId` 引用 `User.id` (cuid2 字符串)
 - 反向不持有指针 (聚合根不持有外部身份实体)
 
-## Account (002-account)
+## Account (002-account + 027 US6)
 
 - id (UUID v7)
 - familyId (跨聚合引用 Family)
 - name (1-50 UTF-16 code unit)
 - currency (ISO 4217,9 种白名单)
 - initialBalance (bigint,单位"分",允许负数,**创建后只读**)
+- type (027 US6:`asset` 资产 / `debt` 负债,DEFAULT 'asset'。净资产/总资产/总负债按 type 分组聚合)
 - archivedAt (timestamp NULL,归档时间戳)
 - createdAt / updatedAt (Drizzle $onUpdate 自动维护)
+
+### 027 US6 资产聚合 (Account.type)
+
+- 账户余额 = initialBalance + SUM(income/expense) − transfer 转出 + transfer 转入
+- totalAssets = SUM(余额 WHERE type='asset')
+- totalLiabilities = SUM(ABS(余额) WHERE type='debt')
+- netAssets = totalAssets − totalLiabilities
+- 排除归档账户;不新增 Asset/Debt 表(YAGNI,用 type 字段推导)
 
 ## 关键不变量
 

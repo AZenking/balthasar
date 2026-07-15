@@ -68,6 +68,8 @@ Investment
   RESTRICT);seed 系统内置"转账"分类(id=6206a8ba-...,type=expense,M3 决策)。
 - `0007_wandering_fixer.sql` —— 027-mobile-home-revamp US5:新建 `budgets` 表
   (family_id/year/month/amount)+ UNIQUE(family_id,year,month) + FK families。
+- `0008_old_kulan_gath.sql` —— 027-mobile-home-revamp US6:accounts 新增 `type`
+  列(account_type 枚举 asset/debt,NOT NULL DEFAULT 'asset')。
 - 通过 `pnpm db:generate` (drizzle-kit) 生成,`pnpm db:migrate` 应用
 - 集成测试自动通过 `drizzle-orm/node-postgres/migrator` 应用最新迁移
 

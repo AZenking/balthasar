@@ -16,6 +16,7 @@ import {
 export interface AccountFormValues {
   name: string;
   currency: string;
+  type?: "asset" | "debt";
   initialBalanceCents?: number;
 }
 
@@ -26,12 +27,13 @@ export function AccountForm({
   onCancel,
 }: {
   mode: "create" | "edit";
-  defaultValues?: { name: string; currency: string };
+  defaultValues?: { name: string; currency: string; type?: "asset" | "debt" };
   onSubmit: (values: AccountFormValues) => void;
   onCancel: () => void;
 }) {
   const [name, setName] = useState(defaultValues?.name ?? "");
   const [currency, setCurrency] = useState(defaultValues?.currency ?? "CNY");
+  const [type, setType] = useState<"asset" | "debt">(defaultValues?.type ?? "asset");
   const [initialBalance, setInitialBalance] = useState("0");
   const [error, setError] = useState("");
 
@@ -48,7 +50,7 @@ export function AccountForm({
       return;
     }
 
-    const values: AccountFormValues = { name: name.trim(), currency };
+    const values: AccountFormValues = { name: name.trim(), currency, type };
 
     if (mode === "create") {
       const balanceNum = parseFloat(initialBalance);
@@ -88,6 +90,20 @@ export function AccountForm({
                 {c}
               </SelectItem>
             ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* 027 US6:账户类型(asset 资产 / debt 负债) */}
+      <div className="space-y-1">
+        <Label htmlFor={`type-${mode}`}>账户类型</Label>
+        <Select value={type} onValueChange={(v) => setType(v as "asset" | "debt")}>
+          <SelectTrigger id={`type-${mode}`} className="h-10 w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="asset">资产(银行卡/现金)</SelectItem>
+            <SelectItem value="debt">负债(信用卡/贷款)</SelectItem>
           </SelectContent>
         </Select>
       </div>

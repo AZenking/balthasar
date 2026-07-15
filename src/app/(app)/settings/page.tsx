@@ -119,6 +119,7 @@ export default function SettingsPage() {
       name: values.name,
       currency: values.currency as any,
       initialBalance: values.initialBalanceCents ?? 0,
+      type: values.type, // 027 US6
     });
   };
 
@@ -128,6 +129,7 @@ export default function SettingsPage() {
       id: editingAccountId,
       name: values.name,
       currency: values.currency as any,
+      type: values.type, // 027 US6
     });
   };
 
@@ -262,6 +264,7 @@ export default function SettingsPage() {
                       defaultValues={{
                         name: account.name,
                         currency: account.currency,
+                        type: account.type, // 027 US6
                       }}
                       onSubmit={handleEdit}
                       onCancel={() => setEditingAccountId(null)}

@@ -1,0 +1,114 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { Wallet } from "lucide-react";
+import { Card, Button } from "@heroui/react";
+
+/**
+ * AssetOverview (027-mobile-home-revamp US6 FR-020/FR-021)。
+ *
+ * 资产概览:净资产 / 总资产 / 总负债 + 账户数。
+ * 未添加账户(accountCount=0)→ 显示"添加第一个账户"引导(FR-021)。
+ *
+ * 设计文档 §3.2-8。HeroUI v3:Card 组合式。金额挂 data-amount 走隐私遮蔽。
+ *
+ * 数据来源:dashboard.summary.assets(AssetsSummary | null)。
+ * null = 查询失败降级(SC-008),显示"加载失败 重试"。
+ */
+function formatCents(cents: number): string {
+  return `¥${(cents / 100).toFixed(2)}`;
+}
+
+type AssetsSummary = {
+  totalAssets: number;
+  totalLiabilities: number;
+  netAssets: number;
+  accountCount: number;
+};
+
+export function AssetOverview({ assets }: { assets: AssetsSummary | null }) {
+  const router = useRouter();
+
+  // null = 查询失败降级
+  if (assets === null) {
+    return (
+      <section aria-label="资产概览" className="pt-4">
+        <Card>
+          <Card.Content className="p-4">
+            <p className="text-sm text-muted-foreground">资产加载失败</p>
+          </Card.Content>
+        </Card>
+      </section>
+    );
+  }
+
+  // 无账户 → 引导(FR-021)
+  if (assets.accountCount === 0) {
+    return (
+      <section aria-label="资产概览" className="pt-4">
+        <Card>
+          <Card.Content className="flex flex-col items-center gap-3 p-6 text-center">
+            <Wallet className="h-8 w-8 text-muted-foreground" aria-hidden />
+            <div>
+              <p className="text-sm font-medium text-foreground">还没有账户</p>
+              <p className="text-xs text-muted-foreground">
+                添加第一个账户,查看资产概览
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onPress={() => router.push("/settings")}
+            >
+              添加第一个账户
+            </Button>
+          </Card.Content>
+        </Card>
+      </section>
+    );
+  }
+
+  const netColor =
+    assets.netAssets >= 0 ? "text-[var(--success)]" : "text-[var(--danger)]";
+
+  return (
+    <section aria-label="资产概览" className="pt-4">
+      <Card>
+        <Card.Content className="p-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-foreground">资产概览</p>
+            <Button
+              variant="ghost"
+              size="sm"
+              onPress={() => router.push("/settings")}
+            >
+              {assets.accountCount} 个账户
+            </Button>
+          </div>
+
+          <div className="mt-3">
+            <p className="text-xs text-muted-foreground">净资产</p>
+            <p data-amount className={`mt-0.5 text-xl font-medium tabular-nums ${netColor}`}>
+              {formatCents(assets.netAssets)}
+            </p>
+          </div>
+
+          <div className="mt-3 flex gap-4 text-sm">
+            <div>
+              <p className="text-xs text-muted-foreground">总资产</p>
+              <p data-amount className="font-medium tabular-nums">
+                {formatCents(assets.totalAssets)}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">总负债</p>
+              <p data-amount className="font-medium tabular-nums text-[var(--danger)]">
+                {formatCents(assets.totalLiabilities)}
+              </p>
+            </div>
+          </div>
+        </Card.Content>
+      </Card>
+    </section>
+  );
+}

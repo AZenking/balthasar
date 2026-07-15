@@ -8,6 +8,7 @@ import {
   getDailyTrend,
   getWeeklyTrend,
 } from "@/server/db/queries/dashboard";
+import { getAssets } from "@/server/db/queries/assets";
 import {
   getBudget,
   upsertBudget,
@@ -125,6 +126,14 @@ export const dashboardRouter = router({
 
       // budget 已在上方 try/catch 中计算(四态或降级 null)。
 
+      // 027 US6:资产聚合降级 —— 失败时 null(SC-008)。
+      let assets: Awaited<ReturnType<typeof getAssets>> | null;
+      try {
+        assets = await getAssets({ familyId });
+      } catch {
+        assets = null;
+      }
+
       return {
         queriedYearMonth: { year, month },
         monthIncome: summary.income,
@@ -134,8 +143,18 @@ export const dashboardRouter = router({
         recentTransactions: recent.map(serializeTransaction),
         expenseTrend: trend,
         budget, // 027 US5:BudgetSummary | null
+        assets, // 027 US6:AssetsSummary | null
       };
     }),
+
+  /**
+   * `dashboard.assets` — 027 US6 资产三项聚合(独立 procedure,供单独刷新)。
+   * contracts/dashboard-assets.md。按 accounts.type 分组 + transfer 双向余额。
+   */
+  assets: protectedProcedure.query(async ({ ctx }) => {
+    const familyId = await loadFamilyIdByUserId(ctx.session.user.id);
+    return getAssets({ familyId });
+  }),
 
   /**
    * `dashboard.budget` — 027 US5 月预算 CRUD。

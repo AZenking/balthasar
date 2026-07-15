@@ -174,20 +174,20 @@
 
 ### Tests for US6 (TDD)
 
-- [ ] T048 [P] [US6] 集成测试:资产 type 分组 + transfer 双向余额 + 排除归档在 `src/tests/integration/dashboard/assets.test.ts`(对应 contracts/dashboard-assets.md Test Scenarios)
-- [ ] T049 [P] [US6] 集成测试:account.create 含 type + migration 向后兼容(存量 account 全 asset)在 `src/tests/integration/account/create-type.test.ts`
+- [X] T048 [P] [US6] 集成测试:资产 type 分组 + transfer 双向余额 + 排除归档在 `src/tests/integration/dashboard/assets.test.ts`(对应 contracts/dashboard-assets.md Test Scenarios)
+- [X] T049 [P] [US6] 集成测试:account.create 含 type + migration 向后兼容(存量 account 全 asset)在 `src/tests/integration/account/create-type.test.ts`
 
 ### Implementation for US6
 
-- [ ] T050 [US6] 生成 Drizzle migration:`accounts` 新增 `type` 列(account_type 枚举,NOT NULL DEFAULT 'asset';`drizzle-kit generate`);验证 down(DROP COLUMN + DROP TYPE)
-- [ ] T051 [US6] 更新 `src/server/db/schema/account.ts`:新增 `accountType` pgEnum + `type` 字段(data-model §1.2)
-- [ ] T052 [US6] 新建 `src/server/db/queries/assets.ts`:`getAssets(familyId)` 单次 CTE 聚合(research R5,含 transfer 双向余额);返回 `{ totalAssets, totalLiabilities, netAssets, accountCount }`
-- [ ] T053 [US6] 扩展 `src/server/api/routers/dashboard.ts`:新增 `assets` query procedure(contracts/dashboard-assets.md);扩展 `summary` 内联调用(`.catch(() => null)` 降级)
-- [ ] T054 [US6] 扩展 `src/server/api/routers/account.ts` `create`/`update`:input 加 `type`(默认 asset);输出含 type(contracts/account-create.md)
-- [ ] T055 [US6] 扩展 `src/components/settings/account-form.tsx`:加 type 选择(asset/debt)。**执行前 `/heroui-react`**
-- [ ] T056 [US6] 新建 `src/components/dashboard/asset-overview.tsx`:净资产/总资产/总负债 + accountCount + 空引导(FR-020/FR-021)。**执行前 `/heroui-react`**
-- [ ] T057 [US6] 更新 `src/app/(app)/dashboard/page.tsx`:装配 AssetOverview(下滑区底部)
-- [ ] T058 [US6] 更新 `docs/DOMAIN.md` + `docs/DATABASE.md`:Account.type + 资产聚合规则(宪章开发流程 3)
+- [X] T050 [US6] 生成 Drizzle migration:`accounts` 新增 `type` 列(account_type 枚举,NOT NULL DEFAULT 'asset';`drizzle-kit generate`);验证 down(DROP COLUMN + DROP TYPE)
+- [X] T051 [US6] 更新 `src/server/db/schema/account.ts`:新增 `accountType` pgEnum + `type` 字段(data-model §1.2)
+- [X] T052 [US6] 新建 `src/server/db/queries/assets.ts`:`getAssets(familyId)` 单次 CTE 聚合(research R5,含 transfer 双向余额);返回 `{ totalAssets, totalLiabilities, netAssets, accountCount }`
+- [X] T053 [US6] 扩展 `src/server/api/routers/dashboard.ts`:新增 `assets` query procedure(contracts/dashboard-assets.md);扩展 `summary` 内联调用(`.catch(() => null)` 降级)
+- [X] T054 [US6] 扩展 `src/server/api/routers/account.ts` `create`/`update`:input 加 `type`(默认 asset);输出含 type(contracts/account-create.md)
+- [X] T055 [US6] 扩展 `src/components/settings/account-form.tsx`:加 type 选择(asset/debt)。**执行前 `/heroui-react`**
+- [X] T056 [US6] 新建 `src/components/dashboard/asset-overview.tsx`:净资产/总资产/总负债 + accountCount + 空引导(FR-020/FR-021)。**执行前 `/heroui-react`**
+- [X] T057 [US6] 更新 `src/app/(app)/dashboard/page.tsx`:装配 AssetOverview(下滑区底部)
+- [X] T058 [US6] 更新 `docs/DOMAIN.md` + `docs/DATABASE.md`:Account.type + 资产聚合规则(宪章开发流程 3)
 
 **Checkpoint**: 资产端到端可用;SC-005(空态引导)+ 资产三项达成。全部 US 完成。
 
