@@ -66,7 +66,7 @@ export function AccountForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3 rounded-lg border bg-muted/30 p-4">
+    <form onSubmit={handleSubmit} className="space-y-3 overflow-hidden rounded-lg border bg-muted/30 p-4">
       <div className="space-y-1">
         <Label htmlFor={`name-${mode}`}>账户名称</Label>
         <Input

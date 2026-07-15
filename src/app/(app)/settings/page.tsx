@@ -15,7 +15,7 @@
  *
  * V2 入口点击 toast 提示"即将上线"。
  */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -120,6 +120,17 @@ export default function SettingsPage() {
   });
   const budgetAmount = budgetData?.amount;
   const formatCents = (cents: number) => `¥${(cents / 100).toFixed(0)}`;
+
+  // 当前主题文本值(显示在"外观主题"右侧)
+  const [themeLabel, setThemeLabel] = useState("跟随系统");
+  useEffect(() => {
+    try {
+      const t = localStorage.getItem("balthasar.theme") || "system";
+      setThemeLabel(t === "dark" ? "深色" : t === "light" ? "浅色" : "跟随系统");
+    } catch {
+      // SSR / 无 localStorage
+    }
+  }, []);
   const editingAccount = editingAccountId
     ? (accounts ?? []).find((a) => a.id === editingAccountId)
     : null;
@@ -248,9 +259,17 @@ export default function SettingsPage() {
         </SettingsToggleRow>
         <SettingsRow icon={BellRing} label="记账提醒" value="未开启" onClick={v2Toast} />
         <SettingsRow icon={Landmark} label="默认账户" value="未设置" onClick={v2Toast} />
-        <SettingsToggleRow icon={Palette} label="外观主题">
-          <ThemeToggle />
-        </SettingsToggleRow>
+        <SettingsRow
+          icon={Palette}
+          label="外观主题"
+          value={themeLabel}
+          onClick={() => {}}
+          expandable
+        >
+          <div className="pt-2">
+            <ThemeToggle />
+          </div>
+        </SettingsRow>
       </SettingsGroup>
 
       {/* ── 数据与同步 ── */}
@@ -284,24 +303,28 @@ export default function SettingsPage() {
       </SettingsGroup>
 
       {/* ── 危险区 ── */}
-      <SettingsGroup title="">
-        <SettingsRow
-          icon={Trash2}
-          label="清空全部数据"
-          onClick={() => toast.error("此操作不可撤销,请确认后联系管理员")}
-        />
-      </SettingsGroup>
+      <div>
+        <Card>
+          <Card.Content className="divide-y p-0">
+            <SettingsRow
+              icon={Trash2}
+              label="清空全部数据"
+              onClick={() => toast.error("此操作不可撤销,请确认后联系管理员")}
+            />
+          </Card.Content>
+        </Card>
+      </div>
 
       {/* ── 退出 ── */}
       <Button
         variant="outline"
-        className="w-full justify-center gap-2 text-destructive"
+        className="w-full justify-center gap-2 text-[var(--danger)]"
         onClick={() => setShowLogoutConfirm(true)}
       >
         退出登录
       </Button>
 
-      <div className="px-4 py-6 text-center text-xs text-muted-foreground">
+      <div className="pb-4 pt-2 text-center text-xs text-muted-foreground">
         <p className="font-medium">BALTHASAR</p>
         <p className="mt-1">版本 v{packageJson.version}</p>
       </div>

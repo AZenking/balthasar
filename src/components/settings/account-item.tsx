@@ -21,6 +21,7 @@ export function AccountItem({
     name: string;
     currency: string;
     initialBalance: number;
+    type: "asset" | "debt";
     archivedAt: Date | null;
   };
   onEdit: (id: string) => void;
@@ -34,7 +35,17 @@ export function AccountItem({
       isArchived && "opacity-50"
     )}>
       <div className="min-w-0">
-        <p className="truncate text-sm font-medium">{account.name}</p>
+        <div className="flex items-center gap-2">
+          <p className="truncate text-sm font-medium">{account.name}</p>
+          <span className={cn(
+            "shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+            account.type === "debt"
+              ? "bg-[var(--danger)]/10 text-[var(--danger)]"
+              : "bg-[var(--success)]/10 text-[var(--success)]",
+          )}>
+            {account.type === "debt" ? "负债" : "资产"}
+          </span>
+        </div>
         <p className="text-xs text-muted-foreground tabular-nums">
           {account.currency} · {formatBalance(account.initialBalance, account.currency as any)}
         </p>
