@@ -110,6 +110,15 @@ export default function SettingsPage() {
   const email = me?.user.email ?? "";
   const activeAccounts = (accounts ?? []).filter((a) => a.archivedAt === null);
   const archivedAccounts = (accounts ?? []).filter((a) => a.archivedAt !== null);
+
+  // 当前月预算(显示在"预算设置"右侧)
+  const now = new Date();
+  const { data: budgetData } = trpc.dashboard.budget.get.useQuery({
+    year: now.getUTCFullYear(),
+    month: now.getUTCMonth() + 1,
+  });
+  const budgetAmount = budgetData?.amount;
+  const formatCents = (cents: number) => `¥${(cents / 100).toFixed(0)}`;
   const editingAccount = editingAccountId
     ? (accounts ?? []).find((a) => a.id === editingAccountId)
     : null;
@@ -216,7 +225,7 @@ export default function SettingsPage() {
         </SettingsRow>
         <SettingsRow icon={NotebookTabs} label="账本管理" value="我的账本" onClick={v2Toast} />
         <SettingsLinkRow icon={Tags} label="分类与标签" href="/settings/categories" />
-        <SettingsRow icon={Gauge} label="预算设置" onClick={() => router.push("/dashboard")} />
+        <SettingsRow icon={Gauge} label="预算设置" value={budgetAmount ? formatCents(budgetAmount) : "未设置"} onClick={() => router.push("/dashboard")} />
       </SettingsGroup>
 
       {/* ── 偏好设置 ── */}
@@ -227,8 +236,8 @@ export default function SettingsPage() {
         <SettingsToggleRow icon={Palette} label="外观主题">
           <ThemeToggle />
         </SettingsToggleRow>
-        <SettingsRow icon={BellRing} label="记账提醒" onClick={v2Toast} />
-        <SettingsRow icon={Landmark} label="默认账户" onClick={v2Toast} />
+        <SettingsRow icon={BellRing} label="记账提醒" value="未开启" onClick={v2Toast} />
+        <SettingsRow icon={Landmark} label="默认账户" value={activeAccounts[0]?.name ?? "未设置"} onClick={v2Toast} />
       </SettingsGroup>
 
       {/* ── 数据与同步 ── */}
@@ -239,7 +248,7 @@ export default function SettingsPage() {
           value={email ? "已同步" : "登录后开启"}
           onClick={v2Toast}
         />
-        <SettingsRow icon={DatabaseBackup} label="本地备份" onClick={v2Toast} />
+        <SettingsRow icon={DatabaseBackup} label="本地备份" value="今天" onClick={v2Toast} />
         <SettingsRow icon={ArrowDownUp} label="导入与导出" onClick={v2Toast} />
       </SettingsGroup>
 

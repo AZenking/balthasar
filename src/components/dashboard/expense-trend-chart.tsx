@@ -102,7 +102,7 @@ function weekdayLabel(iso: string): string {
 }
 
 interface DailyRow {
-  label: string; // 周几(用于 X 轴)
+  label: string; // M/D 短日期(用于 X 轴)
   date: string;
   subLabel: string; // 短日期(用于 Tooltip)
   amount: number;
@@ -196,13 +196,13 @@ function DailyView({
   isPrivacy?: boolean;
 }) {
   const rows: DailyRow[] = buckets.map((b) => ({
-    label: weekdayLabel(b.date),
+    label: shortDate(b.date), // 027:改用 M/D 日期刻度(非星期)
     date: b.date,
     subLabel: shortDate(b.date),
     amount: b.amount,
   }));
   const total = buckets.reduce((acc, b) => acc + b.amount, 0);
-  const overallAria = `本周支出趋势,周一至周日每日金额,合计 ${formatAmount(total)}`;
+  const overallAria = `本月每日支出趋势,合计 ${formatAmount(total)}`;
 
   return (
     <div role="img" aria-label={overallAria}>
@@ -220,7 +220,8 @@ function DailyView({
             dataKey="label"
             tickLine={false}
             axisLine={{ stroke: "var(--border)" }}
-            tick={{ fontSize: 11, fill: "var(--muted)" }}
+            tick={{ fontSize: 10, fill: "var(--muted)" }}
+            interval={Math.max(0, Math.floor(rows.length / 5) - 1)}
           />
           <YAxis
             tickFormatter={(v: number) => tickFormatter(!!isPrivacy, v)}

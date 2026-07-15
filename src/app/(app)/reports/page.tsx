@@ -26,10 +26,10 @@ import { cn } from "@/lib/utils";
 /**
  * 统计页 (027-mobile-home-revamp,线稿对齐)。
  *
+ * 月模式:用 dashboard.summary(趋势/分类/摘要) + transaction.list(三宫格)
+ * 年模式:全部从 transaction.list(全年范围)客户端聚合(趋势/分类/摘要/三宫格)
+ *
  * 线稿顺序:摘要 → 当月每日趋势 → 分类占比 → 消费数据
- * - 趋势改为"当月每日支出"(原 6 月趋势移除;与首页口径统一)
- * - 月/年 toggle + ‹ › 周期切换 + 隐私入口
- * - 修"最高支出日 ¥0"BUG(computeInsights 返回 maxExpenseDayAmount)
  */
 const monthKey = (year: number, month: number) =>
   `${year}-${String(month).padStart(2, "0")}`;
@@ -40,6 +40,46 @@ function formatCents(cents: number): string {
 
 function prevMonth(y: number, m: number) {
   return m === 1 ? { year: y - 1, month: 12 } : { year: y, month: m - 1 };
+}
+
+/** 从交易列表客户端聚合分类 Top N(用于年模式)。 */
+function computeCategoryBreakdown(
+  txs: Array<{ type: string; amount: number; categoryName: string | null; categoryIcon: string | null; categoryId?: string }>,
+): Array<{ categoryId: string; categoryName: string; categoryIcon: string | null; amount: number; percentage: number }> {
+  const expenses = txs.filter((t) => t.type === "expense");
+  const total = expenses.reduce((s, t) => s + Math.abs(t.amount), 0);
+  const byCat = new Map<string, { name: string; icon: string | null; amount: number }>();
+  for (const t of expenses) {
+    const key = t.categoryName ?? "?";
+    const existing = byCat.get(key);
+    if (existing) existing.amount += Math.abs(t.amount);
+    else byCat.set(key, { name: key, icon: t.categoryIcon, amount: Math.abs(t.amount) });
+  }
+  return [...byCat.entries()]
+    .map(([name, v]) => ({
+      categoryId: name,
+      categoryName: v.name,
+      categoryIcon: v.icon,
+      amount: v.amount,
+      percentage: total > 0 ? Math.round((v.amount / total) * 1000) / 10 : 0,
+    }))
+    .sort((a, b) => b.amount - a.amount);
+}
+
+/** 从交易列表客户端聚合每日趋势(用于年模式)。 */
+function computeDailyTrend(
+  txs: Array<{ type: string; amount: number; occurredAt: string | Date }>,
+): Array<{ date: string; amount: number }> {
+  const byDay = new Map<string, number>();
+  for (const t of txs) {
+    if (t.type !== "expense") continue;
+    const d = typeof t.occurredAt === "string" ? new Date(t.occurredAt) : t.occurredAt;
+    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+    byDay.set(key, (byDay.get(key) ?? 0) + Math.abs(t.amount));
+  }
+  return [...byDay.entries()]
+    .map(([date, amount]) => ({ date, amount }))
+    .sort((a, b) => (a.date < b.date ? -1 : 1));
 }
 
 export default function ReportsPage() {
@@ -55,13 +95,13 @@ export default function ReportsPage() {
     setIsPrivacy(isPrivacyOn());
   }, []);
 
-  // 用 dashboard.summary 获取当月每日趋势 + 分类 + 预算
+  // 月模式:summary(趋势/分类/摘要)
   const summaryQuery = trpc.dashboard.summary.useQuery({
     year: endYearMonth.year,
     month: endYearMonth.month,
   });
 
-  // 年模式:全年日期范围;月模式:当月范围
+  // 日期范围(月 or 年)
   const yearStart = new Date(Date.UTC(endYearMonth.year, 0, 1));
   const yearEnd = new Date(Date.UTC(endYearMonth.year + 1, 0, 1));
   const { start: mStart, end: mEnd } = getUtcMonthRange(
@@ -71,15 +111,19 @@ export default function ReportsPage() {
   const periodStart = period === "year" ? yearStart : mStart;
   const periodEnd = period === "year" ? yearEnd : mEnd;
 
+  // periodTxs:用于三宫格(月模式) + 全部聚合(年模式)
   const { data: periodTxs } = trpc.transaction.list.useQuery({
     startDate: periodStart.toISOString(),
     endDate: periodEnd.toISOString(),
-    limit: 200,
+    limit: 500,
     includeSummary: false,
   });
 
-  const data = summaryQuery.data;
-  const isLoading = summaryQuery.isLoading || !data;
+  const summaryData = summaryQuery.data;
+  const isLoading =
+    period === "month"
+      ? summaryQuery.isLoading || !summaryData
+      : !periodTxs;
 
   const handleCategoryClick = (categoryId: string) => {
     const m = monthKey(endYearMonth.year, endYearMonth.month);
@@ -92,29 +136,42 @@ export default function ReportsPage() {
     endYearMonth.year === now.getUTCFullYear() &&
     endYearMonth.month === now.getUTCMonth() + 1;
 
-  // 年模式:从 periodTxs 客户端聚合全年支出;月模式:用 summary
-  const yearExpenses = (periodTxs?.items ?? []).filter((t) => t.type === "expense");
+  // ── 统一数据源:月模式用 summary;年模式从 periodTxs 聚合 ──
+  const periodItems = periodTxs?.items ?? [];
+
+  // 支出总额
   const targetExpense =
     period === "year"
-      ? yearExpenses.reduce((s, t) => s + Math.abs(t.amount), 0)
-      : data?.monthExpense ?? 0;
-  const dailyAvg =
-    period === "year"
-      ? Math.round(targetExpense / 12) // 月均
-      : (isCurrentMonth
-          ? now.getUTCDate()
-          : new Date(endYearMonth.year, endYearMonth.month, 0).getUTCDate()) > 0
-        ? Math.round(
-            targetExpense /
-              (isCurrentMonth
-                ? now.getUTCDate()
-                : new Date(endYearMonth.year, endYearMonth.month, 0).getUTCDate()),
-          )
-        : 0;
+      ? periodItems.filter((t) => t.type === "expense").reduce((s, t) => s + Math.abs(t.amount), 0)
+      : summaryData?.monthExpense ?? 0;
 
+  // 均值
+  const avgValue =
+    period === "year"
+      ? Math.round(targetExpense / 12)
+      : (() => {
+          const days = isCurrentMonth
+            ? now.getUTCDate()
+            : new Date(endYearMonth.year, endYearMonth.month, 0).getUTCDate();
+          return days > 0 ? Math.round(targetExpense / days) : 0;
+        })();
+
+  // 趋势
+  const trendData =
+    period === "year"
+      ? { granularity: "daily" as const, buckets: computeDailyTrend(periodItems) }
+      : summaryData?.expenseTrend ?? { granularity: "daily" as const, buckets: [] };
+
+  // 分类
+  const categoryData =
+    period === "year"
+      ? computeCategoryBreakdown(periodItems).slice(0, 5)
+      : summaryData?.topExpenseCategories ?? [];
+
+  // 三宫格(两种模式都用 periodTxs)
   const insights =
-    periodTxs && periodTxs.items.length > 0
-      ? computeInsights(periodTxs.items)
+    periodItems.length > 0
+      ? computeInsights(periodItems)
       : {
           maxExpenseDay: null,
           maxExpenseDayAmount: null,
@@ -127,10 +184,24 @@ export default function ReportsPage() {
     const p = prevMonth(endYearMonth.year, endYearMonth.month);
     setEndYearMonth(p);
   };
+  const goNext = () => {
+    if (
+      endYearMonth.year === now.getUTCFullYear() &&
+      endYearMonth.month === now.getUTCMonth() + 1
+    ) return;
+    const n =
+      endYearMonth.month === 12
+        ? { year: endYearMonth.year + 1, month: 1 }
+        : { year: endYearMonth.year, month: endYearMonth.month + 1 };
+    setEndYearMonth(n);
+  };
+  const isAtCurrentMonth =
+    endYearMonth.year === now.getUTCFullYear() &&
+    endYearMonth.month === now.getUTCMonth() + 1;
 
   return (
     <div>
-      {/* 顶部:标题 + 月/年 toggle */}
+      {/* 顶部:标题 + 月/年 toggle + 隐私 */}
       <div className="flex items-center justify-between pt-2">
         <h1 className="text-lg font-medium">统计</h1>
         <div className="flex items-center gap-2">
@@ -139,7 +210,7 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {/* 第二行:‹ 2026 年 7 月 › 周期切换 */}
+      {/* 第二行:‹ 周期 › */}
       <div className="flex items-center justify-center gap-2 py-3">
         <button
           type="button"
@@ -156,14 +227,12 @@ export default function ReportsPage() {
         </span>
         <button
           type="button"
-          onClick={() => {
-            /* 未来月份不可选(当前月为边界) */
-          }}
-          disabled={isCurrentMonth}
+          onClick={goNext}
+          disabled={isAtCurrentMonth}
           aria-label="下一周期"
           className={cn(
             "flex h-9 w-9 items-center justify-center rounded-md",
-            isCurrentMonth
+            isAtCurrentMonth
               ? "cursor-not-allowed text-muted-foreground/40"
               : "text-muted-foreground hover:bg-[var(--muted)]",
           )}
@@ -179,7 +248,7 @@ export default function ReportsPage() {
         </div>
       ) : (
         <>
-          {/* 1. 摘要卡 */}
+          {/* 1. 摘要 */}
           <section className="pt-2">
             <Card>
               <Card.Content className="p-4">
@@ -194,7 +263,7 @@ export default function ReportsPage() {
                   <div>
                     <p className="text-xs text-muted-foreground">{labels.average}</p>
                     <p data-amount className="font-medium tabular-nums">
-                      {formatCents(period === "month" ? dailyAvg : targetExpense)}
+                      {formatCents(avgValue)}
                     </p>
                   </div>
                 </div>
@@ -202,17 +271,20 @@ export default function ReportsPage() {
             </Card>
           </section>
 
-          {/* 2. 当月每日趋势(线稿口径,非 6 月趋势) */}
+          {/* 2. 趋势 */}
           <section className="pt-4">
             <Card>
               <Card.Header>
                 <Card.Title>支出趋势</Card.Title>
               </Card.Header>
               <Card.Content className="p-4 pt-0">
-                <ExpenseTrendChart
-                  trend={data.expenseTrend}
-                  isPrivacy={isPrivacy}
-                />
+                {trendData.buckets.length > 0 ? (
+                  <ExpenseTrendChart trend={trendData} isPrivacy={isPrivacy} />
+                ) : (
+                  <p className="py-8 text-center text-sm text-muted-foreground">
+                    暂无支出数据
+                  </p>
+                )}
               </Card.Content>
             </Card>
           </section>
@@ -224,21 +296,21 @@ export default function ReportsPage() {
                 ? `${endYearMonth.year}年 支出分类`
                 : `${endYearMonth.year}年${endYearMonth.month}月 支出分类`}
             </h2>
-            {data.topExpenseCategories.length === 0 ? (
+            {categoryData.length === 0 ? (
               <EmptyState
                 icon={PieChart}
                 title="暂无报表数据"
-                description="本月还没有支出记录,记一笔后报表会自动汇总"
+                description="本周期还没有支出记录"
                 className="min-h-[24vh]"
               />
             ) : (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
                 <div className="md:col-span-5">
-                  <CategoryDonut items={data.topExpenseCategories} />
+                  <CategoryDonut items={categoryData} />
                 </div>
                 <div className="md:col-span-7">
                   <CategoryBreakdownCard
-                    items={data.topExpenseCategories}
+                    items={categoryData}
                     onCategoryClick={handleCategoryClick}
                   />
                 </div>
@@ -246,7 +318,7 @@ export default function ReportsPage() {
             )}
           </section>
 
-          {/* 4. 消费数据三宫格 */}
+          {/* 4. 消费数据 */}
           <StatsInsightsGrid insights={insights} />
         </>
       )}
