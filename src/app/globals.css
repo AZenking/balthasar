@@ -128,6 +128,13 @@
   --color-popover-foreground: oklch(0.145 0 0);
   --color-secondary: oklch(0.97 0 0);
   --color-secondary-foreground: oklch(0.205 0 0);
+  /*
+   * 品牌强调色:用于「记一笔」FAB 等需要高亮的 CTA。
+   * 独立于 --color-primary(近黑),避免污染全局 primary 按钮/链接。
+   * 浅/深主题复用同一蓝(dark 主题已是此色),保证品牌一致。
+   */
+  --color-accent-brand: oklch(0.6204 0.195 253.83);
+  --color-accent-brand-foreground: oklch(0.99 0 0);
 }
 
 .dark {
@@ -150,6 +157,8 @@
   --color-popover-foreground: oklch(0.97 0 0);
   --color-secondary: oklch(0.27 0.01 285.89);
   --color-secondary-foreground: oklch(0.97 0 0);
+  --color-accent-brand: oklch(0.6204 0.195 253.83);
+  --color-accent-brand-foreground: oklch(0.99 0 0);
 }
 
 @theme {

@@ -66,8 +66,9 @@ export function BottomNavigation() {
         <NavEntry entry={ENTRIES[1]!} active={isEntryActive(pathname, ENTRIES[1]!.href)} />
 
         {/* 中央 FAB 占位:固定宽度 flex-none,把空间还给左右 4 个导航入口
-            (原 flex-1 与导航项等宽,FAB 仅 48px 圆却占 ~72px,挤压标签) */}
-        <div className="flex h-16 w-16 flex-none items-start justify-center">
+            (原 flex-1 与导航项等宽,FAB 仅圆却占宽,挤压标签)。
+            relative 作为 TransactionDrawer 内 FAB absolute 定位的锚点。 */}
+        <div className="relative flex h-16 w-16 flex-none items-center justify-center">
           <TransactionDrawer />
         </div>
 

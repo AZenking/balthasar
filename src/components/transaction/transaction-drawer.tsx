@@ -33,15 +33,17 @@ export function TransactionDrawer() {
 
   return (
     <>
-      {/* 触发器:凸起的圆形按钮(替代原 <Link href="/transaction/new">) */}
+      {/*
+        触发器:凸起的圆形 FAB。
+        定位用 absolute(锚点 = BottomNavigation 中央占位容器的 relative),
+        负 margin 方案会让 FAB 半嵌入底栏且投影被同色背景吃掉;absolute +
+        ring 切边让 FAB 与底栏有清晰层次。
+      */}
       <button
         type="button"
         onClick={() => setIsOpen(true)}
         aria-label="记一笔"
-        className={cn(
-          "flex flex-1 items-center justify-center",
-          "-mt-6", // lift the FAB above the bar
-        )}
+        className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 cursor-pointer"
       >
         <span
           className={cn(
@@ -49,10 +51,15 @@ export function TransactionDrawer() {
               variant: "default",
               size: "icon",
             }),
-            "h-12 w-12 rounded-full shadow-lg",
+            // 品牌蓝高亮:覆盖 default 的近黑 primary,FAB 作为视觉主角
+            "bg-[var(--color-accent-brand)] text-[var(--color-accent-brand-foreground)] hover:bg-[var(--color-accent-brand)]/90",
+            "flex h-14 w-14 items-center justify-center rounded-full",
+            "ring-4 ring-background", // 底栏背景色切边,分离 FAB 与底栏
+            "shadow-lg shadow-[var(--color-accent-brand)]/30", // 蓝色调柔光投影
+            "transition-transform hover:scale-105 active:scale-95",
           )}
         >
-          <Plus className="h-5 w-5" aria-hidden />
+          <Plus className="h-6 w-6" aria-hidden />
         </span>
         <span className="sr-only">记一笔</span>
       </button>

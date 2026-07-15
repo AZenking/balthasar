@@ -119,7 +119,6 @@ export default function SettingsPage() {
   });
 
   const member = me?.member;
-  const email = me?.user.email ?? "";
   const activeAccounts = (accounts ?? []).filter((a) => a.archivedAt === null);
   const archivedAccounts = (accounts ?? []).filter((a) => a.archivedAt !== null);
 
@@ -148,51 +147,24 @@ export default function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-[720px] space-y-4">
-      {/* ── 顶部标题 + 状态徽标 ── */}
-      <div className="flex items-center justify-between pt-2">
-        <h1 className="text-lg font-medium">设置</h1>
-        <span
-          className={cn(
-            "rounded-full px-2 py-0.5 text-xs font-medium",
-            email
-              ? "bg-[var(--accent)] text-[var(--accent-foreground)]"
-              : "bg-[var(--muted)] text-muted-foreground",
-          )}
-        >
-          {email ? "已同步" : "本地使用"}
-        </span>
-      </div>
+      {/* ── 顶部标题 ── */}
+      <h1 className="pt-2 text-lg font-medium">设置</h1>
 
-      {/* ── 个人资料卡 ── */}
+      {/* ── 个人资料卡(垂直居中:头像独占一行 + 昵称 + 铅笔编辑) ── */}
       <Card>
-        <Card.Content className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--muted)] text-lg font-medium">
-              {(member?.displayName ?? "?").charAt(0)}
-            </div>
-            <div>
-              <p className="text-sm font-semibold">
-                {member?.displayName ?? "未设置昵称"}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {email ? (
-                  <span className="inline-flex items-center gap-1">
-                    <span className="h-1.5 w-1.5 rounded-full bg-[var(--success)]" />
-                    已同步 · {email}
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1">
-                    <span className="h-1.5 w-1.5 rounded-full bg-[var(--muted-foreground)]" />
-                    本地使用
-                  </span>
-                )}
-              </p>
-            </div>
+        <Card.Content className="flex flex-col items-center gap-3 p-6 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--muted)] text-xl font-medium">
+            {(member?.displayName ?? "?").charAt(0)}
           </div>
-          <NicknameEditor
-            currentDisplayName={member?.displayName ?? ""}
-            memberId={member?.id ?? ""}
-          />
+          <div className="flex items-center justify-center gap-1">
+            <span className="text-base font-semibold">
+              {member?.displayName ?? "未设置昵称"}
+            </span>
+            <NicknameEditor
+              currentDisplayName={member?.displayName ?? ""}
+              memberId={member?.id ?? ""}
+            />
+          </div>
         </Card.Content>
       </Card>
 
@@ -207,8 +179,11 @@ export default function SettingsPage() {
         >
           {!isLoading && (
             <>
-              {/* 列表常驻:新建/编辑改用 Dialog 弹窗(对齐 category-manager),
-                  不再用 showCreateForm 替换整列,以便新建时仍可参照已有账户。 */}
+              {/* 账户列表 —— 普通 div + map。
+                  不用 ListBox:AccountItem 行内有独立的 ⋯ Popover 菜单,
+                  嵌套在 ListBox.Item(可聚焦 Option)内会拦截点击、破坏
+                  focus 链,导致 Popover 打不开。ListBox 仅适合"整行单一
+                  动作"的列表。新建/编辑用 Dialog 弹窗(对齐 category-manager)。 */}
               {activeAccounts.map((acc) => (
                 <AccountItem
                   key={acc.id}
