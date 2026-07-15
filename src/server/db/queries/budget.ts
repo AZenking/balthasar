@@ -1,7 +1,7 @@
 import "server-only";
 import { db } from "@/server/db/client";
 import { budget } from "@/server/db/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 /**
  * Budget queries (027-mobile-home-revamp US5)。
