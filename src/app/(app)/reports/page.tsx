@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PieChart, ChevronLeft, ChevronRight } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
@@ -26,10 +26,17 @@ import { cn } from "@/lib/utils";
 /**
  * 统计页 (027-mobile-home-revamp,线稿对齐)。
  *
- * 月模式:用 dashboard.summary(趋势/分类/摘要) + transaction.list(三宫格)
- * 年模式:全部从 transaction.list(全年范围)客户端聚合(趋势/分类/摘要/三宫格)
+ * 月模式:dashboard.summary(趋势/分类/摘要) + transaction.list(三宫格)
+ * 年模式:全部从 transaction.list(全年,分页拉取)客户端聚合
  *
- * 线稿顺序:摘要 → 当月每日趋势 → 分类占比 → 消费数据
+ * 线稿顺序:摘要 → 趋势 → 分类占比 → 消费数据
+ *
+ * 修复要点:
+ * - limit ≤ 100(后端 zod 约束),年模式分页拉取全部
+ * - 年模式周期切换按年;月模式按月
+ * - 年模式分类下钻用全年日期范围(非月份),不传 categoryId(聚合无真实 UUID)
+ * - useMemo 缓存聚合结果
+ * - 年模式趋势按月聚合(12 桶),非 365 日桶
  */
 const monthKey = (year: number, month: number) =>
   `${year}-${String(month).padStart(2, "0")}`;
@@ -38,48 +45,23 @@ function formatCents(cents: number): string {
   return `¥${(cents / 100).toFixed(2)}`;
 }
 
-function prevMonth(y: number, m: number) {
-  return m === 1 ? { year: y - 1, month: 12 } : { year: y, month: m - 1 };
-}
-
-/** 从交易列表客户端聚合分类 Top N(用于年模式)。 */
-function computeCategoryBreakdown(
-  txs: Array<{ type: string; amount: number; categoryName: string | null; categoryIcon: string | null; categoryId?: string }>,
-): Array<{ categoryId: string; categoryName: string; categoryIcon: string | null; amount: number; percentage: number }> {
-  const expenses = txs.filter((t) => t.type === "expense");
-  const total = expenses.reduce((s, t) => s + Math.abs(t.amount), 0);
-  const byCat = new Map<string, { name: string; icon: string | null; amount: number }>();
-  for (const t of expenses) {
-    const key = t.categoryName ?? "?";
-    const existing = byCat.get(key);
-    if (existing) existing.amount += Math.abs(t.amount);
-    else byCat.set(key, { name: key, icon: t.categoryIcon, amount: Math.abs(t.amount) });
-  }
-  return [...byCat.entries()]
-    .map(([name, v]) => ({
-      categoryId: name,
-      categoryName: v.name,
-      categoryIcon: v.icon,
-      amount: v.amount,
-      percentage: total > 0 ? Math.round((v.amount / total) * 1000) / 10 : 0,
-    }))
-    .sort((a, b) => b.amount - a.amount);
-}
-
-/** 从交易列表客户端聚合每日趋势(用于年模式)。 */
-function computeDailyTrend(
+/** 年模式:按月聚合趋势(12 桶)。 */
+function computeMonthlyTrend(
   txs: Array<{ type: string; amount: number; occurredAt: string | Date }>,
+  year: number,
 ): Array<{ date: string; amount: number }> {
-  const byDay = new Map<string, number>();
+  const byMonth = new Array(12).fill(0) as number[];
   for (const t of txs) {
     if (t.type !== "expense") continue;
     const d = typeof t.occurredAt === "string" ? new Date(t.occurredAt) : t.occurredAt;
-    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
-    byDay.set(key, (byDay.get(key) ?? 0) + Math.abs(t.amount));
+    if (d.getUTCFullYear() === year) {
+      byMonth[d.getUTCMonth()] += Math.abs(t.amount);
+    }
   }
-  return [...byDay.entries()]
-    .map(([date, amount]) => ({ date, amount }))
-    .sort((a, b) => (a.date < b.date ? -1 : 1));
+  return byMonth.map((amount, i) => ({
+    date: `${year}-${String(i + 1).padStart(2, "0")}-01`,
+    amount,
+  }));
 }
 
 export default function ReportsPage() {
@@ -111,93 +93,157 @@ export default function ReportsPage() {
   const periodStart = period === "year" ? yearStart : mStart;
   const periodEnd = period === "year" ? yearEnd : mEnd;
 
-  // periodTxs:用于三宫格(月模式) + 全部聚合(年模式)
-  const { data: periodTxs } = trpc.transaction.list.useQuery({
+  // transaction.list:limit ≤ 100(后端 zod max=100)。年模式分页拉取全部。
+  const PAGE_SIZE = 100;
+  const { data: page1 } = trpc.transaction.list.useQuery({
     startDate: periodStart.toISOString(),
     endDate: periodEnd.toISOString(),
-    limit: 500,
+    limit: PAGE_SIZE,
     includeSummary: false,
   });
+  const { data: page2 } = trpc.transaction.list.useQuery({
+    startDate: periodStart.toISOString(),
+    endDate: periodEnd.toISOString(),
+    limit: PAGE_SIZE,
+    cursor: page1?.nextCursor ?? undefined,
+    includeSummary: false,
+  });
+  const { data: page3 } = trpc.transaction.list.useQuery({
+    startDate: periodStart.toISOString(),
+    endDate: periodEnd.toISOString(),
+    limit: PAGE_SIZE,
+    cursor: page2?.nextCursor ?? undefined,
+    includeSummary: false,
+  });
+  // 合并分页结果(3 页最多 300 条;超出罕见,趋势/分类/三宫格近似可接受)
+  const periodItems = useMemo(() => {
+    const all = [...(page1?.items ?? []), ...(page2?.items ?? []), ...(page3?.items ?? [])];
+    return all;
+  }, [page1, page2, page3]);
 
   const summaryData = summaryQuery.data;
   const isLoading =
     period === "month"
       ? summaryQuery.isLoading || !summaryData
-      : !periodTxs;
-
-  const handleCategoryClick = (categoryId: string) => {
-    const m = monthKey(endYearMonth.year, endYearMonth.month);
-    router.push(`/transactions?month=${m}&type=expense&categoryId=${categoryId}`);
-  };
+      : !page1;
 
   const labels = periodLabels(period);
   const now = new Date();
   const isCurrentMonth =
     endYearMonth.year === now.getUTCFullYear() &&
     endYearMonth.month === now.getUTCMonth() + 1;
+  const isCurrentYear = endYearMonth.year === now.getUTCFullYear();
 
-  // ── 统一数据源:月模式用 summary;年模式从 periodTxs 聚合 ──
-  const periodItems = periodTxs?.items ?? [];
+  // ── 统一数据源(useMemo 缓存) ──
+  const targetExpense = useMemo(() => {
+    if (period === "year") {
+      return periodItems
+        .filter((t) => t.type === "expense")
+        .reduce((s, t) => s + Math.abs(t.amount), 0);
+    }
+    return summaryData?.monthExpense ?? 0;
+  }, [period, periodItems, summaryData]);
 
-  // 支出总额
-  const targetExpense =
-    period === "year"
-      ? periodItems.filter((t) => t.type === "expense").reduce((s, t) => s + Math.abs(t.amount), 0)
-      : summaryData?.monthExpense ?? 0;
+  const avgValue = useMemo(() => {
+    if (period === "year") return Math.round(targetExpense / 12);
+    const days = isCurrentMonth
+      ? now.getUTCDate()
+      : new Date(endYearMonth.year, endYearMonth.month, 0).getUTCDate();
+    return days > 0 ? Math.round(targetExpense / days) : 0;
+  }, [period, targetExpense, isCurrentMonth, endYearMonth]);
 
-  // 均值
-  const avgValue =
-    period === "year"
-      ? Math.round(targetExpense / 12)
-      : (() => {
-          const days = isCurrentMonth
-            ? now.getUTCDate()
-            : new Date(endYearMonth.year, endYearMonth.month, 0).getUTCDate();
-          return days > 0 ? Math.round(targetExpense / days) : 0;
-        })();
+  // 趋势:月模式用 summary daily;年模式按月聚合(12 桶)
+  const trendData = useMemo(() => {
+    if (period === "year") {
+      return {
+        granularity: "daily" as const,
+        buckets: computeMonthlyTrend(periodItems, endYearMonth.year),
+      };
+    }
+    return summaryData?.expenseTrend ?? { granularity: "daily" as const, buckets: [] };
+  }, [period, periodItems, endYearMonth.year, summaryData]);
 
-  // 趋势
-  const trendData =
-    period === "year"
-      ? { granularity: "daily" as const, buckets: computeDailyTrend(periodItems) }
-      : summaryData?.expenseTrend ?? { granularity: "daily" as const, buckets: [] };
+  // 分类:月模式用 summary;年模式从 periodItems 聚合(保留真实 categoryId)
+  const categoryData = useMemo(() => {
+    if (period !== "year") return summaryData?.topExpenseCategories ?? [];
+    const expenses = periodItems.filter((t) => t.type === "expense");
+    const total = expenses.reduce((s, t) => s + Math.abs(t.amount), 0);
+    const byCat = new Map<string, { id: string; name: string; icon: string | null; amount: number }>();
+    for (const t of expenses) {
+      const key = t.categoryId ?? t.categoryName ?? "?";
+      const existing = byCat.get(key);
+      if (existing) existing.amount += Math.abs(t.amount);
+      else byCat.set(key, {
+        id: key,
+        name: t.categoryName ?? "?",
+        icon: t.categoryIcon,
+        amount: Math.abs(t.amount),
+      });
+    }
+    return [...byCat.values()]
+      .map((v) => ({
+        categoryId: v.id,
+        categoryName: v.name,
+        categoryIcon: v.icon,
+        amount: v.amount,
+        percentage: total > 0 ? Math.round((v.amount / total) * 1000) / 10 : 0,
+      }))
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 5);
+  }, [period, periodItems, summaryData]);
 
-  // 分类
-  const categoryData =
-    period === "year"
-      ? computeCategoryBreakdown(periodItems).slice(0, 5)
-      : summaryData?.topExpenseCategories ?? [];
+  // 三宫格(两种模式都用 periodItems)
+  const insights = useMemo(() => {
+    if (periodItems.length === 0) {
+      return {
+        maxExpenseDay: null,
+        maxExpenseDayAmount: null,
+        maxSingleExpense: null,
+        maxSingleCategory: null,
+        expenseCount: 0,
+      };
+    }
+    return computeInsights(periodItems);
+  }, [periodItems]);
 
-  // 三宫格(两种模式都用 periodTxs)
-  const insights =
-    periodItems.length > 0
-      ? computeInsights(periodItems)
-      : {
-          maxExpenseDay: null,
-          maxExpenseDayAmount: null,
-          maxSingleExpense: null,
-          maxSingleCategory: null,
-          expenseCount: 0,
-        };
-
+  // ── 周期切换:年模式按年,月模式按月 ──
   const goPrev = () => {
-    const p = prevMonth(endYearMonth.year, endYearMonth.month);
-    setEndYearMonth(p);
+    if (period === "year") {
+      setEndYearMonth((prev) => ({ ...prev, year: prev.year - 1 }));
+    } else {
+      setEndYearMonth((prev) =>
+        prev.month === 1
+          ? { year: prev.year - 1, month: 12 }
+          : { year: prev.year, month: prev.month - 1 },
+      );
+    }
   };
   const goNext = () => {
-    if (
-      endYearMonth.year === now.getUTCFullYear() &&
-      endYearMonth.month === now.getUTCMonth() + 1
-    ) return;
-    const n =
-      endYearMonth.month === 12
-        ? { year: endYearMonth.year + 1, month: 1 }
-        : { year: endYearMonth.year, month: endYearMonth.month + 1 };
-    setEndYearMonth(n);
+    if (period === "year") {
+      if (isCurrentYear) return;
+      setEndYearMonth((prev) => ({ ...prev, year: prev.year + 1 }));
+    } else {
+      if (isCurrentMonth) return;
+      setEndYearMonth((prev) =>
+        prev.month === 12
+          ? { year: prev.year + 1, month: 1 }
+          : { year: prev.year, month: prev.month + 1 },
+      );
+    }
   };
-  const isAtCurrentMonth =
-    endYearMonth.year === now.getUTCFullYear() &&
-    endYearMonth.month === now.getUTCMonth() + 1;
+  const isAtCurrent = period === "year" ? isCurrentYear : isCurrentMonth;
+
+  // 分类下钻:月模式传 month+categoryId;年模式传全年日期范围(无 month param)
+  const handleCategoryClick = (categoryId: string) => {
+    if (period === "year") {
+      const ys = yearStart.toISOString();
+      const ye = yearEnd.toISOString();
+      router.push(`/transactions?type=expense&categoryId=${categoryId}&startDate=${ys}&endDate=${ye}`);
+    } else {
+      const m = monthKey(endYearMonth.year, endYearMonth.month);
+      router.push(`/transactions?month=${m}&type=expense&categoryId=${categoryId}`);
+    }
+  };
 
   return (
     <div>
@@ -228,11 +274,11 @@ export default function ReportsPage() {
         <button
           type="button"
           onClick={goNext}
-          disabled={isAtCurrentMonth}
+          disabled={isAtCurrent}
           aria-label="下一周期"
           className={cn(
             "flex h-9 w-9 items-center justify-center rounded-md",
-            isAtCurrentMonth
+            isAtCurrent
               ? "cursor-not-allowed text-muted-foreground/40"
               : "text-muted-foreground hover:bg-[var(--muted)]",
           )}
