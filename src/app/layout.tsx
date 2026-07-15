@@ -1,5 +1,5 @@
 import "./globals.css";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Toaster } from "sonner";
 import { Providers } from "./providers";
 import { ThemeProvider } from "@/components/theme/theme-provider";
@@ -7,6 +7,33 @@ import { ThemeProvider } from "@/components/theme/theme-provider";
 export const metadata: Metadata = {
   title: "BALTHASAR · 家庭记账",
   description: "10 秒记账,每天坚持。",
+  applicationName: "BALTHASAR",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "BALTHASAR",
+  },
+};
+
+/**
+ * Viewport + theme color (PWA installability).
+ *
+ * `themeColor` is an array keyed by `prefers-color-scheme` so the browser /
+ * OS chrome tint follows the system dark/light setting. The literal values
+ * mirror the app's background tokens: light `#ffffff`, dark `#2a2a2d`
+ * (dark `--background` ≈ oklch(0.18 0.01 285.89)). `maximumScale: 1`
+ * disables pinch-zoom — a bookkeeping app benefits from stable form
+ * layouts on mobile.
+ */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#2a2a2d" },
+  ],
 };
 
 const PRIVACY_KEY = process.env.NEXT_PUBLIC_PRIVACY_KEY ?? "balthasar.privacy.enabled";
