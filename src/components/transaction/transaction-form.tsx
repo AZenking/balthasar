@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
 import { ChevronLeft } from "lucide-react";
 import {
   transactionFormSchema,
@@ -195,8 +196,16 @@ export function TransactionForm({
 
   const createMutation = trpc.transaction.create.useMutation({
     onSuccess: () => {
+      // 025 FR-005:optimistic 反馈 — toast 在 onSubmit 里已立刻显示
+      // "已记账 ✓",这里只做 server 确认后的 invalidate + navigate。
       handlePostSuccess();
       if (!embedded) router.push("/dashboard");
+    },
+    onError: (e) => {
+      // 后台失败:回滚 toast + 提示。表单状态仍在,用户可改后重提。
+      // tRPC v11 TRPCError:.message 在 top-level,.data.code 是 SERVER_ERROR_CODE。
+      const reason = e?.message ?? e?.data?.code ?? "请重试";
+      toast.error(`保存失败:${reason}`, { id: "tx-create" });
     },
   });
 
@@ -204,6 +213,10 @@ export function TransactionForm({
     onSuccess: () => {
       handlePostSuccess();
       if (!embedded) router.push(transactionsHref);
+    },
+    onError: (e) => {
+      const reason = e?.message ?? e?.data?.code ?? "请重试";
+      toast.error(`保存失败:${reason}`, { id: "tx-update" });
     },
   });
 
@@ -257,16 +270,27 @@ export function TransactionForm({
 
   const onSubmit = async (data: TransactionFormValues) => {
     setServerError("");
+    // 025 FR-005:optimistic 反馈 —— 通过 sonner toast 在用户点击 <100ms 内
+    // 显示"已提交"状态。toast id 用于后续 onError 替换为 error 消息(回滚)。
+    // 不做缓存层乐观更新(transaction.list / dashboard.summary cache 写入)
+    // 因为表单提交后立即 invalidate + 路由跳转,server 真值会在 < 500ms 内
+    // 反映到目标页面;真做 cache 写入收益小、风险大(YAGNI)。
+    const toastId = isEditMode ? "tx-update" : "tx-create";
+    toast.success(isEditMode ? "已保存 ✓ — 正在同步" : "已记账 ✓ — 正在同步", {
+      id: toastId,
+    });
     try {
       const baseAccountId = data.accountId || unarchivedAccounts[0]!.id;
       if (isTransfer) {
         // 027 US4:转账 —— 无 categoryId,需 toAccountId,且 !== accountId。
         if (!toAccountId) {
           setServerError("请选择转入账户");
+          toast.error("请选择转入账户", { id: toastId });
           return;
         }
         if (toAccountId === baseAccountId) {
           setServerError("转出账户与转入账户不能相同");
+          toast.error("转出账户与转入账户不能相同", { id: toastId });
           return;
         }
         const transferPayload = {
@@ -280,6 +304,7 @@ export function TransactionForm({
         if (isEditMode && editId) {
           // update procedure 暂未支持 transfer 切换(留后续),降级提示。
           setServerError("转账暂不支持编辑,请删除后重建");
+          toast.error("转账暂不支持编辑,请删除后重建", { id: toastId });
           return;
         }
         await createMutation.mutateAsync(transferPayload);

@@ -103,6 +103,7 @@
 | PR-2 | `perf(dashboard): server-component migration (4 子组件)` | `/dashboard` | [NEEDS-MANUAL] | [NEEDS-MANUAL] | **有限** (parent 仍 client;详见 anti-patterns.md Architecture Note) | n/a | [NEEDS-MANUAL] | n/a (未动 server) | AP-03/04/05/06 ✅;SC-004 部分推进 |
 | PR-3 | `perf(transactions): drop "use client" from zero-hook children` | `/transactions` | [NEEDS-MANUAL] | [NEEDS-MANUAL] | **有限** (parent 仍 client;同 PR-2 note) | [NEEDS-MANUAL] | [NEEDS-MANUAL] | n/a (未动 server) | AP-01/02 ✅ |
 | PR-4 | `perf(transaction): Skeleton fallback for useSearchParams 暂态` | `/transaction/new` | [NEEDS-MANUAL] | [NEEDS-MANUAL] | n/a | n/a | [NEEDS-MANUAL] | n/a | FR-004/SC-003 推进(白屏闪烁消除) |
+| PR-5 US2 | `perf(bundle): dynamic-import recharts + loading.tsx + optimistic mutations` | `/dashboard` 全 (app) 路由 | [NEEDS-MANUAL] | [NEEDS-MANUAL] | **recharts 108KB gz 不再进 first-load**(改为 `next/dynamic({ ssr:false })` 懒加载,有 Skeleton 占位);其它 root chunks 不变 | n/a | [NEEDS-MANUAL] | n/a | SC-004 关键进展;FR-005 ✓(sonner toast <100ms 反馈);FR-004 ✓((app)/loading.tsx + /transaction/new 已有 FormSkeleton) |
 
 ## PR-by-PR 验证 checklist
 

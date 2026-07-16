@@ -6,7 +6,7 @@
 ## Summary
 
 - **Checklist pass rate**: 待 Phase 5 完成后填写(`__ / 17`)
-- **Verified APs**: 6 / ≥5 目标 ✅(AP-01 / AP-02 / AP-03 / AP-04 / AP-05 / AP-06 全部完成)
+- **Verified APs**: 8 / ≥5 目标 ✅(AP-01 ~ AP-08 全部完成)
 
 ## AP Inventory
 
@@ -18,6 +18,8 @@
 | AP-04 | `src/components/dashboard/summary-hero-card.tsx` | L1 | Vercel A1 | 文件零 hooks 且零 handlers 却标 `"use client"`(纯渲染) | 删除 `"use client"` 指令 → Server-renderable | **verified** | PR-2 |
 | AP-05 | `src/components/dashboard/asset-overview.tsx` | L1+L30 | Vercel A2 | `useRouter`+`onPress` 仅用于内部路由跳转 | 用 `<Link>` 包 `<Button>`,删除 `useRouter`/`"use client"` | **verified** | PR-2 |
 | AP-06 | `src/components/dashboard/category-top-list.tsx` | L1+L40+L43 | Vercel A2 | `useRouter`+`onClick` 仅用于内部路由跳转 | 用 `<Link>` 取代 `<button onClick>`,删除 `useRouter`/`"use client"` | **verified** | PR-2 |
+| AP-07 | `src/app/(app)/dashboard/page.tsx` (recharts import) | L11 | Vercel `bundle-dynamic-imports` | recharts(108 KB gz)静态导入进 Dashboard first-load | `next/dynamic({ ssr:false, loading: Skeleton })` 懒加载 | **verified** | PR-5 US2 |
+| AP-08 | `src/components/transaction/transaction-form.tsx` (create/update mutation) | L196-L218 | Vercel `rerender-derived-state-no-effect` (邻近) | mutateAsync 在 onSuccess 才反馈,延迟 100-500ms | `toast.success("已记账 ✓")` 在 onSubmit < 16ms 内显示;onError 用同 id 替换为 error | **verified** | PR-5 US2 |
 
 ## Architecture Note(影响 SC-004 实际收益)
 
@@ -149,6 +151,43 @@ API。纯 `(props) => <Card>...</Card>` 渲染。
 **After**:`<Link href={`/transactions?month=${monthKey}&type=expense&categoryId=${item.categoryId}`}>...` × 每项
 
 **Rationale**:同 AP-03。Link 提供原生 a11y + 预加载。
+
+### AP-07(PR-5 US2)
+
+**File**: `src/app/(app)/dashboard/page.tsx` (recharts 部分)
+
+**Before**:`import { ExpenseTrendChart } from "@/components/dashboard/expense-trend-chart";`
+直接静态导入,recharts(108 KB gzipped)进入 Dashboard first-load bundle。
+
+**After**:
+```ts
+const ExpenseTrendChart = dynamic(
+  () => import("@/components/dashboard/expense-trend-chart").then(m => m.ExpenseTrendChart),
+  { ssr: false, loading: () => <Skeleton className="h-[200px] w-full rounded-lg" /> }
+);
+```
+recharts 拆为独立 chunk(`8343-*.js`),仅在图表实际渲染时加载;
+加载期 Skeleton 占位 200px 高度,CLS=0(FR-013)。
+
+**Rationale**:Vercel `bundle-dynamic-imports`。recharts 是 Dashboard 体积
+最大的第三方(~ 108 KB gz),但只在趋势图卡可见时才需要。拆 chunk 后
+Dashboard first-load 实测应减少 ~108 KB gz(具体改善幅度待 Lighthouse
+手工测量填入 baseline.md)。
+
+### AP-08(PR-5 US2)
+
+**File**: `src/components/transaction/transaction-form.tsx` (create/update mutation)
+
+**Before**:`createMutation.mutateAsync` 在 `onSuccess` 才导航;用户点"确认记账"
+后看到的是按钮 "提交中..." 等待 server 响应(典型 100-500ms),不满足 FR-005。
+
+**After**:`onSubmit` 一进入就 `toast.success("已记账 ✓ — 正在同步")`,
+<16ms 内反馈;mutation 后台跑;`onSuccess` 跳转 dashboard;`onError` 用
+相同 toast id 替换为 error 消息(回滚)。
+
+**Rationale**:Vercel `rerender-derived-state-no-effect` 邻近 —— 用 sonner
+toast 实现"perceived-optimistic"反馈,不做缓存层乐观更新(transaction.list /
+dashboard.summary cache 写入收益小、风险大,违反 YAGNI)。
 
 ## Checklist Audit(17 项,Vercel React Best Practices 派生)
 
