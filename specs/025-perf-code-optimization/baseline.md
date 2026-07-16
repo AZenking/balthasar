@@ -100,7 +100,7 @@
 | PR | 改动摘要 | 路由 | LCP Δ | TTI Δ | Bundle Δ | FPS Δ | CLS Δ | p95 Δ | SC 对照 |
 |----|----------|------|-------|-------|----------|-------|-------|-------|---------|
 | PR-1 | `chore(perf): bundle-analyzer + baseline template` | — | — | — | — | — | — | — | 工具基建 |
-| PR-2 | (待填) | `/` | | | | | | | |
+| PR-2 | `perf(dashboard): server-component migration (4 子组件)` | `/dashboard` | [NEEDS-MANUAL] | [NEEDS-MANUAL] | **有限** (parent 仍 client;详见 anti-patterns.md Architecture Note) | n/a | [NEEDS-MANUAL] | n/a (未动 server) | AP-03/04/05/06 ✅;SC-004 部分推进 |
 | PR-3 | (待填) | `/transactions` | | | | | | | |
 | PR-4 | (待填) | `/transaction/new` | | | | | | | |
 

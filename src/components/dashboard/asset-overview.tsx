@@ -1,6 +1,4 @@
-"use client";
-
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Wallet } from "lucide-react";
 import { Card, Button } from "@heroui/react";
 
@@ -14,6 +12,8 @@ import { Card, Button } from "@heroui/react";
  *
  * 数据来源:dashboard.summary.assets(AssetsSummary | null)。
  * null = 查询失败降级(SC-008),显示"加载失败 重试"。
+ *
+ * 025 AP-05:`useRouter`+`onPress` → `<Link>` 包 Button。Server-renderable。
  */
 function formatCents(cents: number): string {
   return `¥${(cents / 100).toFixed(2)}`;
@@ -27,8 +27,6 @@ type AssetsSummary = {
 };
 
 export function AssetOverview({ assets }: { assets: AssetsSummary | null }) {
-  const router = useRouter();
-
   // null = 查询失败降级
   if (assets === null) {
     return (
@@ -55,13 +53,11 @@ export function AssetOverview({ assets }: { assets: AssetsSummary | null }) {
                 添加第一个账户,查看资产概览
               </p>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onPress={() => router.push("/settings")}
-            >
-              添加第一个账户
-            </Button>
+            <Link href="/settings">
+              <Button variant="outline" size="sm">
+                添加第一个账户
+              </Button>
+            </Link>
           </Card.Content>
         </Card>
       </section>
@@ -77,13 +73,11 @@ export function AssetOverview({ assets }: { assets: AssetsSummary | null }) {
         <Card.Content className="p-4">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium text-foreground">资产概览</p>
-            <Button
-              variant="ghost"
-              size="sm"
-              onPress={() => router.push("/settings")}
-            >
-              {assets.accountCount} 个账户
-            </Button>
+            <Link href="/settings">
+              <Button variant="ghost" size="sm">
+                {assets.accountCount} 个账户
+              </Button>
+            </Link>
           </div>
 
           <div className="mt-3">
