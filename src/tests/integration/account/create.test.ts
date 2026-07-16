@@ -119,7 +119,7 @@ describe("[T013] familyId server-derived (FR-006)", () => {
     } as any;
 
     await expect(caller.account.create(input)).rejects.toMatchObject({
-      data: { code: "BAD_REQUEST" },
+      code: "BAD_REQUEST",
     });
   });
 });

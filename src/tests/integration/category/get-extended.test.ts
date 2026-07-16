@@ -107,7 +107,7 @@ describe("[US5] category.get procedure extended", () => {
     const c = await createCategory({
       type: "expense",
       name: "GetExtOwn",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
     });
@@ -119,7 +119,7 @@ describe("[US5] category.get procedure extended", () => {
       id: c.id,
       name: "GetExtOwn",
       type: "expense",
-      icon: "🐾",
+      icon: "paw-print",
       sortOrder: 100,
       isBuiltIn: false,
       familyId: famId,
@@ -134,7 +134,7 @@ describe("[US5] category.get procedure extended", () => {
     const other = await createCategory({
       type: "expense",
       name: "GetExtOther",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: otherFamId,
       actorMemberId: otherMemId,
     });
@@ -166,7 +166,7 @@ describe("[US5] category.get procedure extended", () => {
     const c = await createCategory({
       type: "expense",
       name: "GetExtArchived",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
     });

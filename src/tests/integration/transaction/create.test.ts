@@ -123,7 +123,7 @@ describe("[T012] type/category mismatch → 400", () => {
         categoryId: s.incomeCatId,
         amount: 100,
       })
-    ).rejects.toMatchObject({ data: { code: "BAD_REQUEST" } });
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 });
 
@@ -142,7 +142,7 @@ describe("[T013] cross-family account → 400 + archived account → 400", () =>
         categoryId: sB.expenseCatId,
         amount: 100,
       })
-    ).rejects.toMatchObject({ data: { code: "BAD_REQUEST" } });
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
   it("archived account → BAD_REQUEST", async () => {
@@ -162,7 +162,7 @@ describe("[T013] cross-family account → 400 + archived account → 400", () =>
         categoryId: s.expenseCatId,
         amount: 100,
       })
-    ).rejects.toMatchObject({ data: { code: "BAD_REQUEST" } });
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 });
 
@@ -223,7 +223,7 @@ describe("[T020-T021] get with JOIN + cross-family 404", () => {
 
     await expect(
       caller(sB.userId).transaction.get({ id: created.id })
-    ).rejects.toMatchObject({ data: { code: "NOT_FOUND" } });
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 });
 
@@ -286,7 +286,7 @@ describe("[T028-T030] update", () => {
 
     await expect(
       caller(sB.userId).transaction.update({ id: created.id, remark: "stolen" })
-    ).rejects.toMatchObject({ data: { code: "NOT_FOUND" } });
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 
   it("transaction_edited audit with before/after", async () => {
@@ -340,7 +340,7 @@ describe("[T033-T036] delete", () => {
     await c.transaction.delete({ id: created.id });
 
     await expect(c.transaction.delete({ id: created.id })).rejects.toMatchObject({
-      data: { code: "NOT_FOUND" },
+      code: "NOT_FOUND",
     });
   });
 

@@ -119,7 +119,7 @@ describe("[T026] archived account cannot be edited (FR-011)", () => {
 
     await expect(
       caller.account.update({ id: created.id, name: "改名" })
-    ).rejects.toMatchObject({ data: { code: "CONFLICT" } });
+    ).rejects.toMatchObject({ code: "CONFLICT" });
   });
 });
 
@@ -140,7 +140,7 @@ describe("[T027] cross-family update → NOT_FOUND (SC-003)", () => {
     const callerB = authedCallerWith(userB);
     await expect(
       callerB.account.update({ id: created.id, name: "stolen" })
-    ).rejects.toMatchObject({ data: { code: "NOT_FOUND" } });
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
 
     // Verify A's account unchanged
     const rows = await db.select().from(account).where(eq(account.id, created.id));

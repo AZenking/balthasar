@@ -81,14 +81,14 @@ describe("[US4] findAllCategories hierarchical + filters", () => {
     const parent = await createCategory({
       type: "expense",
       name: "ListParent",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
     });
     await createCategory({
       type: "expense",
       name: "ListChild",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
       parentId: parent.id,
@@ -113,14 +113,14 @@ describe("[US4] findAllCategories hierarchical + filters", () => {
     const parent = await createCategory({
       type: "expense",
       name: "NestParent",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
     });
     const child = await createCategory({
       type: "expense",
       name: "NestChild",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
       parentId: parent.id,
@@ -142,7 +142,7 @@ describe("[US4] findAllCategories hierarchical + filters", () => {
     await createCategory({
       type: "expense",
       name: "FilterExpense",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
     });
@@ -173,7 +173,7 @@ describe("[US4] findAllCategories hierarchical + filters", () => {
     const c = await createCategory({
       type: "expense",
       name: "ToBeArchivedList",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
     });
@@ -201,14 +201,14 @@ describe("[US4] findAllCategories hierarchical + filters", () => {
     await createCategory({
       type: "expense",
       name: "FamilyAPrivate",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
     });
     await createCategory({
       type: "expense",
       name: "FamilyBPrivate",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: otherFamId,
       actorMemberId: otherMemId,
     });
@@ -229,14 +229,14 @@ describe("[US4] findAllCategories hierarchical + filters", () => {
     const parent = await createCategory({
       type: "expense",
       name: "CascadeParent",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
     });
     const child1 = await createCategory({
       type: "expense",
       name: "CascadeChild1",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
       parentId: parent.id,
@@ -244,7 +244,7 @@ describe("[US4] findAllCategories hierarchical + filters", () => {
     const child2 = await createCategory({
       type: "expense",
       name: "CascadeChild2",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
       parentId: parent.id,
@@ -267,8 +267,8 @@ describe("[US4] findAllCategories hierarchical + filters", () => {
     const flat = await findAllCategories({ familyId: famId });
     const builtIns = flat.filter((c) => c.isBuiltIn);
 
-    // All 20 built-ins present
-    expect(builtIns.length).toBe(20);
+    // All built-ins present (003 seed 20 + 0006 增 seed "转账" = 21)
+    expect(builtIns.length).toBe(21);
 
     // Each has new fields (familyId=null, parentId=null, archivedAt=null)
     for (const b of builtIns) {

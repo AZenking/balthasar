@@ -222,7 +222,7 @@ describe("[T035] cross-family archive/unarchive → NOT_FOUND (SC-003)", () => {
     const callerB = authedCallerWith(userB);
     await expect(
       callerB.account.archive({ id: created.id })
-    ).rejects.toMatchObject({ data: { code: "NOT_FOUND" } });
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
 
     // Verify A's account not archived
     const rows = await db.select().from(account).where(eq(account.id, created.id));
@@ -246,7 +246,7 @@ describe("[T035] cross-family archive/unarchive → NOT_FOUND (SC-003)", () => {
     const callerB = authedCallerWith(userB);
     await expect(
       callerB.account.unarchive({ id: created.id })
-    ).rejects.toMatchObject({ data: { code: "NOT_FOUND" } });
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
 
     // Verify A's account still archived
     const rows = await db.select().from(account).where(eq(account.id, created.id));

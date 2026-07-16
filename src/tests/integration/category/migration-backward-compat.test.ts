@@ -39,7 +39,8 @@ describe("018 migration 0006: backward compat with 003", () => {
 
     const expense = rows.filter((r) => r.type === "expense" && r.isBuiltIn);
     const income = rows.filter((r) => r.type === "income" && r.isBuiltIn);
-    expect(expense.length).toBe(12);
+    // 003 seed: 12 expense + 8 income = 20;0006 增 seed "转账"(expense)→ 13 + 8 = 21
+    expect(expense.length).toBe(13);
     expect(income.length).toBe(8);
   });
 

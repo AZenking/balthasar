@@ -56,7 +56,7 @@ describe("[US1] createCategory DB-level integration", () => {
     const created = await createCategory({
       type: "expense",
       name: "宠物用品",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
     });
@@ -102,7 +102,7 @@ describe("[US1] createCategory DB-level integration", () => {
     await createCategory({
       type: "expense",
       name: "Unique",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
     });
@@ -112,7 +112,7 @@ describe("[US1] createCategory DB-level integration", () => {
       createCategory({
         type: "expense",
         name: "UNIQUE",
-        icon: "🐾",
+        icon: "paw-print",
         familyId: famId,
         actorMemberId: memId,
       }),
@@ -123,7 +123,7 @@ describe("[US1] createCategory DB-level integration", () => {
     await createCategory({
       type: "expense",
       name: "DualType",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
     });
@@ -142,14 +142,14 @@ describe("[US1] createCategory DB-level integration", () => {
     const parent = await createCategory({
       type: "expense",
       name: "Level1",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
     });
     const child = await createCategory({
       type: "expense",
       name: "Level2",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
       parentId: parent.id,
@@ -159,7 +159,7 @@ describe("[US1] createCategory DB-level integration", () => {
       createCategory({
         type: "expense",
         name: "Level3",
-        icon: "🐾",
+        icon: "paw-print",
         familyId: famId,
         actorMemberId: memId,
         parentId: child.id, // already a 二级 → would be 3rd level
@@ -171,7 +171,7 @@ describe("[US1] createCategory DB-level integration", () => {
     const parent = await createCategory({
       type: "expense",
       name: "ParentExpense",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
     });
@@ -217,7 +217,7 @@ describe("[US1] createCategory DB-level integration", () => {
       await createCategory({
         type: "expense",
         name: `Cat${i}`,
-        icon: "🐾",
+        icon: "paw-print",
         familyId: capFamId,
         actorMemberId: capMemId,
       });
@@ -230,7 +230,7 @@ describe("[US1] createCategory DB-level integration", () => {
       createCategory({
         type: "expense",
         name: "OverCap",
-        icon: "🐾",
+        icon: "paw-print",
         familyId: capFamId,
         actorMemberId: capMemId,
       }),

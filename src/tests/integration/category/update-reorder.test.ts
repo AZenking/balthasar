@@ -79,7 +79,7 @@ describe("[US2] updateCategory", () => {
     const created = await createCategory({
       type: "expense",
       name: "Original",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
     });
@@ -113,14 +113,14 @@ describe("[US2] updateCategory", () => {
     await createCategory({
       type: "expense",
       name: "SiblingA",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
     });
     const b = await createCategory({
       type: "expense",
       name: "SiblingB",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
     });
@@ -138,14 +138,14 @@ describe("[US2] updateCategory", () => {
     const parent = await createCategory({
       type: "expense",
       name: "HasChildParent",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
     });
     await createCategory({
       type: "expense",
       name: "ChildOfParent",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
       parentId: parent.id,
@@ -153,7 +153,7 @@ describe("[US2] updateCategory", () => {
     const otherTop = await createCategory({
       type: "expense",
       name: "OtherTop",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
     });
@@ -171,7 +171,7 @@ describe("[US2] updateCategory", () => {
     const c = await createCategory({
       type: "expense",
       name: "SelfCycle",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
     });
@@ -189,7 +189,7 @@ describe("[US2] updateCategory", () => {
     const c = await createCategory({
       type: "expense",
       name: "HasTxRef",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
     });
@@ -248,7 +248,7 @@ describe("[US2] updateCategory", () => {
     const otherCat = await createCategory({
       type: "expense",
       name: "OtherFamilyCat",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: otherFamId,
       actorMemberId: otherMemId,
     });
@@ -268,7 +268,7 @@ describe("[US2] updateCategory", () => {
     const c = await createCategory({
       type: "expense",
       name: "ToBeArchived",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
     });
@@ -302,7 +302,7 @@ describe("[US2] updateCategory", () => {
     const c = await createCategory({
       type: "expense",
       name: "AuditUpdate",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
     });
@@ -331,21 +331,21 @@ describe("[US2] reorderCategories", () => {
     const a = await createCategory({
       type: "expense",
       name: "ReorderA",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
     });
     const b = await createCategory({
       type: "expense",
       name: "ReorderB",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
     });
     const c = await createCategory({
       type: "expense",
       name: "ReorderC",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
     });
@@ -405,7 +405,7 @@ describe("[US2] reorderCategories", () => {
     const otherCat = await createCategory({
       type: "expense",
       name: "OtherFamilyReorder",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: otherFamId,
       actorMemberId: otherMemId,
     });
@@ -423,14 +423,14 @@ describe("[US2] reorderCategories", () => {
     const parent = await createCategory({
       type: "expense",
       name: "ReorderParent",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
     });
     const child = await createCategory({
       type: "expense",
       name: "ReorderChild",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
       parentId: parent.id,
@@ -438,7 +438,7 @@ describe("[US2] reorderCategories", () => {
     const top = await createCategory({
       type: "expense",
       name: "ReorderTop",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
     });
@@ -459,14 +459,14 @@ describe("[US2] reorderCategories", () => {
     const a = await createCategory({
       type: "expense",
       name: "DupSortA",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
     });
     const b = await createCategory({
       type: "expense",
       name: "DupSortB",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
     });

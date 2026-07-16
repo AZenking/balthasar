@@ -61,14 +61,14 @@ describe("[US3] archiveCategory cascade", () => {
     const parent = await createCategory({
       type: "expense",
       name: "ArchiveParent",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
     });
     const child = await createCategory({
       type: "expense",
       name: "ArchiveChild",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
       parentId: parent.id,
@@ -100,14 +100,14 @@ describe("[US3] archiveCategory cascade", () => {
     const parent = await createCategory({
       type: "expense",
       name: "IdempParent",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
     });
     const child = await createCategory({
       type: "expense",
       name: "IdempChild",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
       parentId: parent.id,
@@ -141,14 +141,14 @@ describe("[US3] archiveCategory cascade", () => {
     const parent = await createCategory({
       type: "expense",
       name: "ForceParent",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
     });
     const childA = await createCategory({
       type: "expense",
       name: "ForceChildA",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
       parentId: parent.id,
@@ -156,7 +156,7 @@ describe("[US3] archiveCategory cascade", () => {
     const childB = await createCategory({
       type: "expense",
       name: "ForceChildB",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
       parentId: parent.id,
@@ -209,7 +209,7 @@ describe("[US3] archiveCategory cascade", () => {
     const c = await createCategory({
       type: "expense",
       name: "HideFromList",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
     });
@@ -259,7 +259,7 @@ describe("[US3] archiveCategory cascade", () => {
     const otherCat = await createCategory({
       type: "expense",
       name: "OtherFamilyArchive",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: otherFamId,
       actorMemberId: otherMemId,
     });
@@ -277,14 +277,14 @@ describe("[US3] archiveCategory cascade", () => {
     const parent = await createCategory({
       type: "expense",
       name: "AuditParent",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
     });
     await createCategory({
       type: "expense",
       name: "AuditChild1",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
       parentId: parent.id,
@@ -292,7 +292,7 @@ describe("[US3] archiveCategory cascade", () => {
     await createCategory({
       type: "expense",
       name: "AuditChild2",
-      icon: "🐾",
+      icon: "paw-print",
       familyId: famId,
       actorMemberId: memId,
       parentId: parent.id,

@@ -67,7 +67,7 @@ describe("[T013] seed integrity (SC-001/002/003/006/008)", () => {
     expect(income.length).toBeGreaterThanOrEqual(5);
   });
 
-  it("every row: name 1-30, icon ≤ 4 UTF-16 code units, type ∈ {income,expense}", async () => {
+  it("every row: name 1-30, icon is valid lucide name, type ∈ {income,expense}", async () => {
     const userId = await seedUser(`t013b-${Date.now()}@example.com`);
     const c = caller(userId);
     const items = await c.category.list();
@@ -75,7 +75,10 @@ describe("[T013] seed integrity (SC-001/002/003/006/008)", () => {
     for (const item of items) {
       expect(item.name.length).toBeGreaterThanOrEqual(1);
       expect(item.name.length).toBeLessThanOrEqual(30);
-      expect(item.icon.length).toBeLessThanOrEqual(4);
+      // 028 迁移后 icon 是 lucide kebab-case 名(如 "utensils"),非 emoji
+      expect(item.icon).toMatch(/^[a-z][a-z0-9-]*$/);
+      expect(item.icon.length).toBeGreaterThanOrEqual(2);
+      expect(item.icon.length).toBeLessThanOrEqual(30);
       expect(["income", "expense"]).toContain(item.type);
       expect(item.sortOrder).toBeGreaterThan(0);
     }

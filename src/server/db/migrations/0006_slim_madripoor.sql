@@ -13,4 +13,5 @@ ALTER TABLE "transactions" ADD CONSTRAINT "transactions_to_account_id_accounts_i
 
 -- 4. seed 系统内置"转账"分类(M3 决策:transfer 强制引用此 id 满足 NOT NULL)
 --    UUID v5 由 "expense:转账" 在 CATEGORY_DNS_NAMESPACE 派生,跨环境稳定。
-INSERT INTO categories (id, name, type, icon, sort_order, is_built_in) VALUES ('6206a8ba-b706-51ee-ace0-39299f1e39d5', '转账', 'expense', '🔄', 900, true) ON CONFLICT (id) DO NOTHING;
+--    icon 直接用 lucide 名 "undo-2"(028 迁移后统一,不再用 emoji)。
+INSERT INTO categories (id, name, type, icon, sort_order, is_built_in) VALUES ('6206a8ba-b706-51ee-ace0-39299f1e39d5', '转账', 'expense', 'undo-2', 900, true) ON CONFLICT (id) DO NOTHING;
