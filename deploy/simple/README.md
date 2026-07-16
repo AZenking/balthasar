@@ -220,7 +220,7 @@ make simple-up                   # 再次启动
 修改 `.env` 中的 `DOCKER_TAG`,然后 pull + restart:
 
 ```bash
-make simple-upgrade TAG=0.2.0
+make simple-upgrade TAG=1.0.0
 # 内部: sed 改 .env DOCKER_TAG → docker compose pull → docker compose up -d
 # entrypoint 自动跑新版本数据库迁移
 ```
@@ -248,16 +248,6 @@ make simple-restore DATE=2026-07-08
 ```
 
 ⚠️ **恢复会覆盖当前所有数据**,无确认提示。
-
-### Synology Task Scheduler 定时备份
-
-DSM 控制面板 → 任务计划 → 新增 → 计划任务 → 用户定义的脚本:
-
-- **计划**: 每天 03:00
-- **用户**: root
-- **命令**: `cd /volume1/docker/balthasar && docker compose -f docker-compose.simple.yml exec -T postgres pg_dump -U balthasar balthasar | gzip > /volume1/backup/balthasar/backup-$$(date +%F).sql.gz`
-
-DSM 自动保留所有备份,如需轮转 30 天可在脚本里加 `find /volume1/backup/balthasar -name 'backup-*.sql.gz' -mtime +30 -delete`。
 
 ### 危险操作警告
 
