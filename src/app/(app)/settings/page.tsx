@@ -360,7 +360,7 @@ export default function SettingsPage() {
                 <AlertDialog.Heading>确认退出登录?</AlertDialog.Heading>
               </AlertDialog.Header>
               <AlertDialog.Body>
-                <p className="text-sm text-muted-foreground">退出后需重新输入账号密码登录。</p>
+                <p className="text-sm text-muted">退出后需重新输入账号密码登录。</p>
               </AlertDialog.Body>
               <AlertDialog.Footer className="flex justify-end gap-2">
                 <Button variant="outline" onPress={() => setShowLogoutConfirm(false)}>

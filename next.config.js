@@ -6,6 +6,7 @@
  * - experimental.taint: enable React's experimental taint API for leak prevention
  * - bundle-analyzer: triggered via ANALYZE=true env (spec 025-perf-code-optimization)
  */
+/* global process */
 import bundleAnalyzer from "@next/bundle-analyzer";
 
 const withBundleAnalyzer = bundleAnalyzer({

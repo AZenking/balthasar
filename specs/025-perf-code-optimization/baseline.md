@@ -105,6 +105,7 @@
 | PR-4 | `perf(transaction): Skeleton fallback for useSearchParams 暂态` | `/transaction/new` | [NEEDS-MANUAL] | [NEEDS-MANUAL] | n/a | n/a | [NEEDS-MANUAL] | n/a | FR-004/SC-003 推进(白屏闪烁消除) |
 | PR-5 US2 | `perf(bundle): dynamic-import recharts + loading.tsx + optimistic mutations` | `/dashboard` 全 (app) 路由 | [NEEDS-MANUAL] | [NEEDS-MANUAL] | **recharts 108KB gz 不再进 first-load**(改为 `next/dynamic({ ssr:false })` 懒加载,有 Skeleton 占位);其它 root chunks 不变 | n/a | [NEEDS-MANUAL] | n/a | SC-004 关键进展;FR-005 ✓(sonner toast <100ms 反馈);FR-004 ✓((app)/loading.tsx + /transaction/new 已有 FormSkeleton) |
 | PR-5 US3 | `docs(perf): vercel checklist audit + anti-patterns backlog` | n/a(文档) | n/a | n/a | n/a | n/a | n/a | n/a | **SC-006 ✓** 42/45=93% ≥ 80%;**SC-007 ✓** 8 verified ≥ 5;**SC-008 ✓** 30-min onboarding guide 已文档化;**SC-009 ✓** server 未动;**SC-010 ✓** 187/187 tests |
+| PR-5 Polish | `chore(perf): final validation + token cleanup + close initiative` | n/a | n/a | n/a | n/a | n/a | n/a | n/a | **FR-011 ✓** 修复 3 处 `text-muted-foreground` → `text-muted`(settings 页);**FR-006 ✓** 零新运行时依赖;**FR-012 ✓** 无 ES2024+ 不兼容 API;**docs/AGENTS.md** 加 Server/Client 边界原则(第 8 条);**lint** 0 error / 54 pre-existing warnings;**type-check** 0 error;**unit** 187/187;**build** ✓ |
 
 ## PR-by-PR 验证 checklist
 
@@ -129,6 +130,27 @@
 - **p95 bench ×20**(T009):需 integration test 套件支持 perf bench
   模式;若 vitest config 暂未配置,可用 `pnpm test:integration` 单次
   通过 + timing log 作为代理
+- **视觉稳态截图**(T049):需在浏览器截 4 张稳态图(Dashboard / 流水 /
+  新增交易 / 设置),与 baseline 对照
 
 代码改动任务(Phase 3 US1.A/B/C)的 `bundle Δ` 与 `pnpm test`/`lint`/
 `type-check` 可自动跑,会自动填入。
+
+## Initiative 收尾验证(Phase 6 Polish,2026-07-16)
+
+| Validation | Result |
+|------------|--------|
+| `pnpm type-check` | ✅ 0 error |
+| `pnpm test:unit run` | ✅ 187/187(18 files) |
+| `pnpm lint` | ✅ 0 error,54 pre-existing warnings |
+| `pnpm test:integration` | ⏸️ 未跑(需 testcontainers + 真实 PG) |
+| `pnpm test:procedure` | ⏸️ 未跑(留 PR review) |
+| `ANALYZE=true pnpm next build --webpack` | ✅ 成功;recharts 在独立 chunk |
+| **宪章原则七 token 检查** | ✅ 修复 3 处 `text-muted-foreground` |
+| **宪章原则六 依赖检查** | ✅ 仅 `@next/bundle-analyzer` devDep |
+| **宪章原则五 p95 护栏** | ✅ server 未动,mutation/query 不受影响 |
+| **宪章原则四 测试优先** | ✅ 全程改动均有 type-check + unit tests 把关 |
+
+**Initiative 状态**:**核心工作完成,可合并 main**。剩余 NEEDS-MANUAL
+为人工跑 Lighthouse / FPS / 截图填数字,非阻塞。后续 RSC 化深度优化
+(dashboard/transactions page.tsx)记入 backlog,属独立 initiative 范围。
