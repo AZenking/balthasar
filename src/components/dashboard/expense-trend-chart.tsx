@@ -125,12 +125,12 @@ function DailyTooltip({
   const item = payload[0];
   const row = item.payload;
   return (
-    <div className="rounded-md border border-border bg-popover px-3 py-2 text-xs shadow-md">
+    <div className="rounded-md border border-border bg-overlay px-3 py-2 text-xs shadow-md">
       <div className="font-medium text-foreground">
         {row ? `${row.label} ${row.subLabel}` : ""}
       </div>
       <div className="mt-1 flex items-center gap-3">
-        <span className="text-muted-foreground">支出</span>
+        <span className="text-muted">支出</span>
         <span
           data-amount
           className="ml-auto font-medium text-foreground"
@@ -153,10 +153,10 @@ function WeeklyTooltip({
   const item = payload[0];
   const row = item.payload;
   return (
-    <div className="rounded-md border border-border bg-popover px-3 py-2 text-xs shadow-md">
+    <div className="rounded-md border border-border bg-overlay px-3 py-2 text-xs shadow-md">
       <div className="font-medium text-foreground">{row?.label ?? ""}</div>
       <div className="mt-1 flex items-center gap-3">
-        <span className="text-muted-foreground">支出</span>
+        <span className="text-muted">支出</span>
         <span
           data-amount
           className="ml-auto font-medium text-foreground"

@@ -75,7 +75,7 @@ export function TopCategoryCard({
     return (
       <div className="px-4 py-4">
         <Card>
-          <Card.Content className="p-4 text-center text-sm text-muted-foreground">
+          <Card.Content className="p-4 text-center text-sm text-muted">
             本月无支出
           </Card.Content>
         </Card>
@@ -116,7 +116,7 @@ export function TopCategoryCard({
           }}
           aria-label={`查看「${c.categoryName}」分类的支出明细`}
           className={cn(
-            "cursor-pointer transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            "cursor-pointer transition-colors hover:bg-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
           )}
         >
           <Card.Content className="p-3">
@@ -132,7 +132,7 @@ export function TopCategoryCard({
             >
               {formatAmount(c.amount)}
             </p>
-            <p className="text-xs text-muted-foreground">占比 {c.percentage}%</p>
+            <p className="text-xs text-muted">占比 {c.percentage}%</p>
           </Card.Content>
         </Card>
       ))}

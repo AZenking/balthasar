@@ -17,19 +17,19 @@ export function TransactionSummary({
   return (
     <div className="grid grid-cols-3 text-center">
       <div className="border-r border-[var(--border)] py-2">
-        <p className="text-xs text-muted-foreground">收入</p>
+        <p className="text-xs text-muted">收入</p>
         <p data-amount className="mt-0.5 text-sm font-semibold tabular-nums text-[var(--success)]">
           {formatAmount(income)}
         </p>
       </div>
       <div className="border-r border-[var(--border)] py-2">
-        <p className="text-xs text-muted-foreground">支出</p>
+        <p className="text-xs text-muted">支出</p>
         <p data-amount className="mt-0.5 text-sm font-semibold tabular-nums text-[var(--danger)]">
           {formatAmount(expense)}
         </p>
       </div>
       <div className="py-2">
-        <p className="text-xs text-muted-foreground">结余</p>
+        <p className="text-xs text-muted">结余</p>
         <p data-amount className={`mt-0.5 text-sm font-semibold tabular-nums ${netColor}`}>
           {formatAmount(net)}
         </p>

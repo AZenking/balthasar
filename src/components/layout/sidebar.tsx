@@ -77,7 +77,7 @@ export function Sidebar({ className }: { className?: string }) {
         >
           BALTHASAR
         </Link>
-        <p className="mt-0.5 text-xs text-muted-foreground">家庭记账</p>
+        <p className="mt-0.5 text-xs text-muted">家庭记账</p>
       </div>
 
       {/* 入口列表 */}
@@ -92,8 +92,8 @@ export function Sidebar({ className }: { className?: string }) {
               className={cn(
                 "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
                 active
-                  ? "bg-accent font-medium text-accent-foreground"
-                  : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                  ? "bg-default font-medium text-default-foreground"
+                  : "text-muted hover:bg-default hover:text-foreground",
               )}
             >
               <Icon className="h-5 w-5" aria-hidden />
@@ -104,7 +104,7 @@ export function Sidebar({ className }: { className?: string }) {
       </nav>
 
       {/* 底部签名(版本号从 package.json 读,保持与 settings/page.tsx 一致) */}
-      <div className="px-5 py-4 text-xs text-muted-foreground">
+      <div className="px-5 py-4 text-xs text-muted">
         v{packageJson.version}
       </div>
     </aside>

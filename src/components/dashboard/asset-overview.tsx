@@ -35,7 +35,7 @@ export function AssetOverview({ assets }: { assets: AssetsSummary | null }) {
       <section aria-label="资产概览" className="pt-4">
         <Card>
           <Card.Content className="p-4">
-            <p className="text-sm text-muted-foreground">资产加载失败</p>
+            <p className="text-sm text-muted">资产加载失败</p>
           </Card.Content>
         </Card>
       </section>
@@ -48,10 +48,10 @@ export function AssetOverview({ assets }: { assets: AssetsSummary | null }) {
       <section aria-label="资产概览" className="pt-4">
         <Card>
           <Card.Content className="flex flex-col items-center gap-3 p-6 text-center">
-            <Wallet className="h-8 w-8 text-muted-foreground" aria-hidden />
+            <Wallet className="h-8 w-8 text-muted" aria-hidden />
             <div>
               <p className="text-sm font-medium text-foreground">还没有账户</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted">
                 添加第一个账户,查看资产概览
               </p>
             </div>
@@ -87,7 +87,7 @@ export function AssetOverview({ assets }: { assets: AssetsSummary | null }) {
           </div>
 
           <div className="mt-3">
-            <p className="text-xs text-muted-foreground">净资产</p>
+            <p className="text-xs text-muted">净资产</p>
             <p data-amount className={`mt-0.5 text-xl font-medium tabular-nums ${netColor}`}>
               {formatCents(assets.netAssets)}
             </p>
@@ -95,13 +95,13 @@ export function AssetOverview({ assets }: { assets: AssetsSummary | null }) {
 
           <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm">
             <div className="min-w-0 flex-1">
-              <p className="text-xs text-muted-foreground">总资产</p>
+              <p className="text-xs text-muted">总资产</p>
               <p data-amount className="truncate font-medium tabular-nums">
                 {formatCents(assets.totalAssets)}
               </p>
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-xs text-muted-foreground">总负债</p>
+              <p className="text-xs text-muted">总负债</p>
               <p data-amount className="font-medium tabular-nums text-[var(--danger)]">
                 {formatCents(assets.totalLiabilities)}
               </p>

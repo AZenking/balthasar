@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
  *
  * 视觉规范:
  *   - 桌面 / 移动共用同一行布局(`flex items-start justify-between`)
- *   - h1 字号 `text-xl font-bold`,描述 `text-sm text-muted-foreground`
+ *   - h1 字号 `text-xl font-bold`,描述 `text-sm text-muted`
  *   - actions 与标题之间 `gap-2`,容器 `gap-3`
  *   - leading(可选):标题左侧槽位,常用于返回按钮,与标题正文垂直居中
  */
@@ -43,7 +43,7 @@ export function PageHeader({
         <div className="min-w-0">
           <h1 className="text-xl font-bold leading-tight">{title}</h1>
           {description && (
-            <div className="mt-0.5 truncate text-sm text-muted-foreground">
+            <div className="mt-0.5 truncate text-sm text-muted">
               {description}
             </div>
           )}

@@ -12,7 +12,7 @@
  *     字号更大(text-3xl)+ 居中布局。
  *   - 与 HeroUI Card 解耦:本组件只渲染文字区,外壳 (Card) 由
  *     调用方包(详见 login / register page.tsx)。
- *   - 颜色全部走 HeroUI token (var(--foreground) / var(--muted-foreground)),
+ *   - 颜色全部走 HeroUI token (var(--foreground) / var(--muted)),
  *     不写死色,自动适配 dark / light / privacy 模式。
  */
 interface BrandHeaderProps {
@@ -33,7 +33,7 @@ export function BrandHeader({
     <div className="space-y-3 pb-6 pt-8 text-center">
       <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
       {subtitle && (
-        <p className="text-sm text-muted-foreground">{subtitle}</p>
+        <p className="text-sm text-muted">{subtitle}</p>
       )}
       {actions && <div className="pt-2">{actions}</div>}
     </div>

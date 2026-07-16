@@ -64,10 +64,10 @@ function CustomTooltip({
   const item = payload[0];
   const slice = item.payload;
   return (
-    <div className="rounded-md border border-border bg-popover px-3 py-2 text-xs shadow-md">
+    <div className="rounded-md border border-border bg-overlay px-3 py-2 text-xs shadow-md">
       <div className="font-medium text-foreground">{item.name}</div>
       <div className="mt-1 flex items-center gap-3">
-        <span className="text-muted-foreground">金额</span>
+        <span className="text-muted">金额</span>
         <span
           data-amount
           className="ml-auto font-medium text-foreground"
@@ -77,7 +77,7 @@ function CustomTooltip({
       </div>
       {slice && (
         <div className="flex items-center gap-3">
-          <span className="text-muted-foreground">占比</span>
+          <span className="text-muted">占比</span>
           <span className="ml-auto font-medium text-foreground">
             {slice.percentage}%
           </span>
@@ -92,7 +92,7 @@ export function CategoryDonut({ items, onCategoryClick }: Props) {
   if (items.length === 0) {
     return (
       <div
-        className="flex h-[200px] w-full items-center justify-center text-sm text-muted-foreground"
+        className="flex h-[200px] w-full items-center justify-center text-sm text-muted"
         data-empty="true"
       >
         本月无支出
@@ -155,7 +155,7 @@ export function CategoryDonut({ items, onCategoryClick }: Props) {
 
       {/* 中央总额(覆盖在 svg 之上,绝对定位独立层,不受 svg transform 影响)。 */}
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-xs text-muted-foreground">本月支出</span>
+        <span className="text-xs text-muted">本月支出</span>
         <span
           className="text-lg font-semibold"
           data-amount

@@ -65,11 +65,11 @@ export default function RegisterPage() {
           type="button"
           onClick={() => router.push("/login")}
           aria-label="返回登录"
-          className="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground hover:bg-[var(--muted)]"
+          className="flex h-10 w-10 items-center justify-center rounded-full text-muted hover:bg-[var(--muted)]"
         >
           <ChevronLeft className="h-5 w-5" />
         </button>
-        <span className="inline-flex items-center gap-1 rounded-full bg-[var(--muted)] px-2.5 py-1 text-xs font-medium text-muted-foreground">
+        <span className="inline-flex items-center gap-1 rounded-full bg-[var(--muted)] px-2.5 py-1 text-xs font-medium text-muted">
           <ShieldCheck className="h-3.5 w-3.5" aria-hidden />
           安全注册
         </span>
@@ -121,7 +121,7 @@ export default function RegisterPage() {
               type="button"
               onClick={() => setShowPassword(!showPassword)}
               aria-label={showPassword ? "隐藏密码" : "显示密码"}
-              className="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-[var(--muted)]"
+              className="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-muted hover:bg-[var(--muted)]"
             >
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
@@ -148,7 +148,7 @@ export default function RegisterPage() {
               type="button"
               onClick={() => setShowConfirm(!showConfirm)}
               aria-label={showConfirm ? "隐藏密码" : "显示密码"}
-              className="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-[var(--muted)]"
+              className="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-muted hover:bg-[var(--muted)]"
             >
               {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
@@ -180,7 +180,7 @@ export default function RegisterPage() {
       </form>
 
       {/* ── 登录入口 ── */}
-      <div className="mt-auto pt-8 text-center text-sm text-muted-foreground">
+      <div className="mt-auto pt-8 text-center text-sm text-muted">
         已有账户?{" "}
         <button
           type="button"

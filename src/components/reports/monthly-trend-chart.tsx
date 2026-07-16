@@ -91,7 +91,7 @@ function CustomTooltip({
 }) {
   if (!active || !payload || payload.length === 0) return null;
   return (
-    <div className="rounded-md border border-border bg-popover px-3 py-2 text-xs shadow-md">
+    <div className="rounded-md border border-border bg-overlay px-3 py-2 text-xs shadow-md">
       <div className="mb-1 font-medium text-foreground">{label}</div>
       {payload.map((p) => (
         <div key={p.name} className="flex items-center gap-2">
@@ -100,7 +100,7 @@ function CustomTooltip({
             style={{ backgroundColor: p.color }}
             aria-hidden
           />
-          <span className="text-muted-foreground">{p.name}</span>
+          <span className="text-muted">{p.name}</span>
           <span
             data-amount
             className="ml-auto font-medium text-foreground"
@@ -166,7 +166,7 @@ export function MonthlyTrendChart({
       )}
 
       {/* 图例 */}
-      <div className="mb-3 flex items-center justify-end gap-3 text-xs text-muted-foreground">
+      <div className="mb-3 flex items-center justify-end gap-3 text-xs text-muted">
         <span className="flex items-center gap-1">
           <span
             className="inline-block h-0.5 w-4 rounded-sm"
@@ -285,7 +285,7 @@ function SelectedSummary({ item }: { item: MonthlyTrendItem }) {
   return (
     <dl className="mt-4 grid grid-cols-3 gap-2 text-center">
       <div>
-        <dt className="text-[11px] text-muted-foreground">收入</dt>
+        <dt className="text-[11px] text-muted">收入</dt>
         <dd
           data-amount
           className="text-sm font-bold"
@@ -295,7 +295,7 @@ function SelectedSummary({ item }: { item: MonthlyTrendItem }) {
         </dd>
       </div>
       <div>
-        <dt className="text-[11px] text-muted-foreground">支出</dt>
+        <dt className="text-[11px] text-muted">支出</dt>
         <dd
           data-amount
           className="text-sm font-bold"
@@ -305,7 +305,7 @@ function SelectedSummary({ item }: { item: MonthlyTrendItem }) {
         </dd>
       </div>
       <div>
-        <dt className="text-[11px] text-muted-foreground">结余</dt>
+        <dt className="text-[11px] text-muted">结余</dt>
         <dd
           data-amount
           className="text-sm font-bold"
@@ -356,8 +356,8 @@ function MonthButtonRow({
             className={cn(
               "flex min-h-[44px] min-w-[64px] shrink-0 items-center justify-center rounded-md border px-3 text-xs font-medium transition-colors",
               isSelected
-                ? "border-primary bg-primary text-primary-foreground"
-                : "border-border bg-background text-foreground hover:bg-accent hover:text-accent-foreground",
+                ? "border-accent bg-accent text-accent-foreground"
+                : "border-border bg-background text-foreground hover:bg-default hover:text-default-foreground",
             )}
           >
             {row.shortLabel}

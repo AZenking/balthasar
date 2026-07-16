@@ -31,7 +31,7 @@ export function SummaryHeroCard({
     <section aria-label="本月收支概览" className="pt-4">
       <Card>
         <Card.Content className="p-4">
-          <p className="text-xs text-muted-foreground">本月支出</p>
+          <p className="text-xs text-muted">本月支出</p>
           <p
             data-amount
             className="mt-1 text-2xl font-semibold tabular-nums text-[var(--danger)] sm:text-3xl"
@@ -40,7 +40,7 @@ export function SummaryHeroCard({
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
             <div className="flex items-center gap-1">
-              <span className="text-muted-foreground">收入</span>
+              <span className="text-muted">收入</span>
               <span
                 data-amount
                 className="font-semibold tabular-nums text-[var(--success)]"
@@ -49,7 +49,7 @@ export function SummaryHeroCard({
               </span>
             </div>
             <div className="flex items-center gap-1">
-              <span className="text-muted-foreground">结余</span>
+              <span className="text-muted">结余</span>
               <span
                 data-amount
                 className={`font-semibold tabular-nums ${netColor}`}

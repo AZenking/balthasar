@@ -278,7 +278,7 @@ export default function ReportsPage() {
           type="button"
           onClick={goPrev}
           aria-label="上一周期"
-          className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-[var(--muted)]"
+          className="flex h-9 w-9 items-center justify-center rounded-md text-muted hover:bg-[var(--muted)]"
         >
           <ChevronLeft className="h-5 w-5" />
         </button>
@@ -295,8 +295,8 @@ export default function ReportsPage() {
           className={cn(
             "flex h-9 w-9 items-center justify-center rounded-md",
             isAtCurrent
-              ? "cursor-not-allowed text-muted-foreground/40"
-              : "text-muted-foreground hover:bg-[var(--muted)]",
+              ? "cursor-not-allowed text-muted/40"
+              : "text-muted hover:bg-[var(--muted)]",
           )}
         >
           <ChevronRight className="h-5 w-5" />
@@ -331,7 +331,7 @@ export default function ReportsPage() {
           <section className="pt-2">
             <Card>
               <Card.Content className="p-4">
-                <p className="text-xs text-muted-foreground">{labels.total}</p>
+                <p className="text-xs text-muted">{labels.total}</p>
                 <p
                   data-amount
                   className="mt-1 text-2xl font-medium tabular-nums text-[var(--danger)]"
@@ -340,14 +340,14 @@ export default function ReportsPage() {
                 </p>
                 <div className="mt-3 flex items-stretch gap-3 text-sm">
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs text-muted-foreground">{labels.average}</p>
+                    <p className="text-xs text-muted">{labels.average}</p>
                     <p data-amount className="font-medium tabular-nums">
                       {formatCents(avgValue)}
                     </p>
                   </div>
                   <Separator orientation="vertical" />
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs text-muted-foreground">{labels.comparison}</p>
+                    <p className="text-xs text-muted">{labels.comparison}</p>
                     {prevExpense != null && prevExpense > 0 ? (
                       <p
                         data-amount
@@ -363,12 +363,12 @@ export default function ReportsPage() {
                         {Math.abs(Math.round(((targetExpense - prevExpense) / prevExpense) * 1000) / 10)}%
                       </p>
                     ) : (
-                      <p className="text-xs text-muted-foreground">暂无对比</p>
+                      <p className="text-xs text-muted">暂无对比</p>
                     )}
                   </div>
                   <Separator orientation="vertical" />
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs text-muted-foreground">支出笔数</p>
+                    <p className="text-xs text-muted">支出笔数</p>
                     <p className="font-medium tabular-nums">{insights.expenseCount} 笔</p>
                   </div>
                 </div>
@@ -390,7 +390,7 @@ export default function ReportsPage() {
                     if (max.amount === 0) return null;
                     const [, mm, dd] = max.date.split("-");
                     return (
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-xs text-muted">
                         峰值 {Number(mm)}/{Number(dd)}{" "}
                         <span data-amount>{formatCents(max.amount)}</span>
                       </span>
@@ -402,7 +402,7 @@ export default function ReportsPage() {
                 {trendData.buckets.length > 0 ? (
                   <ExpenseTrendChart trend={trendData} isPrivacy={isPrivacy} />
                 ) : (
-                  <p className="py-8 text-center text-sm text-muted-foreground">
+                  <p className="py-8 text-center text-sm text-muted">
                     暂无支出数据
                   </p>
                 )}
@@ -412,7 +412,7 @@ export default function ReportsPage() {
 
           {/* 3. 分类占比 */}
           <section className="pt-4">
-            <h2 className="pb-2 text-sm font-semibold text-muted-foreground">
+            <h2 className="pb-2 text-sm font-semibold text-muted">
               {period === "year"
                 ? `${endYearMonth.year}年 支出分类`
                 : `${endYearMonth.year}年${endYearMonth.month}月 支出分类`}

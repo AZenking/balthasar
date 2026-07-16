@@ -22,7 +22,7 @@ export function ComparisonBadge({
 }) {
   if (previous == null || previous === 0) {
     return (
-      <span className="text-xs text-muted-foreground">暂无对比</span>
+      <span className="text-xs text-muted">暂无对比</span>
     );
   }
 
@@ -30,7 +30,7 @@ export function ComparisonBadge({
   const isUp = pct > 0;
   const isFlat = Math.abs(pct) < 0.05;
   const color = isFlat
-    ? "text-muted-foreground"
+    ? "text-muted"
     : isUp
       ? "text-[var(--danger)]"
       : "text-[var(--success)]";

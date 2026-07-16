@@ -38,7 +38,7 @@ export function BottomNav() {
             href={href}
             className={cn(
               "flex flex-1 flex-col items-center justify-center gap-0.5 text-xs transition-colors",
-              active ? "text-primary" : "text-muted-foreground hover:text-foreground"
+              active ? "text-accent" : "text-muted hover:text-foreground"
             )}
           >
             <Icon className="h-5 w-5" aria-hidden />

@@ -133,7 +133,7 @@ function TrendSection({
                     ? "text-[var(--danger)]"
                     : comparisonPercent < 0
                       ? "text-[var(--success)]"
-                      : "text-muted-foreground"
+                      : "text-muted"
                 }`}
               >
                 较上月 {comparisonPercent > 0 ? "↑" : comparisonPercent < 0 ? "↓" : "→"}{" "}
@@ -162,7 +162,7 @@ function RecentSection({
         <h2 className="text-sm font-medium text-foreground">最近账单</h2>
         <a
           href="/transactions"
-          className="text-xs text-muted-foreground hover:text-foreground"
+          className="text-xs text-muted hover:text-foreground"
         >
           查看明细
         </a>

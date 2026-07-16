@@ -87,14 +87,14 @@ export function DashboardTopNav({
           aria-label="进入设置"
         >
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--muted)]">
-            <UserRound className="h-5 w-5 text-muted-foreground" aria-hidden />
+            <UserRound className="h-5 w-5 text-muted" aria-hidden />
           </span>
           <span className="min-w-0 text-left">
             <span className="block truncate text-sm font-medium text-foreground">
               {greeting}
               {displayName ? `，${displayName}` : ""}
             </span>
-            <span className="block truncate text-xs text-muted-foreground">
+            <span className="block truncate text-xs text-muted">
               {ledgerName} <ChevronRightSmall className="inline h-3 w-3" aria-hidden />
             </span>
           </span>
@@ -104,7 +104,7 @@ export function DashboardTopNav({
           type="button"
           onClick={() => toast.info("暂无消息")}
           aria-label="消息"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-[var(--muted)]"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted hover:bg-[var(--muted)]"
         >
           <Bell className="h-5 w-5" />
         </button>
@@ -121,7 +121,7 @@ export function DashboardTopNav({
             type="button"
             onClick={goPrev}
             aria-label="上个月"
-            className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-[var(--muted)]"
+            className="flex h-9 w-9 items-center justify-center rounded-md text-muted hover:bg-[var(--muted)]"
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
@@ -137,8 +137,8 @@ export function DashboardTopNav({
             className={cn(
               "flex h-9 w-9 items-center justify-center rounded-md",
               isCurrentMonth || isFuture
-                ? "cursor-not-allowed text-muted-foreground/40"
-                : "text-muted-foreground hover:bg-[var(--muted)]",
+                ? "cursor-not-allowed text-muted/40"
+                : "text-muted hover:bg-[var(--muted)]",
             )}
           >
             <ChevronRight className="h-5 w-5" />

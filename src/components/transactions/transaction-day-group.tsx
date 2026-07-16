@@ -125,14 +125,14 @@ export function TransactionDayGroup({
       {groups.map((group) => (
         <div key={group.key} className="mt-4">
           {/* 组头:日期 + 当日收支小计 */}
-          <div className="sticky top-0 z-10 flex items-center justify-between bg-[var(--background)]/80 py-2 text-xs font-medium text-[var(--muted-foreground)] backdrop-blur">
+          <div className="sticky top-0 z-10 flex items-center justify-between bg-[var(--background)]/80 py-2 text-xs font-medium text-[var(--muted)] backdrop-blur">
             <span>{group.label}</span>
             <span data-amount className="tabular-nums">
               {group.subtotal.expense > 0 && <>支出 {formatCents(group.subtotal.expense)}</>}
               {group.subtotal.expense > 0 && group.subtotal.income > 0 && " · "}
               {group.subtotal.income > 0 && <>收入 {formatCents(group.subtotal.income)}</>}
               {group.subtotal.expense === 0 && group.subtotal.income === 0 && (
-                <span className="text-[var(--muted-foreground)]">—</span>
+                <span className="text-[var(--muted)]">—</span>
               )}
             </span>
           </div>

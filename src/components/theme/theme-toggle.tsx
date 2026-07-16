@@ -29,7 +29,7 @@ export function ThemeToggle() {
   if (!mounted) {
     return (
       <div
-        className="h-10 w-full rounded-md bg-muted animate-pulse"
+        className="h-10 w-full rounded-md bg-default animate-pulse"
         aria-label="主题加载中"
       />
     );

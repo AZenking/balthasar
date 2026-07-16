@@ -45,11 +45,11 @@ function StatCell({
   return (
     <Card>
       <Card.Content className="p-3">
-        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className="text-xs text-muted">{label}</p>
         <p data-amount className="mt-1 text-base font-medium tabular-nums">
           {value}
         </p>
-        <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>
+        <p className="mt-0.5 text-xs text-muted">{sub}</p>
       </Card.Content>
     </Card>
   );

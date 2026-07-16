@@ -34,7 +34,7 @@ export function CategoryBreakdown({ items }: { items: CategoryItem[] }) {
               <CategoryIcon name={c.categoryIcon} size={18} />
               {c.categoryName}
             </span>
-            <span className="text-muted-foreground">
+            <span className="text-muted">
               {formatAmount(c.amount)} · {c.percentage}%
             </span>
           </div>

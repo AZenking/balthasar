@@ -89,22 +89,22 @@ function NavEntry({ entry, active }: { entry: Entry; active: boolean }) {
       className={cn(
         "relative flex h-16 flex-1 flex-col items-center justify-center gap-1 text-xs transition-colors",
         active
-          ? "font-semibold text-primary"
-          : "text-muted-foreground hover:text-foreground",
+          ? "font-semibold text-accent"
+          : "text-muted hover:text-foreground",
       )}
     >
       {/* 选中态:顶部短指示条 + 图标背景药丸。
-          旧实现仅 font-semibold text-primary,浅色主题下 primary≈黑,
+          旧实现仅 font-semibold text-accent,浅色主题下 primary≈黑,
           与 muted-foreground(中灰)差异极小,切换几乎看不出高亮。
           补充可见指示后,两套主题下都能明确识别当前页。 */}
       {active && (
         <span
           aria-hidden
-          className="absolute inset-x-0 top-0 mx-auto h-1 w-8 rounded-b-full bg-primary"
+          className="absolute inset-x-0 top-0 mx-auto h-1 w-8 rounded-b-full bg-accent"
         />
       )}
       <Icon
-        className={cn("h-5 w-5", active && "text-primary")}
+        className={cn("h-5 w-5", active && "text-accent")}
         aria-hidden
       />
       <span>{label}</span>

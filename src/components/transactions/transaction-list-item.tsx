@@ -49,7 +49,7 @@ export function TransactionListItem({
           <p className="truncate text-sm font-medium text-[var(--foreground)]">
             {transaction.remark || transaction.categoryName || "?"}
           </p>
-          <p className="truncate text-xs text-[var(--muted-foreground)]">
+          <p className="truncate text-xs text-[var(--muted)]">
             {isTransfer && transaction.toAccountName
               ? `${transaction.categoryName} · ${transaction.accountName} → ${transaction.toAccountName}`
               : `${transaction.categoryName} · ${transaction.accountName}`}
@@ -65,7 +65,7 @@ export function TransactionListItem({
           transaction.type === "income"
             ? "text-[var(--success)]"
             : isTransfer
-              ? "text-[var(--muted-foreground)]"
+              ? "text-[var(--muted)]"
               : "text-[var(--danger)]",
         )}
       >

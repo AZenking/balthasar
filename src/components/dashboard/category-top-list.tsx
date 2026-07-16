@@ -56,14 +56,14 @@ export function CategoryTopList({
             {items.length > 0 && (
               <a
                 href="/transactions?type=expense"
-                className="text-xs text-muted-foreground hover:text-foreground"
+                className="text-xs text-muted hover:text-foreground"
               >
                 全部
               </a>
             )}
           </div>
           {items.length === 0 ? (
-            <p className="text-xs text-muted-foreground">本月暂无支出</p>
+            <p className="text-xs text-muted">本月暂无支出</p>
           ) : (
             <ul className="space-y-3">
               {items.slice(0, 3).map((item) => {

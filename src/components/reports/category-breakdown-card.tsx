@@ -53,7 +53,7 @@ function CategoryRowContent({ item, index }: { item: CategoryItem; index: number
           >
             {formatAmount(item.amount)}
           </span>
-          <span className="text-muted-foreground">
+          <span className="text-muted">
             ({item.percentage}%)
           </span>
         </span>
@@ -86,7 +86,7 @@ export function CategoryBreakdownCard({ items, onCategoryClick }: Props) {
       </Card.Header>
       <Card.Content className="px-4 pb-4">
         {items.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">
+          <p className="py-6 text-center text-sm text-muted">
             本月无支出
           </p>
         ) : (
@@ -104,7 +104,7 @@ export function CategoryBreakdownCard({ items, onCategoryClick }: Props) {
                 key={item.categoryId}
                 id={item.categoryId}
                 textValue={item.categoryName}
-                className="cursor-pointer outline-none data-[focus-visible]:bg-muted/50"
+                className="cursor-pointer outline-none data-[focus-visible]:bg-default/50"
               >
                 <CategoryRowContent
                   item={item}
