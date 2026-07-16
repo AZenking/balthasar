@@ -102,7 +102,7 @@
 | PR-1 | `chore(perf): bundle-analyzer + baseline template` | — | — | — | — | — | — | — | 工具基建 |
 | PR-2 | `perf(dashboard): server-component migration (4 子组件)` | `/dashboard` | [NEEDS-MANUAL] | [NEEDS-MANUAL] | **有限** (parent 仍 client;详见 anti-patterns.md Architecture Note) | n/a | [NEEDS-MANUAL] | n/a (未动 server) | AP-03/04/05/06 ✅;SC-004 部分推进 |
 | PR-3 | `perf(transactions): drop "use client" from zero-hook children` | `/transactions` | [NEEDS-MANUAL] | [NEEDS-MANUAL] | **有限** (parent 仍 client;同 PR-2 note) | [NEEDS-MANUAL] | [NEEDS-MANUAL] | n/a (未动 server) | AP-01/02 ✅ |
-| PR-4 | (待填) | `/transaction/new` | | | | | | | |
+| PR-4 | `perf(transaction): Skeleton fallback for useSearchParams 暂态` | `/transaction/new` | [NEEDS-MANUAL] | [NEEDS-MANUAL] | n/a | n/a | [NEEDS-MANUAL] | n/a | FR-004/SC-003 推进(白屏闪烁消除) |
 
 ## PR-by-PR 验证 checklist
 
