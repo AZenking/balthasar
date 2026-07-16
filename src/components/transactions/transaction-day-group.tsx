@@ -1,9 +1,7 @@
-"use client";
-
 import { TransactionListItem } from "@/components/transactions/transaction-list-item";
 
 /**
- * TransactionDayGroup (027-mobile-home-revamp US3 FR-010).
+ * TransactionDayGroup (027-mobile-home-revamp US3 FR-010)。
  *
  * 明细页按日分组展示账单,组头显示当日支出/收入/(转账)小计。
  *
@@ -15,6 +13,10 @@ import { TransactionListItem } from "@/components/transactions/transaction-list-
  *
  * 转账不计入收支小计(US4 后;FR-013)。groupLabel 把"今天/昨天"做相对
  * 友好化,其余用绝对日期。
+ *
+ * 025 AP-02:删除 `"use client"` —— 本文件零 hooks、纯数据变换 + 渲染,
+ * Server-renderable(Vercel A1)。`daySubtotal` / `groupByUtcDay` 仍由
+ * `src/tests/unit/components/transaction-day-group.test.ts` 单测覆盖。
  */
 
 export interface DayGroupTx {

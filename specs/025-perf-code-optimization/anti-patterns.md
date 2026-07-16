@@ -6,14 +6,14 @@
 ## Summary
 
 - **Checklist pass rate**: 待 Phase 5 完成后填写(`__ / 17`)
-- **Verified APs**: 4 / ≥5 目标(AP-03 / AP-04 / AP-05 / AP-06 在 PR-2 完成)
+- **Verified APs**: 6 / ≥5 目标 ✅(AP-01 / AP-02 / AP-03 / AP-04 / AP-05 / AP-06 全部完成)
 
 ## AP Inventory
 
 | ID | File | Line | Violated Rule | Description | Fix Strategy | Status | PR |
 |----|------|------|---------------|-------------|--------------|--------|----|
-| AP-01 | `src/components/transactions/transaction-list-item.tsx` | L1 | `bundle-dynamic-imports` / Vercel A1 | 文件零 hooks 却标 `"use client"` | 删除 `"use client"` 指令 → Server-renderable | identified | PR-3 |
-| AP-02 | `src/components/transactions/transaction-day-group.tsx` | L1 | `bundle-dynamic-imports` / Vercel A1 | 纯数据变换 + 渲染却标 `"use client"` | 删除 `"use client"` 指令 → Server-renderable | identified | PR-3 |
+| AP-01 | `src/components/transactions/transaction-list-item.tsx` | L1 | `bundle-dynamic-imports` / Vercel A1 | 文件零 hooks 却标 `"use client"` | 删除 `"use client"` 指令 → Server-renderable | **verified** | PR-3 |
+| AP-02 | `src/components/transactions/transaction-day-group.tsx` | L1 | `bundle-dynamic-imports` / Vercel A1 | 纯数据变换 + 渲染却标 `"use client"` | 删除 `"use client"` 指令 → Server-renderable | **verified** | PR-3 |
 | AP-03 | `src/components/dashboard/recent-transactions.tsx` | L1+L43+L79 | `server-serialization` / `async-suspense-boundaries` | `useRouter` + `<ListBox onAction>` 跳转内部路由,导致整个组件被强制 client | 改用 `<Link href={...}>` 包 ListBox.Item,删除 `useRouter`/`"use client"` → Server-renderable | **verified** | PR-2 |
 | AP-04 | `src/components/dashboard/summary-hero-card.tsx` | L1 | Vercel A1 | 文件零 hooks 且零 handlers 却标 `"use client"`(纯渲染) | 删除 `"use client"` 指令 → Server-renderable | **verified** | PR-2 |
 | AP-05 | `src/components/dashboard/asset-overview.tsx` | L1+L30 | Vercel A2 | `useRouter`+`onPress` 仅用于内部路由跳转 | 用 `<Link>` 包 `<Button>`,删除 `useRouter`/`"use client"` | **verified** | PR-2 |
@@ -43,6 +43,30 @@ bundle 收益**有限** —— 主要价值是:
 ## AP Detail(before/after)
 
 > 在对应 PR 合并时补 before/after 代码片段。
+
+### AP-01(PR-3)
+
+**File**: `src/components/transactions/transaction-list-item.tsx`
+
+**Before**:文件首行 `"use client"`,但全文零 hooks、零 event handler —— 仅
+`<Link href={editHref}>` 渲染。
+
+**After**:删除 `"use client"` 指令(其余不变)。
+
+**Rationale**:Vercel A1。零客户端能力的组件不应客户端化。本文件甚至已经
+用了 `<Link>` —— 唯一阻挡 Server-renderable 的就是 `"use client"` 指令本身。
+
+### AP-02(PR-3)
+
+**File**: `src/components/transactions/transaction-day-group.tsx`
+
+**Before**:文件首行 `"use client"`,但全文仅做纯数据变换(`groupByUtcDay` /
+`daySubtotal` —— 均有单测)+ 渲染,无任何客户端能力。
+
+**After**:删除 `"use client"` 指令。`daySubtotal` / `groupByUtcDay` 仍由
+`src/tests/unit/components/transaction-day-group.test.ts` 覆盖,8 tests 全绿。
+
+**Rationale**:同 AP-01。
 
 ### AP-03(PR-2)
 

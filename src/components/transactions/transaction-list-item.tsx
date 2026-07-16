@@ -1,5 +1,3 @@
-"use client";
-
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { CategoryIcon } from "@/components/category/category-icon";
@@ -17,6 +15,9 @@ const formatDate = (date: string | Date) => {
  * 整行用 <Link> 进入编辑(可中键/⌘点击新标签、可右键复制链接)。
  * 删除在编辑页内完成。
  * 转账行显示 账户A → 账户B。
+ *
+ * 025 AP-01:删除 `"use client"` —— 本文件零 hooks、零 event handler,
+ * 纯 `<Link>` 渲染,Server-renderable(Vercel A1)。
  */
 export function TransactionListItem({
   transaction,
