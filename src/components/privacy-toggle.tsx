@@ -2,12 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Button, Tooltip } from "@heroui/react";
 import { isPrivacyOn, togglePrivacy } from "@/lib/privacy";
 
 /**
@@ -49,19 +44,19 @@ export function PrivacyToggle() {
 
   return (
     <Tooltip>
-      <TooltipTrigger asChild>
+      <Tooltip.Trigger>
         <Button
           variant="ghost"
-          size="icon"
-          onClick={handleToggle}
+          isIconOnly
+          size="sm"
+          onPress={handleToggle}
           aria-label={on ? "关闭隐私模式" : "开启隐私模式"}
           aria-pressed={on}
-          title={on ? "关闭隐私模式" : "开启隐私模式"}
         >
           {on ? <EyeOff /> : <Eye />}
         </Button>
-      </TooltipTrigger>
-      <TooltipContent>{on ? "关闭隐私模式" : "开启隐私模式"}</TooltipContent>
+      </Tooltip.Trigger>
+      <Tooltip.Content>{on ? "关闭隐私模式" : "开启隐私模式"}</Tooltip.Content>
     </Tooltip>
   );
 }

@@ -2,8 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { ReceiptText } from "lucide-react";
-import { ListBox } from "@heroui/react";
-import { Skeleton } from "@/components/ui/skeleton";
+import { ListBox, Skeleton } from "@heroui/react";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { cn } from "@/lib/utils";
 import { CategoryIcon } from "@/components/category/category-icon";
@@ -85,7 +84,7 @@ export function RecentTransactions({
           key={t.id}
           id={t.id}
           textValue={t.remark || t.categoryName || "交易"}
-          className="cursor-pointer outline-none data-[focus-visible]:bg-muted/50"
+          className="cursor-pointer outline-none data-[focus-visible]:bg-default/50"
         >
           <div className="flex w-full items-center justify-between py-3">
             <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -94,7 +93,7 @@ export function RecentTransactions({
                 <p className="truncate text-sm font-medium">
                   {t.remark || t.categoryName || "?"}
                 </p>
-                <p className="truncate text-xs text-muted-foreground">
+                <p className="truncate text-xs text-muted">
                   {t.type === "transfer" && t.toAccountName
                     ? `${t.categoryName} · ${t.accountName} → ${t.toAccountName}`
                     : `${t.categoryName} · ${t.accountName}`}
@@ -110,7 +109,7 @@ export function RecentTransactions({
                 t.type === "income"
                   ? "text-[var(--success)]"
                   : t.type === "transfer"
-                    ? "text-muted-foreground"
+                    ? "text-muted"
                     : "text-[var(--danger)]",
               )}
             >

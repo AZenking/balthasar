@@ -89,7 +89,7 @@ export function BudgetProgress({
       <section aria-label="预算进度" className="pt-4">
         <Card>
           <Card.Content className="p-4">
-            <p className="text-sm text-muted-foreground">预算加载失败</p>
+            <p className="text-sm text-muted">预算加载失败</p>
             <Button
               variant="ghost"
               size="sm"
@@ -112,7 +112,7 @@ export function BudgetProgress({
           <Card.Content className="flex items-center justify-between p-4">
             <div>
               <p className="text-sm font-medium text-foreground">本月预算</p>
-              <p className="text-xs text-muted-foreground">设置预算,跟踪支出</p>
+              <p className="text-xs text-muted">设置预算,跟踪支出</p>
             </div>
             <Button variant="outline" size="sm" onPress={() => setIsSetOpen(true)}>
               设置预算
@@ -158,7 +158,7 @@ export function BudgetProgress({
                 超支 {formatCents(budget.overspendAmount)}
               </span>
             ) : (
-              <span data-amount className="text-muted-foreground">
+              <span data-amount className="text-muted">
                 剩余 {formatCents(budget.remaining)}
               </span>
             )}
@@ -180,7 +180,7 @@ export function BudgetProgress({
           </Meter>
 
           <p
-            className="mt-1 text-xs text-muted-foreground"
+            className="mt-1 text-xs text-muted"
           >
             <span>
               本月已过 {monthProgressPercent}% · 预算使用 {usagePercent}%
@@ -240,7 +240,7 @@ function BudgetSetModal({
           <Modal.Header>
             <div>
               <Modal.Heading>设置预算</Modal.Heading>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted">
                 {yearMonth.year}年{yearMonth.month}月
               </p>
             </div>
@@ -258,7 +258,7 @@ function BudgetSetModal({
             >
               <Label className="sr-only">预算金额 (元)</Label>
               <NumberField.Group className="h-auto items-center justify-center gap-1 rounded-2xl border-0 bg-[var(--surface)] px-4 py-4 shadow-none">
-                <span className="text-3xl font-bold tabular-nums text-muted-foreground">
+                <span className="text-3xl font-bold tabular-nums text-muted">
                   ¥
                 </span>
                 <NumberField.Input

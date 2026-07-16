@@ -1,11 +1,10 @@
 "use client";
 
-import { Chip } from "@heroui/react";
+import { Chip, Skeleton } from "@heroui/react";
 import { keepPreviousData } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
 import { CategoryIcon } from "@/components/category/category-icon";
-import { Skeleton } from "@/components/ui/skeleton";
 import type { Category } from "@/server/db/schema";
 
 /**
@@ -62,7 +61,7 @@ export function CategorySelect({ value, onChange, type }: CategorySelectProps) {
         variant={value === cat.id ? "soft" : "secondary"}
         className={cn(
           "cursor-pointer transition-colors",
-          value !== cat.id && "hover:bg-accent",
+          value !== cat.id && "hover:bg-default",
         )}
       >
         <CategoryIcon name={cat.icon} size={16} />
@@ -103,7 +102,7 @@ export function CategorySelect({ value, onChange, type }: CategorySelectProps) {
           {/* 内置 */}
           {builtIns.length > 0 && (
             <div>
-              <p className="mb-1 text-xs font-medium text-muted-foreground">内置</p>
+              <p className="mb-1 text-xs font-medium text-muted">内置</p>
               <div className="flex flex-wrap gap-2">
                 {builtIns.map((node) => renderChip(node))}
               </div>
@@ -113,7 +112,7 @@ export function CategorySelect({ value, onChange, type }: CategorySelectProps) {
           {/* 自定义 */}
           {customs.length > 0 && (
             <div>
-              <p className="mb-1 text-xs font-medium text-muted-foreground">自定义</p>
+              <p className="mb-1 text-xs font-medium text-muted">自定义</p>
               <div className="space-y-2">
                 {customs.map((node) => renderNode(node))}
               </div>
@@ -121,7 +120,7 @@ export function CategorySelect({ value, onChange, type }: CategorySelectProps) {
           )}
 
           {builtIns.length === 0 && customs.length === 0 && (
-            <p className="text-xs text-muted-foreground">暂无分类</p>
+            <p className="text-xs text-muted">暂无分类</p>
           )}
         </>
       )}
