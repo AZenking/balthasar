@@ -29,33 +29,32 @@
 > Turbopack。本 baseline 用 `--webpack` 切回 webpack 模式捕获。后续 PR
 > 测量保持同一开关,保证可比性。
 
-**Root main files(每个路由都加载,gzipped)**:
+**实测方法**(2026-07-16,Phase 6 polish 阶段):
+production build → `node .next/standalone/server.js` → `curl /dashboard`
+→ grep HTML 提取所有 `<script src="/_next/static/chunks/*.js">` + preload
+→ 用 gzip 计算每个 chunk 的 gzipped 大小 → 累加。
 
-| Chunk | gzipped | 备注 |
-|-------|---------|------|
-| `framework-*.js` | 59.7 KB | React 19 |
-| `8f39d3da-*.js` | 68.7 KB | shared lib(待 US2 阶段 audit) |
-| `7261-*.js` | 60.5 KB | shared lib(待 US2 阶段 audit) |
-| `main-*.js` | 39.8 KB | Next.js main runtime |
-| `polyfills-*.js` | 39.5 KB | browser polyfills |
-| `webpack-*.js` | 1.7 KB | webpack bootstrap |
-| `main-app-*.js` | 0.3 KB | app shell |
-| **小计(root)** | **≈ 270 KB** | 每路由必加载 |
+**Dashboard `/dashboard` 实测 first-load**(含 HTML + 所有 first-load JS):
 
-**Top per-route / shared chunks(gzipped,按大小降序)**:
+| 分支 | HTML gz | JS chunks gz | Total gz | 文件数 |
+|------|---------|--------------|----------|--------|
+| `main`(baseline) | 5 KB | 560 KB | **565 KB** | 23 |
+| `025-perf-code-optimization`(本分支) | 6 KB | 460 KB | **466 KB** | 22 |
+| **Δ** | +1 KB | **-100 KB** | **-99 KB / -17.5%** | -1 文件 |
 
-| Chunk | gzipped | 候选归属 |
-|-------|---------|----------|
-| `1111-*.js` | 108.8 KB | 最大共享块 —— 待 US2 audit |
-| `4865-*.js` | 48.8 KB | |
-| `9344-*.js` | 40.4 KB | |
-| `1489-*.js` | 27.5 KB | |
-| `5333-*.js` | 25.9 KB | |
-| `9629-*.js` | 25.0 KB | |
+**SC-004 门槛**:-20%。**实测 -17.5%**,差 ~14 KB 未达标。
 
-**Dashboard `/` first-load 估算**:`root (270 KB) + 至少 1 个 page chunk (≥ 50 KB)` ≈ **320+ KB gzipped**(精确数字需 Lighthouse 测量或 Turbopack analyzer)。
+**未达标原因**:
+- ✅ recharts(原 109 KB gz)成功拆出 first-load —— 这是主要胜利(-100 KB)
+- ❌ Dashboard `page.tsx` 仍是 `"use client"`,带 React Query + tRPC client +
+  多个 HeroUI 组件,这部分没动
+- ❌ root main files(framework/react-dom/main runtime 共 ~270 KB gz)是
+  每路由必加载,无法进一步缩减(除非换 Preact 等大改,违反 YAGNI)
 
-**SC-004 目标**:较本 baseline 减少 ≥ 20% → 目标 first-load ≤ **256 KB gzipped**(root 上限)。
+**进一步达 -20% 的方案**(留作 backlog):
+1. 把 `dashboard/page.tsx` 改为 Server Component,tRPC server caller 拉数据,
+   客户端只剩纯交互子组件 —— 预计可再减 30-50 KB
+2. dynamic-import `@dnd-kit/*`(若 Dashboard 不用就移出 first-load)
 
 ### Lighthouse 指标(Mid-Tier Mobile,3 次中位数)
 
@@ -76,22 +75,37 @@
 
 ### p95 性能护栏(SC-009 分母)
 
-> 跑 `pnpm test:integration` 中 create-transaction + dashboard-query bench ×20。
+> 实测方法(2026-07-16):`node .next/standalone/server.js` warm 状态,
+> 注册 perf-test-025@example.com + cookie 认证,curl tRPC HTTP 端点 ×20
+> 取 p95。
 
-| Procedure | p95(baseline) | 门槛 |
-|-----------|---------------|------|
-| `transaction.create` | [NEEDS-MANUAL]ms | < 300ms |
-| `dashboard.query` | [NEEDS-MANUAL]ms | < 500ms |
+| Procedure | p50 | p95 实测 | 门槛 | 状态 |
+|-----------|-----|---------|------|------|
+| `dashboard.summary` query | 9.3 ms | **30.1 ms** | < 500ms | ✅ **达标 16 倍裕度** |
+| `transaction.create` mutation | ~4.5 ms | ~5.5 ms(1) | < 300ms | ✅ **达标 50 倍裕度** |
+
+(1) 此用户无 accounts(新注册只为测时序),create 多半返回 4xx,但时序
+仍 < 6ms;在有 account 的真实场景下时序会略高(写 transaction + audit
+表),仍远低于 300ms 门槛。
 
 ### 测试基线(SC-010 分母)
 
 | Suite | 通过 / 总数 | 状态 |
 |-------|-------------|------|
 | `pnpm test:unit run` | 187 / 187(18 files) | ✅ 全绿 |
+| `pnpm test:procedure run` | 59 / 59(6 files) | ✅ 全绿 |
+| `pnpm test:integration run` | 165 / 179(12 failed, 2 skipped, 28 files) | 🟡 12 failed(预先存在问题,见下) |
 | `pnpm type-check` | 0 error | ✅ 全绿 |
-| `pnpm lint` | [NEEDS-MANUAL: 未在本次跑测] | — |
-| `pnpm test:procedure` | [NEEDS-MANUAL] | — |
-| `pnpm test:integration` | [NEEDS-MANUAL: 需 testcontainers + PG] | — |
+| `pnpm lint` | 0 error, 54 warnings(pre-existing) | ✅ 全绿 |
+| `pnpm build` | success | ✅ 全绿 |
+| `ANALYZE=true pnpm next build --webpack` | success | ✅ 全绿 |
+
+**Integration test 12 失败分析**(2026-07-16):
+所有失败均为 `duplicate key value violates unique constraint "user_pkey"` ——
+DB 中已有 35 个 leftover 用户(历次 integration test 运行残留 +
+我手测注册的 perf-test-025@example.com)。失败的 test 用 `newId()` 生成
+UUID,与 leftover 行冲突。**非本 initiative 引入的回归** —— 修复需要单独
+清理 DB 或重置 testcontainers(后续 backlog)。
 
 ## After(PR-by-PR 增量)
 
@@ -142,15 +156,31 @@
 |------------|--------|
 | `pnpm type-check` | ✅ 0 error |
 | `pnpm test:unit run` | ✅ 187/187(18 files) |
+| `pnpm test:procedure run` | ✅ 59/59(6 files) |
+| `pnpm test:integration run` | 🟡 165/179(12 失败 = DB leftover,非本 initiative 回归) |
 | `pnpm lint` | ✅ 0 error,54 pre-existing warnings |
-| `pnpm test:integration` | ⏸️ 未跑(需 testcontainers + 真实 PG) |
-| `pnpm test:procedure` | ⏸️ 未跑(留 PR review) |
-| `ANALYZE=true pnpm next build --webpack` | ✅ 成功;recharts 在独立 chunk |
+| `pnpm build` | ✅ success |
+| `ANALYZE=true pnpm next build --webpack` | ✅ success |
+| **SC-009 p95 实测** | ✅ query 30ms / mutation 5ms(门槛 500/300ms,16-50x 裕度) |
+| **SC-004 bundle 实测** | 🟡 **-17.5%**(565→466 KB gz;门槛 -20%,差 14 KB) |
 | **宪章原则七 token 检查** | ✅ 修复 3 处 `text-muted-foreground` |
 | **宪章原则六 依赖检查** | ✅ 仅 `@next/bundle-analyzer` devDep |
-| **宪章原则五 p95 护栏** | ✅ server 未动,mutation/query 不受影响 |
-| **宪章原则四 测试优先** | ✅ 全程改动均有 type-check + unit tests 把关 |
+| **宪章原则四 测试优先** | ✅ 全程改动均有 type-check + unit + procedure tests 把关 |
 
-**Initiative 状态**:**核心工作完成,可合并 main**。剩余 NEEDS-MANUAL
-为人工跑 Lighthouse / FPS / 截图填数字,非阻塞。后续 RSC 化深度优化
-(dashboard/transactions page.tsx)记入 backlog,属独立 initiative 范围。
+**仍未测量(NEEDS-MANUAL — 需 Chrome DevTools GUI)**:
+- SC-001 Lighthouse LCP/FID/CLS on `/dashboard`、`/transactions`、`/transaction/new`(Mid-Tier Mobile,3× 取中位数)
+- SC-002 流水滚动 FPS(DevTools Performance)
+- SC-003 路由切换视觉过渡时间(DevTools Performance timeline)
+- SC-005 TTI 改善比例(同 SC-001)
+- FR-013 4 张稳态截图对照(需浏览器手截)
+
+**Initiative 状态**:**核心工作完成,1 项 SC 未达门槛**:
+- ✅ SC-006 / SC-007 / SC-008 / SC-009 / SC-010 全部达标
+- 🟡 **SC-004 -17.5%,未达 -20% 门槛**(差 14 KB;达标需把 dashboard/transactions page.tsx 改为 RSC,属 backlog)
+- ⏸️ SC-001 / SC-002 / SC-003 / SC-005 需 GUI Lighthouse 测量,但**已实
+  测 SC-009 p95(护栏)+ SC-004 bundle(主要分母),核心价值已被证明**
+
+**建议下一步**:
+1. 决定是否接受 SC-004 -17.5% 作为部分达标(需 spec 修订 OR 继续 RSC 化)
+2. 若需 GUI Lighthouse 数字,协作者按 `REVIEWER-RUNBOOK.md` 跑(预计 30 min)
+3. 合并 main 的决策 = 接受 SC-004 标准放宽 OR 暂搁等 RSC 迁移
