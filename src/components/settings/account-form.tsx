@@ -14,17 +14,15 @@ import {
   type AccountCreateValues,
   type AccountEditValues,
 } from "@/lib/validators/account";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, Radio } from "@heroui/react";
 import {
+  Button,
+  Input,
+  Label,
+  RadioGroup,
+  Radio,
   Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  ListBox,
+} from "@heroui/react";
 
 /**
  * AccountForm (账户管理 新增/编辑 表单).
@@ -148,7 +146,7 @@ function AccountCreateFormBody({
           placeholder="如:招商银行卡"
         />
         {errors.name && (
-          <p className="mt-1 text-xs text-destructive">{errors.name.message}</p>
+          <p className="mt-1 text-xs text-danger">{errors.name.message}</p>
         )}
       </div>
 
@@ -187,11 +185,11 @@ function AccountCreateFormBody({
             </RadioGroup>
           )}
         />
-        <p className="mt-1 text-xs text-muted-foreground">
+        <p className="mt-1 text-xs text-muted">
           负债账户的初始余额用负数表示欠款(如 -3200)。
         </p>
         {errors.type && (
-          <p className="mt-1 text-xs text-destructive">{errors.type.message}</p>
+          <p className="mt-1 text-xs text-danger">{errors.type.message}</p>
         )}
       </div>
 
@@ -202,22 +200,29 @@ function AccountCreateFormBody({
           control={control}
           name="currency"
           render={({ field }) => (
-            <Select value={field.value} onValueChange={field.onChange}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="选择币种" />
-              </SelectTrigger>
-              <SelectContent>
-                {SUPPORTED_CURRENCIES.map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {c}
-                  </SelectItem>
-                ))}
-              </SelectContent>
+            <Select
+              selectedKey={field.value}
+              onSelectionChange={(key) => field.onChange(key as Currency)}
+              placeholder="选择币种"
+            >
+              <Select.Trigger className="w-full">
+                <Select.Value />
+                <Select.Indicator />
+              </Select.Trigger>
+              <Select.Popover>
+                <ListBox>
+                  {SUPPORTED_CURRENCIES.map((c) => (
+                    <ListBox.Item key={c} id={c} textValue={c}>
+                      {c}
+                    </ListBox.Item>
+                  ))}
+                </ListBox>
+              </Select.Popover>
             </Select>
           )}
         />
         {errors.currency && (
-          <p className="mt-1 text-xs text-destructive">
+          <p className="mt-1 text-xs text-danger">
             {errors.currency.message}
           </p>
         )}
@@ -236,7 +241,7 @@ function AccountCreateFormBody({
           placeholder={CURRENCY_MINOR_UNITS[currency] === 0 ? "0" : "0.00"}
         />
         {errors.initialBalanceDisplay && (
-          <p className="mt-1 text-xs text-destructive">
+          <p className="mt-1 text-xs text-danger">
             {errors.initialBalanceDisplay.message}
           </p>
         )}
@@ -294,7 +299,7 @@ function AccountEditFormBody({
           maxLength={50}
         />
         {errors.name && (
-          <p className="mt-1 text-xs text-destructive">{errors.name.message}</p>
+          <p className="mt-1 text-xs text-danger">{errors.name.message}</p>
         )}
       </div>
 
@@ -337,24 +342,30 @@ function AccountEditFormBody({
           control={control}
           name="currency"
           render={({ field }) => (
-            <Select value={field.value} onValueChange={field.onChange}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {SUPPORTED_CURRENCIES.map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {c}
-                  </SelectItem>
-                ))}
-              </SelectContent>
+            <Select
+              selectedKey={field.value}
+              onSelectionChange={(key) => field.onChange(key as Currency)}
+            >
+              <Select.Trigger className="w-full">
+                <Select.Value />
+                <Select.Indicator />
+              </Select.Trigger>
+              <Select.Popover>
+                <ListBox>
+                  {SUPPORTED_CURRENCIES.map((c) => (
+                    <ListBox.Item key={c} id={c} textValue={c}>
+                      {c}
+                    </ListBox.Item>
+                  ))}
+                </ListBox>
+              </Select.Popover>
             </Select>
           )}
         />
       </div>
 
       {/* SC-007:初始余额创建后不可变,给用户明确提示而非静默隐藏 */}
-      <p className="rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+      <p className="rounded-md bg-default/50 px-3 py-2 text-xs text-muted">
         初始余额创建后不可修改。如需调整,请新建账户或通过记账变更。
       </p>
 
@@ -378,12 +389,12 @@ function FormActions({
       <Button
         type="button"
         variant="outline"
-        onClick={onCancel}
-        disabled={submitting}
+        onPress={onCancel}
+        isDisabled={submitting}
       >
         取消
       </Button>
-      <Button type="submit" disabled={submitting}>
+      <Button type="submit" isDisabled={submitting}>
         {submitting ? "提交中..." : mode === "create" ? "创建" : "保存"}
       </Button>
     </div>

@@ -46,24 +46,10 @@ import { ApiKeyManager } from "@/components/settings/api-key-manager";
 import {
   Card,
   Switch,
-} from "@heroui/react";
-import {
+  Button,
+  Modal,
   AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+} from "@heroui/react";
 import { cn } from "@/lib/utils";
 import packageJson from "@/../package.json";
 
@@ -194,14 +180,14 @@ export default function SettingsPage() {
                 />
               ))}
               {activeAccounts.length === 0 && (
-                <p className="py-2 text-xs text-muted-foreground">
+                <p className="py-2 text-xs text-muted">
                   还没有账户,点「新建账户」开始。
                 </p>
               )}
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => setShowCreateForm(true)}
+                onPress={() => setShowCreateForm(true)}
                 className="mt-2"
               >
                 新建账户
@@ -290,127 +276,145 @@ export default function SettingsPage() {
       <Button
         variant="outline"
         className="w-full justify-center gap-2 text-[var(--danger)]"
-        onClick={() => setShowLogoutConfirm(true)}
+        onPress={() => setShowLogoutConfirm(true)}
       >
         退出登录
       </Button>
 
-      <div className="pb-4 pt-2 text-center text-xs text-muted-foreground">
+      <div className="pb-4 pt-2 text-center text-xs text-muted">
         <p className="font-medium">BALTHASAR</p>
         <p className="mt-1">版本 v{packageJson.version}</p>
       </div>
 
       {/* ── 账户管理:新建/编辑 Dialog(对齐 category-manager) ── */}
-      <Dialog open={showCreateForm} onOpenChange={setShowCreateForm}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>新建账户</DialogTitle>
-          </DialogHeader>
-          <AccountForm
-            mode="create"
-            submitting={createMutation.isPending}
-            onSubmit={(v) =>
-              createMutation.mutate({
-                name: v.name,
-                currency: v.currency,
-                initialBalance: v.initialBalanceCents,
-                type: v.type,
-              })
-            }
-            onCancel={() => setShowCreateForm(false)}
-          />
-        </DialogContent>
-      </Dialog>
+      <Modal isOpen={showCreateForm} onOpenChange={setShowCreateForm}>
+        <Modal.Backdrop>
+          <Modal.Container>
+            <Modal.Dialog>
+              <Modal.Header>
+                <Modal.Heading>新建账户</Modal.Heading>
+              </Modal.Header>
+              <Modal.Body>
+                <AccountForm
+                  mode="create"
+                  submitting={createMutation.isPending}
+                  onSubmit={(v) =>
+                    createMutation.mutate({
+                      name: v.name,
+                      currency: v.currency,
+                      initialBalance: v.initialBalanceCents,
+                      type: v.type,
+                    })
+                  }
+                  onCancel={() => setShowCreateForm(false)}
+                />
+              </Modal.Body>
+            </Modal.Dialog>
+          </Modal.Container>
+        </Modal.Backdrop>
+      </Modal>
 
-      <Dialog
-        open={!!editingAccountId}
+      <Modal
+        isOpen={!!editingAccountId}
         onOpenChange={(v) => { if (!v) setEditingAccountId(null); }}
       >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>编辑账户</DialogTitle>
-          </DialogHeader>
-          {editingAccount && (
-            <AccountForm
-              key={editingAccount.id}
-              mode="edit"
-              submitting={updateMutation.isPending}
-              defaultValues={{
-                name: editingAccount.name,
-                currency: editingAccount.currency,
-                type: editingAccount.type,
-              }}
-              onSubmit={(v) =>
-                updateMutation.mutate({
-                  id: editingAccount.id,
-                  name: v.name,
-                  currency: v.currency,
-                  type: v.type,
-                })
-              }
-              onCancel={() => setEditingAccountId(null)}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-
-      <AlertDialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>确认退出登录?</AlertDialogTitle>
-            <AlertDialogDescription>退出后需重新输入账号密码登录。</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction asChild>
-              <Button
-                variant="destructive"
-                disabled={isLoggingOut}
-                onClick={async () => {
-                  setIsLoggingOut(true);
-
-                  try {
-                    const { authClient } = await import("@/server/auth/client");
-                    const signOutResult = await authClient.signOut();
-
-                    if (signOutResult.error) {
-                      throw new Error(
-                        signOutResult.error.message || "退出登录失败，请重试"
-                      );
+        <Modal.Backdrop>
+          <Modal.Container>
+            <Modal.Dialog>
+              <Modal.Header>
+                <Modal.Heading>编辑账户</Modal.Heading>
+              </Modal.Header>
+              <Modal.Body>
+                {editingAccount && (
+                  <AccountForm
+                    key={editingAccount.id}
+                    mode="edit"
+                    submitting={updateMutation.isPending}
+                    defaultValues={{
+                      name: editingAccount.name,
+                      currency: editingAccount.currency,
+                      type: editingAccount.type,
+                    }}
+                    onSubmit={(v) =>
+                      updateMutation.mutate({
+                        id: editingAccount.id,
+                        name: v.name,
+                        currency: v.currency,
+                        type: v.type,
+                      })
                     }
+                    onCancel={() => setEditingAccountId(null)}
+                  />
+                )}
+              </Modal.Body>
+            </Modal.Dialog>
+          </Modal.Container>
+        </Modal.Backdrop>
+      </Modal>
 
-                    // Do not redirect until the server confirms the cookie no
-                    // longer resolves to a session. Otherwise /login's auth
-                    // layout correctly redirects the still-authenticated user
-                    // straight back to /dashboard.
-                    const sessionResult = await authClient.getSession();
-                    if (sessionResult.error) {
-                      throw new Error(
-                        sessionResult.error.message || "无法确认退出状态，请重试"
-                      );
-                    }
-                    if (sessionResult.data) {
-                      throw new Error("会话仍未清除，请重试");
-                    }
+      <AlertDialog isOpen={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
+        <AlertDialog.Backdrop>
+          <AlertDialog.Container>
+            <AlertDialog.Dialog>
+              <AlertDialog.Header>
+                <AlertDialog.Heading>确认退出登录?</AlertDialog.Heading>
+              </AlertDialog.Header>
+              <AlertDialog.Body>
+                <p className="text-sm text-muted-foreground">退出后需重新输入账号密码登录。</p>
+              </AlertDialog.Body>
+              <AlertDialog.Footer className="flex justify-end gap-2">
+                <Button variant="outline" onPress={() => setShowLogoutConfirm(false)}>
+                  取消
+                </Button>
+                <Button
+                  variant="danger"
+                  isDisabled={isLoggingOut}
+                  onPress={async () => {
+                    setIsLoggingOut(true);
 
-                    // Full replacement forces the server auth layout to run
-                    // again and keeps Dashboard out of browser history.
-                    window.location.replace("/login");
-                  } catch (error) {
-                    const message =
-                      error instanceof Error
-                        ? error.message
-                        : "退出登录失败，请重试";
-                    toast.error(message);
-                    setIsLoggingOut(false);
-                  }
-                }}
-              >
-                {isLoggingOut ? "正在退出…" : "退出登录"}
-              </Button>
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
+                    try {
+                      const { authClient } = await import("@/server/auth/client");
+                      const signOutResult = await authClient.signOut();
+
+                      if (signOutResult.error) {
+                        throw new Error(
+                          signOutResult.error.message || "退出登录失败，请重试"
+                        );
+                      }
+
+                      // Do not redirect until the server confirms the cookie no
+                      // longer resolves to a session. Otherwise /login's auth
+                      // layout correctly redirects the still-authenticated user
+                      // straight back to /dashboard.
+                      const sessionResult = await authClient.getSession();
+                      if (sessionResult.error) {
+                        throw new Error(
+                          sessionResult.error.message || "无法确认退出状态，请重试"
+                        );
+                      }
+                      if (sessionResult.data) {
+                        throw new Error("会话仍未清除，请重试");
+                      }
+
+                      // Full replacement forces the server auth layout to run
+                      // again and keeps Dashboard out of browser history.
+                      window.location.replace("/login");
+                    } catch (error) {
+                      const message =
+                        error instanceof Error
+                          ? error.message
+                          : "退出登录失败，请重试";
+                      toast.error(message);
+                      setIsLoggingOut(false);
+                    }
+                  }}
+                >
+                  {isLoggingOut ? "正在退出…" : "退出登录"}
+                </Button>
+              </AlertDialog.Footer>
+            </AlertDialog.Dialog>
+          </AlertDialog.Container>
+        </AlertDialog.Backdrop>
       </AlertDialog>
     </div>
   );
@@ -441,7 +445,7 @@ function PrivacyToggleInline() {
 function SettingsGroup({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="mb-1 px-1 text-xs font-medium text-muted-foreground">{title}</p>
+      <p className="mb-1 px-1 text-xs font-medium text-muted">{title}</p>
       <Card>
         <Card.Content className="divide-y p-0">{children}</Card.Content>
       </Card>
@@ -490,20 +494,20 @@ function SettingsRow({
         )}
       >
         <span className="flex items-center gap-3 text-sm">
-          <Icon className="h-4 w-4 text-muted-foreground" />
+          <Icon className="h-4 w-4 text-muted" />
           {label}
         </span>
         <span className="flex items-center gap-2">
-          {value && <span className="text-xs text-muted-foreground">{value}</span>}
+          {value && <span className="text-xs text-muted">{value}</span>}
           {expandable ? (
             <ChevronDown
               className={cn(
-                "h-4 w-4 text-muted-foreground transition-transform",
+                "h-4 w-4 text-muted transition-transform",
                 isOpen && "rotate-180",
               )}
             />
           ) : (
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            <ChevronRight className="h-4 w-4 text-muted" />
           )}
         </span>
       </button>
@@ -529,10 +533,10 @@ function SettingsLinkRow({
       className="flex items-center justify-between px-4 py-3 hover:bg-[var(--muted)]"
     >
       <span className="flex items-center gap-3 text-sm">
-        <Icon className="h-4 w-4 text-muted-foreground" />
+        <Icon className="h-4 w-4 text-muted" />
         {label}
       </span>
-      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+      <ChevronRight className="h-4 w-4 text-muted" />
     </Link>
   );
 }
@@ -549,7 +553,7 @@ function SettingsToggleRow({
   return (
     <div className="flex items-center justify-between px-4 py-3">
       <span className="flex items-center gap-3 text-sm">
-        <Icon className="h-4 w-4 text-muted-foreground" />
+        <Icon className="h-4 w-4 text-muted" />
         {label}
       </span>
       {children}

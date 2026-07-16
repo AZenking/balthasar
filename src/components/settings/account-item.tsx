@@ -2,13 +2,7 @@
 
 import { useState } from "react";
 import { Pencil, Archive, ArchiveRestore, MoreHorizontal } from "lucide-react";
-import { ListBox } from "@heroui/react";
-import { Button } from "@/components/ui/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Button, ListBox, Popover } from "@heroui/react";
 import {
   formatBalance,
   isSupportedCurrency,
@@ -66,27 +60,28 @@ export function AccountItem({
             {account.type === "debt" ? "负债" : "资产"}
           </span>
         </div>
-        <p className="text-xs text-muted-foreground tabular-nums">
+        <p className="text-xs text-muted tabular-nums">
           {account.currency} · {formatBalance(account.initialBalance, currency)}
         </p>
       </div>
 
       {isArchived ? (
-        <span className="shrink-0 text-xs text-muted-foreground">已归档</span>
+        <span className="shrink-0 text-xs text-muted">已归档</span>
       ) : null}
 
-      <Popover open={menuOpen} onOpenChange={setMenuOpen}>
-        <PopoverTrigger asChild>
+      <Popover isOpen={menuOpen} onOpenChange={setMenuOpen}>
+        <Popover.Trigger>
           <Button
             variant="ghost"
-            size="icon"
+            isIconOnly
+            size="sm"
             className="shrink-0 min-h-[44px] min-w-[44px]"
             aria-label={`${account.name} 操作`}
           >
             <MoreHorizontal className="h-4 w-4" />
           </Button>
-        </PopoverTrigger>
-        <PopoverContent align="end" className="w-40 p-1">
+        </Popover.Trigger>
+        <Popover.Content className="w-40 p-1" placement="bottom end">
           {!isArchived ? (
             <ListBox
               aria-label={`${account.name} 操作菜单`}
@@ -94,13 +89,13 @@ export function AccountItem({
               onAction={handleAction}
             >
               <ListBox.Item id="edit" textValue="编辑">
-                <div className="flex min-h-[36px] items-center gap-2 rounded-sm px-2 text-sm hover:bg-accent">
-                  <Pencil className="h-4 w-4 text-muted-foreground" />
+                <div className="flex min-h-[36px] items-center gap-2 rounded-sm px-2 text-sm hover:bg-default">
+                  <Pencil className="h-4 w-4 text-muted" />
                   编辑
                 </div>
               </ListBox.Item>
               <ListBox.Item id="archive" textValue="归档">
-                <div className="flex min-h-[36px] items-center gap-2 rounded-sm px-2 text-sm text-destructive hover:bg-accent">
+                <div className="flex min-h-[36px] items-center gap-2 rounded-sm px-2 text-sm text-danger hover:bg-default">
                   <Archive className="h-4 w-4" />
                   归档
                 </div>
@@ -113,14 +108,14 @@ export function AccountItem({
               onAction={handleAction}
             >
               <ListBox.Item id="unarchive" textValue="取消归档">
-                <div className="flex min-h-[36px] w-full items-center gap-2 rounded-sm px-2 text-sm hover:bg-accent">
-                  <ArchiveRestore className="h-4 w-4 text-muted-foreground" />
+                <div className="flex min-h-[36px] w-full items-center gap-2 rounded-sm px-2 text-sm hover:bg-default">
+                  <ArchiveRestore className="h-4 w-4 text-muted" />
                   取消归档
                 </div>
               </ListBox.Item>
             </ListBox>
           )}
-        </PopoverContent>
+        </Popover.Content>
       </Popover>
     </div>
   );

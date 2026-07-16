@@ -2,10 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { ChevronDown } from "lucide-react";
-import { TagGroup, Tag } from "@heroui/react";
+import { Input, Popover, TagGroup, Tag } from "@heroui/react";
 import { CATEGORY_ICON_GROUPS } from "@/lib/constants/category-icons";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Input } from "@/components/ui/input";
 import { CategoryIcon } from "@/components/category/category-icon";
 
 /**
@@ -57,27 +55,27 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
 
   return (
     <Popover
-      open={open}
+      isOpen={open}
       onOpenChange={(v) => {
         setOpen(v);
         if (!v) setSearch("");
       }}
     >
-      <PopoverTrigger asChild>
+      <Popover.Trigger>
         <button
           type="button"
-          className="flex h-10 min-w-[80px] items-center justify-center gap-1 rounded-md border border-input bg-background px-3 hover:bg-accent"
+          className="flex h-10 min-w-[80px] items-center justify-center gap-1 rounded-md border border-border bg-background px-3 hover:bg-default"
           aria-label="选择图标"
         >
           {value ? (
             <CategoryIcon name={value} size={24} />
           ) : (
-            <CategoryIcon name="circle-help" size={24} className="text-muted-foreground" />
+            <CategoryIcon name="circle-help" size={24} className="text-muted" />
           )}
-          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+          <ChevronDown className="h-3.5 w-3.5 text-muted" />
         </button>
-      </PopoverTrigger>
-      <PopoverContent className="w-80 p-0" align="start">
+      </Popover.Trigger>
+      <Popover.Content className="w-80 p-0" placement="bottom start">
         {/* search */}
         <div className="border-b border-border p-2">
           <Input
@@ -133,7 +131,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
             onSelect={handleSelect}
           />
         )}
-      </PopoverContent>
+      </Popover.Content>
     </Popover>
   );
 }
@@ -152,8 +150,8 @@ function IconGrid({ icons, value, onSelect }: IconGridProps) {
           key={icon}
           type="button"
           onClick={() => onSelect(icon)}
-          className={`flex h-10 w-10 items-center justify-center rounded transition-colors hover:bg-accent cursor-pointer ${
-            value === icon ? "bg-accent ring-2 ring-ring" : ""
+          className={`flex h-10 w-10 items-center justify-center rounded transition-colors hover:bg-default cursor-pointer ${
+            value === icon ? "bg-default ring-2 ring-focus" : ""
           }`}
           title={icon}
         >
@@ -161,7 +159,7 @@ function IconGrid({ icons, value, onSelect }: IconGridProps) {
         </button>
       ))}
       {icons.length === 0 && (
-        <p className="col-span-6 py-4 text-center text-xs text-muted-foreground">
+        <p className="col-span-6 py-4 text-center text-xs text-muted">
           无匹配图标
         </p>
       )}

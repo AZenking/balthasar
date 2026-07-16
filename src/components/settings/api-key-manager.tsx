@@ -10,31 +10,15 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  Button,
+  Input,
+  Label,
+  Modal,
+  Skeleton,
+  Tooltip,
+} from "@heroui/react";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { cn } from "@/lib/utils";
 
@@ -113,15 +97,15 @@ export function ApiKeyManager() {
     <div className="pt-1">
       {/* header:计数 + 生成按钮(达上限禁用) */}
       <div className="mb-3 flex items-center justify-between">
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-muted">
           {activeKeys.length} / {MAX_ACTIVE_KEYS} 个有效
         </p>
         <Button
           size="sm"
           variant="outline"
-          disabled={capReached}
-          onClick={() => setShowCreate(true)}
-          title={capReached ? `已达上限 ${MAX_ACTIVE_KEYS} 个` : undefined}
+          isDisabled={capReached}
+          onPress={() => setShowCreate(true)}
+          aria-label={capReached ? `已达上限 ${MAX_ACTIVE_KEYS} 个` : "生成 Key"}
         >
           生成 Key
         </Button>
@@ -141,7 +125,7 @@ export function ApiKeyManager() {
           title="还没有 API Key"
           description="生成一个 Key 用于调用 Open API(如浏览器插件、自动化脚本)。"
           action={
-            <Button size="sm" onClick={() => setShowCreate(true)}>
+            <Button size="sm" onPress={() => setShowCreate(true)}>
               生成 Key
             </Button>
           }
@@ -161,7 +145,7 @@ export function ApiKeyManager() {
           {/* 已吊销分组 */}
           {revokedKeys.length > 0 && (
             <div className="mt-4">
-              <p className="mb-1 text-xs text-muted-foreground">已吊销</p>
+              <p className="mb-1 text-xs text-muted">已吊销</p>
               <div className="space-y-1">
                 {revokedKeys.map((k) => (
                   <KeyRow key={k.id} k={k} />
@@ -173,125 +157,144 @@ export function ApiKeyManager() {
       )}
 
       {/* 创建 Dialog */}
-      <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>生成 API Key</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <Label htmlFor="keyName" className="mb-1 block">
-                名称
-              </Label>
-              <Input
-                id="keyName"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="如:浏览器插件"
-                maxLength={50}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleCreate();
-                }}
-                autoFocus
-              />
-              <p className="mt-1 text-xs text-muted-foreground">
-                用于区分这个 Key 的用途,创建后不可改名。
-              </p>
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowCreate(false)}
-                disabled={createMutation.isPending}
-              >
-                取消
-              </Button>
-              <Button
-                type="button"
-                onClick={handleCreate}
-                disabled={createMutation.isPending}
-              >
-                {createMutation.isPending ? "生成中…" : "生成"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <Modal isOpen={showCreate} onOpenChange={setShowCreate}>
+        <Modal.Backdrop>
+          <Modal.Container>
+            <Modal.Dialog>
+              <Modal.Header>
+                <Modal.Heading>生成 API Key</Modal.Heading>
+              </Modal.Header>
+              <Modal.Body>
+                <div className="space-y-3">
+                  <div>
+                    <Label htmlFor="keyName" className="mb-1 block">
+                      名称
+                    </Label>
+                    <Input
+                      id="keyName"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="如:浏览器插件"
+                      maxLength={50}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleCreate();
+                      }}
+                      autoFocus
+                    />
+                    <p className="mt-1 text-xs text-muted">
+                      用于区分这个 Key 的用途,创建后不可改名。
+                    </p>
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onPress={() => setShowCreate(false)}
+                      isDisabled={createMutation.isPending}
+                    >
+                      取消
+                    </Button>
+                    <Button
+                      type="button"
+                      onPress={handleCreate}
+                      isDisabled={createMutation.isPending}
+                    >
+                      {createMutation.isPending ? "生成中…" : "生成"}
+                    </Button>
+                  </div>
+                </div>
+              </Modal.Body>
+            </Modal.Dialog>
+          </Modal.Container>
+        </Modal.Backdrop>
+      </Modal>
 
       {/* 一次性密钥披露 Dialog(create 成功后) */}
-      <Dialog
-        open={!!newKey}
+      <Modal
+        isOpen={!!newKey}
         onOpenChange={(v) => { if (!v) setNewKey(null); }}
       >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <TriangleAlert className="h-5 w-5 text-[var(--warning)]" />
-              密钥已生成
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              请立即复制保存。<strong className="text-foreground">关闭后无法再次查看</strong>
-              ,丢失只能重新生成。
-            </p>
-            <div className="flex items-center gap-2 rounded-md border bg-muted/40 p-2">
-              <code className="min-w-0 flex-1 break-all font-mono text-xs">
-                {newKey}
-              </code>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 shrink-0"
-                    onClick={() => newKey && copyKey(newKey)}
-                    aria-label="复制密钥"
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>复制</TooltipContent>
-              </Tooltip>
-            </div>
-            <div className="flex justify-end">
-              <Button type="button" onClick={() => setNewKey(null)}>
-                我已保存
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+        <Modal.Backdrop>
+          <Modal.Container>
+            <Modal.Dialog>
+              <Modal.Header>
+                <Modal.Heading className="flex items-center gap-2">
+                  <TriangleAlert className="h-5 w-5 text-[var(--warning)]" />
+                  密钥已生成
+                </Modal.Heading>
+              </Modal.Header>
+              <Modal.Body>
+                <div className="space-y-3">
+                  <p className="text-sm text-muted">
+                    请立即复制保存。<strong className="text-foreground">关闭后无法再次查看</strong>
+                    ,丢失只能重新生成。
+                  </p>
+                  <div className="flex items-center gap-2 rounded-md border bg-default/40 p-2">
+                    <code className="min-w-0 flex-1 break-all font-mono text-xs">
+                      {newKey}
+                    </code>
+                    <Tooltip>
+                      <Tooltip.Trigger>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          isIconOnly
+                          size="sm"
+                          className="h-8 w-8 shrink-0"
+                          onPress={() => newKey && copyKey(newKey)}
+                          aria-label="复制密钥"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      </Tooltip.Trigger>
+                      <Tooltip.Content>复制</Tooltip.Content>
+                    </Tooltip>
+                  </div>
+                  <div className="flex justify-end">
+                    <Button type="button" onPress={() => setNewKey(null)}>
+                      我已保存
+                    </Button>
+                  </div>
+                </div>
+              </Modal.Body>
+            </Modal.Dialog>
+          </Modal.Container>
+        </Modal.Backdrop>
+      </Modal>
 
       {/* 吊销二次确认 */}
       <AlertDialog
-        open={!!revokeTarget}
+        isOpen={!!revokeTarget}
         onOpenChange={(v) => { if (!v) setRevokeTarget(null); }}
       >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>吊销 API Key</AlertDialogTitle>
-            <AlertDialogDescription>
-              {revokeTarget
-                ? `确定吊销「${revokeTarget.name}」?吊销后该 Key 立即失效,且无法恢复。`
-                : "确定吊销此 Key?吊销后该 Key 立即失效,且无法恢复。"}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction asChild>
-              <Button
-                variant="destructive"
-                onClick={confirmRevoke}
-                disabled={revokeMutation.isPending}
-              >
-                {revokeMutation.isPending ? "吊销中…" : "吊销"}
-              </Button>
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
+        <AlertDialog.Backdrop>
+          <AlertDialog.Container>
+            <AlertDialog.Dialog>
+              <AlertDialog.Header>
+                <AlertDialog.Heading>吊销 API Key</AlertDialog.Heading>
+              </AlertDialog.Header>
+              <AlertDialog.Body>
+                <p className="text-sm text-muted-foreground">
+                  {revokeTarget
+                    ? `确定吊销「${revokeTarget.name}」?吊销后该 Key 立即失效,且无法恢复。`
+                    : "确定吊销此 Key?吊销后该 Key 立即失效,且无法恢复。"}
+                </p>
+              </AlertDialog.Body>
+              <AlertDialog.Footer className="flex justify-end gap-2">
+                <Button variant="outline" onPress={() => setRevokeTarget(null)}>
+                  取消
+                </Button>
+                <Button
+                  variant="danger"
+                  onPress={confirmRevoke}
+                  isDisabled={revokeMutation.isPending}
+                >
+                  {revokeMutation.isPending ? "吊销中…" : "吊销"}
+                </Button>
+              </AlertDialog.Footer>
+            </AlertDialog.Dialog>
+          </AlertDialog.Container>
+        </AlertDialog.Backdrop>
       </AlertDialog>
     </div>
   );
@@ -318,21 +321,21 @@ function KeyRow({
           <span
             className={cn(
               "h-1.5 w-1.5 shrink-0 rounded-full",
-              isRevoked ? "bg-muted-foreground" : "bg-[var(--success)]",
+              isRevoked ? "bg-default" : "bg-[var(--success)]",
             )}
             aria-hidden
           />
           <p className="truncate text-sm font-medium">{k.name}</p>
           {isRevoked && (
-            <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+            <span className="shrink-0 rounded-full bg-default px-1.5 py-0.5 text-[10px] text-muted">
               已吊销
             </span>
           )}
         </div>
-        <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
+        <p className="mt-0.5 truncate font-mono text-xs text-muted">
           {k.keyPrefix}••••
         </p>
-        <p className="mt-0.5 text-xs text-muted-foreground">
+        <p className="mt-0.5 text-xs text-muted">
           创建于 {formatDate(k.createdAt)}
           {k.lastUsedAt
             ? ` · 最近使用 ${formatDate(k.lastUsedAt)}`
@@ -341,18 +344,19 @@ function KeyRow({
       </div>
       {onRevoke && (
         <Tooltip>
-          <TooltipTrigger asChild>
+          <Tooltip.Trigger>
             <Button
               variant="ghost"
-              size="icon"
+              isIconOnly
+              size="sm"
               className="min-h-[44px] min-w-[44px] text-[var(--danger)] hover:text-[var(--danger)]"
-              onClick={onRevoke}
+              onPress={onRevoke}
               aria-label={`吊销 ${k.name}`}
             >
               <Trash2 className="h-4 w-4" />
             </Button>
-          </TooltipTrigger>
-          <TooltipContent>吊销</TooltipContent>
+          </Tooltip.Trigger>
+          <Tooltip.Content>吊销</Tooltip.Content>
         </Tooltip>
       )}
     </div>

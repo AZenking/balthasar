@@ -19,16 +19,7 @@ import { toast } from "sonner";
 import { Pencil } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { Button, Input, Label, Modal } from "@heroui/react";
 
 const NICKNAME_MAX = 30;
 
@@ -108,67 +99,74 @@ export function NicknameEditor({
     <>
       {/* 图标触发器:铅笔,紧贴昵称文字旁 */}
       <Button
-        size="icon"
+        isIconOnly
+        size="sm"
         variant="ghost"
-        className="h-7 w-7 cursor-pointer text-muted-foreground hover:text-foreground"
+        className="h-7 w-7 cursor-pointer text-muted hover:text-foreground"
         aria-label="修改昵称"
-        onClick={() => setIsOpen(true)}
+        onPress={() => setIsOpen(true)}
       >
         <Pencil className="h-3.5 w-3.5" />
       </Button>
 
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>修改昵称</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="grid gap-2">
-            <Label htmlFor="nickname">昵称</Label>
-            <Input
-              id="nickname"
-              value={value}
-              onChange={(e) => {
-                setValue(e.target.value);
-                if (error) setError(null);
-              }}
-              maxLength={NICKNAME_MAX}
-              autoFocus
-              aria-invalid={isInvalid || undefined}
-              aria-describedby={isInvalid ? "nickname-error" : undefined}
-              placeholder="请输入昵称"
-              className={cn(
-                isInvalid &&
-                  "border-destructive ring-destructive focus-visible:ring-destructive",
-              )}
-            />
-            {isInvalid && (
-              <p
-                id="nickname-error"
-                className="text-xs text-destructive"
-                role="alert"
-              >
-                {error}
-              </p>
-            )}
-            <DialogFooter className="gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleCancel}
-                disabled={updateNickname.isPending}
-              >
-                取消
-              </Button>
-              <Button
-                type="submit"
-                disabled={updateNickname.isPending}
-              >
-                {updateNickname.isPending ? "保存中..." : "保存"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <Modal isOpen={isOpen} onOpenChange={setIsOpen}>
+        <Modal.Backdrop>
+          <Modal.Container>
+            <Modal.Dialog>
+              <Modal.Header>
+                <Modal.Heading>修改昵称</Modal.Heading>
+              </Modal.Header>
+              <Modal.Body>
+                <form onSubmit={handleSubmit} className="grid gap-2">
+                  <Label htmlFor="nickname">昵称</Label>
+                  <Input
+                    id="nickname"
+                    value={value}
+                    onChange={(e) => {
+                      setValue(e.target.value);
+                      if (error) setError(null);
+                    }}
+                    maxLength={NICKNAME_MAX}
+                    autoFocus
+                    aria-invalid={isInvalid || undefined}
+                    aria-describedby={isInvalid ? "nickname-error" : undefined}
+                    placeholder="请输入昵称"
+                    className={cn(
+                      isInvalid &&
+                        "border-danger ring-danger focus-visible:ring-danger",
+                    )}
+                  />
+                  {isInvalid && (
+                    <p
+                      id="nickname-error"
+                      className="text-xs text-danger"
+                      role="alert"
+                    >
+                      {error}
+                    </p>
+                  )}
+                  <Modal.Footer className="flex justify-end gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onPress={handleCancel}
+                      isDisabled={updateNickname.isPending}
+                    >
+                      取消
+                    </Button>
+                    <Button
+                      type="submit"
+                      isDisabled={updateNickname.isPending}
+                    >
+                      {updateNickname.isPending ? "保存中..." : "保存"}
+                    </Button>
+                  </Modal.Footer>
+                </form>
+              </Modal.Body>
+            </Modal.Dialog>
+          </Modal.Container>
+        </Modal.Backdrop>
+      </Modal>
     </>
   );
 }

@@ -4,27 +4,16 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { TRPCClientError } from "@trpc/client";
 import { Tags } from "lucide-react";
-import { Tabs, Checkbox } from "@heroui/react";
-import { trpc } from "@/lib/trpc/client";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { EmptyState } from "@/components/feedback/empty-state";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
+  Tabs,
+  Checkbox,
+  Button,
+  Skeleton,
+  Modal,
   AlertDialog,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogCancel,
-  AlertDialogAction,
-} from "@/components/ui/alert-dialog";
+} from "@heroui/react";
+import { trpc } from "@/lib/trpc/client";
+import { EmptyState } from "@/components/feedback/empty-state";
 import {
   computeSortOrder,
   renumberSortOrders,
@@ -238,7 +227,7 @@ export function CategoryManager() {
           aria-label="显示已归档"
           isSelected={includeArchived}
           onChange={setIncludeArchived}
-          className="flex items-center gap-1.5 text-sm text-muted-foreground"
+          className="flex items-center gap-1.5 text-sm text-muted"
         >
           <Checkbox.Content className="flex items-center gap-1.5 cursor-pointer">
             <Checkbox.Control>
@@ -254,14 +243,14 @@ export function CategoryManager() {
         <div className="mb-3 flex flex-col items-end gap-1">
           <Button
             size="sm"
-            disabled={capReached}
-            title={capReached ? `已达上限 ${CUSTOM_CATEGORY_CAP}` : undefined}
-            onClick={() => setShowCreateForm(true)}
+            isDisabled={capReached}
+            aria-label={capReached ? `已达上限 ${CUSTOM_CATEGORY_CAP}` : "+ 新增分类"}
+            onPress={() => setShowCreateForm(true)}
           >
             + 新增分类
           </Button>
           {capReached && (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted">
               已达上限 {CUSTOM_CATEGORY_CAP} 个自定义分类
             </p>
           )}
@@ -283,8 +272,8 @@ export function CategoryManager() {
           action={
             <Button
               size="sm"
-              disabled={capReached}
-              onClick={() => setShowCreateForm(true)}
+              isDisabled={capReached}
+              onPress={() => setShowCreateForm(true)}
             >
               + 新增分类
             </Button>
@@ -296,7 +285,7 @@ export function CategoryManager() {
            不用 ListBox:CategoryItem 行内有独立的 ⋯ Popover 菜单(上移/下移/
            编辑/归档/恢复),嵌套在 ListBox.Item(可聚焦 Option)内会拦截点击、
            破坏 focus 链,导致 Popover 打不开。ListBox 仅适合"整行单一动作"。 */
-        <div className="rounded-md border border-border bg-card">
+        <div className="rounded-md border border-border bg-surface">
           {tree.map((node) => (
             <CategoryItem
               key={node.id}
@@ -310,73 +299,91 @@ export function CategoryManager() {
         </div>
       )}
 
-      {/* create form dialog (024 US2: shadcn Dialog, replaces Modal) */}
-      <Dialog open={showCreateForm} onOpenChange={setShowCreateForm}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>新增分类</DialogTitle>
-          </DialogHeader>
-          <CategoryForm
-            mode="create"
-            categories={tree ?? []}
-            onSubmit={handleCreate}
-            onCancel={() => setShowCreateForm(false)}
-            submitting={createMutation.isPending}
-          />
-        </DialogContent>
-      </Dialog>
+      {/* create form modal */}
+      <Modal isOpen={showCreateForm} onOpenChange={setShowCreateForm}>
+        <Modal.Backdrop>
+          <Modal.Container>
+            <Modal.Dialog>
+              <Modal.Header>
+                <Modal.Heading>新增分类</Modal.Heading>
+              </Modal.Header>
+              <Modal.Body>
+                <CategoryForm
+                  mode="create"
+                  categories={tree ?? []}
+                  onSubmit={handleCreate}
+                  onCancel={() => setShowCreateForm(false)}
+                  submitting={createMutation.isPending}
+                />
+              </Modal.Body>
+            </Modal.Dialog>
+          </Modal.Container>
+        </Modal.Backdrop>
+      </Modal>
 
-      {/* edit form dialog (US3) */}
-      <Dialog
-        open={!!editingCategoryId}
+      {/* edit form modal (US3) */}
+      <Modal
+        isOpen={!!editingCategoryId}
         onOpenChange={(v) => { if (!v) setEditingCategoryId(null); }}
       >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>编辑分类</DialogTitle>
-          </DialogHeader>
-          {editingNode && (
-            <CategoryForm
-              mode="edit"
-              categories={tree ?? []}
-              editingCategory={editingNode}
-              defaultValues={{
-                type: editingNode.type,
-                name: editingNode.name,
-                icon: editingNode.icon,
-                parentId: editingNode.parentId ?? undefined,
-              }}
-              onSubmit={handleUpdate}
-              onCancel={() => setEditingCategoryId(null)}
-              submitting={updateMutation.isPending}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+        <Modal.Backdrop>
+          <Modal.Container>
+            <Modal.Dialog>
+              <Modal.Header>
+                <Modal.Heading>编辑分类</Modal.Heading>
+              </Modal.Header>
+              <Modal.Body>
+                {editingNode && (
+                  <CategoryForm
+                    mode="edit"
+                    categories={tree ?? []}
+                    editingCategory={editingNode}
+                    defaultValues={{
+                      type: editingNode.type,
+                      name: editingNode.name,
+                      icon: editingNode.icon,
+                      parentId: editingNode.parentId ?? undefined,
+                    }}
+                    onSubmit={handleUpdate}
+                    onCancel={() => setEditingCategoryId(null)}
+                    submitting={updateMutation.isPending}
+                  />
+                )}
+              </Modal.Body>
+            </Modal.Dialog>
+          </Modal.Container>
+        </Modal.Backdrop>
+      </Modal>
 
       {/* 归档二次确认(替代 window.confirm) */}
       <AlertDialog
-        open={!!archiveTarget}
+        isOpen={!!archiveTarget}
         onOpenChange={(v) => { if (!v) setArchiveTarget(null); }}
       >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>归档分类</AlertDialogTitle>
-            <AlertDialogDescription>
-              {archiveTarget && archiveTarget.childCount > 0
-                ? `确定归档?该分类及其 ${archiveTarget.childCount} 个子分类将从新建交易的下拉中隐藏,但历史交易仍保留。`
-                : "确定归档?该分类将从新建交易的下拉中隐藏,但历史交易仍保留。"}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction asChild>
-              <Button variant="destructive" onClick={confirmArchive}>
-                归档
-              </Button>
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
+        <AlertDialog.Backdrop>
+          <AlertDialog.Container>
+            <AlertDialog.Dialog>
+              <AlertDialog.Header>
+                <AlertDialog.Heading>归档分类</AlertDialog.Heading>
+              </AlertDialog.Header>
+              <AlertDialog.Body>
+                <p className="text-sm text-muted-foreground">
+                  {archiveTarget && archiveTarget.childCount > 0
+                    ? `确定归档?该分类及其 ${archiveTarget.childCount} 个子分类将从新建交易的下拉中隐藏,但历史交易仍保留。`
+                    : "确定归档?该分类将从新建交易的下拉中隐藏,但历史交易仍保留。"}
+                </p>
+              </AlertDialog.Body>
+              <AlertDialog.Footer className="flex justify-end gap-2">
+                <Button variant="outline" onPress={() => setArchiveTarget(null)}>
+                  取消
+                </Button>
+                <Button variant="danger" onPress={confirmArchive}>
+                  归档
+                </Button>
+              </AlertDialog.Footer>
+            </AlertDialog.Dialog>
+          </AlertDialog.Container>
+        </AlertDialog.Backdrop>
       </AlertDialog>
     </div>
   );

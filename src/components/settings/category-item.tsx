@@ -10,13 +10,7 @@ import {
   ArrowUp,
   ArrowDown,
 } from "lucide-react";
-import { ListBox } from "@heroui/react";
-import { Button } from "@/components/ui/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Button, ListBox, Popover } from "@heroui/react";
 import { cn } from "@/lib/utils";
 import type { Category } from "@/server/db/schema";
 import { CategoryIcon } from "@/components/category/category-icon";
@@ -83,30 +77,34 @@ export function CategoryItem({
         <div className="flex min-w-0 items-center gap-2">
           {!isChild && !canManage && (
             <Lock
-              className="h-3.5 w-3.5 shrink-0 text-muted-foreground"
+              className="h-3.5 w-3.5 shrink-0 text-muted"
               aria-label="内置分类"
             />
           )}
           <CategoryIcon name={node.icon} size={20} className="shrink-0" />
           <span className="truncate text-sm">{node.name}</span>
           {isArchived && (
-            <span className="shrink-0 text-xs text-muted-foreground">(已归档)</span>
+            <span className="shrink-0 text-xs text-muted">(已归档)</span>
           )}
         </div>
 
         {canManage && (
-          <Popover open={menuOpen} onOpenChange={setMenuOpen}>
-            <PopoverTrigger asChild>
+          <Popover
+            isOpen={menuOpen}
+            onOpenChange={setMenuOpen}
+          >
+            <Popover.Trigger>
               <Button
                 variant="ghost"
-                size="icon"
+                isIconOnly
+                size="sm"
                 className="shrink-0 min-h-[44px] min-w-[44px]"
                 aria-label={`${node.name} 操作`}
               >
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
-            </PopoverTrigger>
-            <PopoverContent align="end" className="w-40 p-1">
+            </Popover.Trigger>
+            <Popover.Content className="w-40 p-1" placement="bottom end">
               {!isArchived ? (
                 <ListBox
                   aria-label={`${node.name} 操作菜单`}
@@ -115,28 +113,28 @@ export function CategoryItem({
                 >
                   {onMove && (
                     <ListBox.Item id="up" textValue="上移">
-                      <div className="flex min-h-[36px] items-center gap-2 rounded-sm px-2 text-sm hover:bg-accent">
-                        <ArrowUp className="h-4 w-4 text-muted-foreground" />
+                      <div className="flex min-h-[36px] items-center gap-2 rounded-sm px-2 text-sm hover:bg-default">
+                        <ArrowUp className="h-4 w-4 text-muted" />
                         上移
                       </div>
                     </ListBox.Item>
                   )}
                   {onMove && (
                     <ListBox.Item id="down" textValue="下移">
-                      <div className="flex min-h-[36px] items-center gap-2 rounded-sm px-2 text-sm hover:bg-accent">
-                        <ArrowDown className="h-4 w-4 text-muted-foreground" />
+                      <div className="flex min-h-[36px] items-center gap-2 rounded-sm px-2 text-sm hover:bg-default">
+                        <ArrowDown className="h-4 w-4 text-muted" />
                         下移
                       </div>
                     </ListBox.Item>
                   )}
                   <ListBox.Item id="edit" textValue="编辑">
-                    <div className="flex min-h-[36px] items-center gap-2 rounded-sm px-2 text-sm hover:bg-accent">
-                      <Pencil className="h-4 w-4 text-muted-foreground" />
+                    <div className="flex min-h-[36px] items-center gap-2 rounded-sm px-2 text-sm hover:bg-default">
+                      <Pencil className="h-4 w-4 text-muted" />
                       编辑
                     </div>
                   </ListBox.Item>
                   <ListBox.Item id="archive" textValue="归档">
-                    <div className="flex min-h-[36px] items-center gap-2 rounded-sm px-2 text-sm text-destructive hover:bg-accent">
+                    <div className="flex min-h-[36px] items-center gap-2 rounded-sm px-2 text-sm text-danger hover:bg-default">
                       <Archive className="h-4 w-4" />
                       归档
                     </div>
@@ -149,14 +147,14 @@ export function CategoryItem({
                   onAction={handleAction}
                 >
                   <ListBox.Item id="unarchive" textValue="恢复">
-                    <div className="flex min-h-[36px] items-center gap-2 rounded-sm px-2 text-sm hover:bg-accent">
-                      <ArchiveRestore className="h-4 w-4 text-muted-foreground" />
+                    <div className="flex min-h-[36px] items-center gap-2 rounded-sm px-2 text-sm hover:bg-default">
+                      <ArchiveRestore className="h-4 w-4 text-muted" />
                       恢复
                     </div>
                   </ListBox.Item>
                 </ListBox>
               )}
-            </PopoverContent>
+            </Popover.Content>
           </Popover>
         )}
       </div>

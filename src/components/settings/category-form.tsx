@@ -3,18 +3,16 @@
 import { useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { RadioGroup, Radio } from "@heroui/react";
-import { categoryCreateSchema, type CategoryCreateValues } from "@/lib/validators/category";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
+  RadioGroup,
+  Radio,
+  Button,
+  Input,
+  Label,
   Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  ListBox,
+} from "@heroui/react";
+import { categoryCreateSchema, type CategoryCreateValues } from "@/lib/validators/category";
 import { IconPicker } from "./icon-picker";
 import { CategoryIcon } from "@/components/category/category-icon";
 import type { CategoryNode } from "./category-item";
@@ -146,10 +144,10 @@ export function CategoryForm({
           )}
         />
         {typeDisabled && (
-          <p className="mt-1 text-xs text-muted-foreground">已归档分类不可改类型</p>
+          <p className="mt-1 text-xs text-muted">已归档分类不可改类型</p>
         )}
         {errors.type && (
-          <p className="mt-1 text-xs text-destructive">{errors.type.message}</p>
+          <p className="mt-1 text-xs text-danger">{errors.type.message}</p>
         )}
       </div>
 
@@ -164,7 +162,7 @@ export function CategoryForm({
           placeholder="1-30 字"
         />
         {errors.name && (
-          <p className="mt-1 text-xs text-destructive">{errors.name.message}</p>
+          <p className="mt-1 text-xs text-danger">{errors.name.message}</p>
         )}
       </div>
 
@@ -182,11 +180,11 @@ export function CategoryForm({
           )}
         />
         {errors.icon && (
-          <p className="mt-1 text-xs text-destructive">{errors.icon.message}</p>
+          <p className="mt-1 text-xs text-danger">{errors.icon.message}</p>
         )}
       </div>
 
-      {/* parent select (only top-level) — 024 US2: shadcn Select */}
+      {/* parent select (only top-level) */}
       <div>
         <Label className="mb-1 block">父分类 (可选)</Label>
         <Controller
@@ -194,32 +192,39 @@ export function CategoryForm({
           name="parentId"
           render={({ field }) => (
             <Select
-              value={field.value ?? PARENT_ROOT_SENTINEL}
-              onValueChange={(v) =>
-                field.onChange(v === PARENT_ROOT_SENTINEL ? undefined : v)
-              }
-              disabled={parentDisabled}
+              selectedKey={field.value ?? PARENT_ROOT_SENTINEL}
+              onSelectionChange={(key) => {
+                const v = key === null ? PARENT_ROOT_SENTINEL : String(key);
+                field.onChange(v === PARENT_ROOT_SENTINEL ? undefined : v);
+              }}
+              isDisabled={parentDisabled}
+              placeholder="(顶级分类)"
             >
-              <SelectTrigger>
-                <SelectValue placeholder="(顶级分类)" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={PARENT_ROOT_SENTINEL}>(顶级分类)</SelectItem>
-                {parentOptions.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    <span className="flex items-center gap-1.5">
-                      <CategoryIcon name={c.icon} size={16} />
-                      {c.name}
-                      {c.isBuiltIn ? " (内置)" : ""}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
+              <Select.Trigger>
+                <Select.Value />
+                <Select.Indicator />
+              </Select.Trigger>
+              <Select.Popover>
+                <ListBox>
+                  <ListBox.Item id={PARENT_ROOT_SENTINEL} textValue="(顶级分类)">
+                    (顶级分类)
+                  </ListBox.Item>
+                  {parentOptions.map((c) => (
+                    <ListBox.Item key={c.id} id={c.id} textValue={c.name}>
+                      <span className="flex items-center gap-1.5">
+                        <CategoryIcon name={c.icon} size={16} />
+                        {c.name}
+                        {c.isBuiltIn ? " (内置)" : ""}
+                      </span>
+                    </ListBox.Item>
+                  ))}
+                </ListBox>
+              </Select.Popover>
             </Select>
           )}
         />
         {parentDisabled && (
-          <p className="mt-1 text-xs text-muted-foreground">
+          <p className="mt-1 text-xs text-muted">
             {isArchived
               ? "已归档分类不可改父分类"
               : hasChildren
@@ -233,10 +238,10 @@ export function CategoryForm({
 
       {/* actions */}
       <div className="flex justify-end gap-2 pt-2">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={submitting}>
+        <Button type="button" variant="outline" onPress={onCancel} isDisabled={submitting}>
           取消
         </Button>
-        <Button type="submit" disabled={submitting}>
+        <Button type="submit" isDisabled={submitting}>
           {submitting ? "提交中..." : mode === "create" ? "创建" : "保存"}
         </Button>
       </div>
