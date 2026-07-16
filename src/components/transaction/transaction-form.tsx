@@ -12,16 +12,11 @@ import {
 } from "@/lib/validators/transaction";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
 import { CategorySelect } from "@/components/category/category-select";
 import {
+  Button,
+  Skeleton,
+  Tooltip,
   Tabs,
   NumberField,
   DatePicker,
@@ -94,7 +89,7 @@ function AccountTriggerLabel({
   return (
     <span className="flex items-center gap-2">
       <span className="truncate">{account.name}</span>
-      <span className="text-xs text-muted-foreground">
+      <span className="text-xs text-muted">
         ¥{(account.initialBalance / 100).toFixed(2)}
       </span>
     </span>
@@ -229,8 +224,8 @@ export function TransactionForm({
   if (unarchivedAccounts.length === 0) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 p-4">
-        <p className="text-muted-foreground">请先创建账户</p>
-        <Button variant="outline" onClick={() => router.push("/settings")}>
+        <p className="text-muted">请先创建账户</p>
+        <Button variant="outline" onPress={() => router.push("/settings")}>
           去设置
         </Button>
       </div>
@@ -368,7 +363,7 @@ export function TransactionForm({
           >
             <HeroUILabel className="sr-only">金额 (元)</HeroUILabel>
             <NumberField.Group className="h-auto items-center justify-center gap-1 rounded-2xl border-0 bg-[var(--surface)] px-4 py-4 shadow-none">
-              <span className="text-3xl font-bold tabular-nums text-muted-foreground">
+              <span className="text-3xl font-bold tabular-nums text-muted">
                 ¥
               </span>
               <NumberField.Input
@@ -483,7 +478,7 @@ export function TransactionForm({
       {/* Category(转账模式无分类,强制内置转账分类 by server) */}
       {!isTransfer && (
         <div className="space-y-2">
-          <Label htmlFor="categoryId">分类</Label>
+          <HeroUILabel htmlFor="categoryId">分类</HeroUILabel>
           <CategorySelect
             type={selectedType}
             value={watch("categoryId")}
@@ -499,7 +494,7 @@ export function TransactionForm({
 
       {/* Remark */}
       <div className="space-y-2">
-        <Label htmlFor="remark">备注 (选填)</Label>
+        <HeroUILabel htmlFor="remark">备注 (选填)</HeroUILabel>
         <TextArea
           id="remark"
           placeholder="如:午餐咖啡"
@@ -574,7 +569,7 @@ export function TransactionForm({
     <Button
       type="submit"
       className={cn("w-full", TYPE_META[selectedType].submitCls)}
-      disabled={isSubmitting}
+      isDisabled={isSubmitting}
     >
       {isSubmitting
         ? "提交中..."
@@ -597,17 +592,17 @@ export function TransactionForm({
         <Card className="mx-4 mt-4">
           <Card.Header className="flex items-center gap-2">
             <Tooltip>
-              <TooltipTrigger asChild>
+              <Tooltip.Trigger>
                 <Button
                   variant="ghost"
-                  size="icon"
-                  onClick={() => router.back()}
+                  size="sm"
+                  onPress={() => router.back()}
                   aria-label="返回"
                 >
                   <ChevronLeft className="h-5 w-5" />
                 </Button>
-              </TooltipTrigger>
-              <TooltipContent>返回</TooltipContent>
+              </Tooltip.Trigger>
+              <Tooltip.Content>返回</Tooltip.Content>
             </Tooltip>
             <Card.Title>{isEditMode ? "编辑交易" : "记一笔"}</Card.Title>
           </Card.Header>

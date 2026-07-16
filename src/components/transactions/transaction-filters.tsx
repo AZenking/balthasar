@@ -2,14 +2,7 @@
 
 import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
-import { Tabs } from "@heroui/react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Tabs, Select, ListBox } from "@heroui/react";
 
 // Sentinel for "全部账户/全部分类". shadcn Select (Radix) doesn't allow
 // empty-string value, so use a string that cannot collide with uuid/cuid ids.
@@ -83,7 +76,7 @@ export function TransactionFilters({
           type="button"
           onClick={() => setExpanded(!expanded)}
           aria-expanded={expanded}
-          className="flex h-11 items-center gap-1 rounded-md px-1 text-sm text-[var(--muted-foreground)] hover:bg-[var(--muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex h-11 items-center gap-1 rounded-md px-1 text-sm text-[var(--muted)] hover:bg-[var(--muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
         >
           <span>{expanded ? "▼" : "▶"}</span>
           更多筛选
@@ -98,49 +91,63 @@ export function TransactionFilters({
           <div className="mt-2 space-y-3">
             {/* Account */}
             <Select
-              value={filters.accountId ?? ALL_SENTINEL}
-              onValueChange={(v) =>
+              selectedKey={filters.accountId ?? ALL_SENTINEL}
+              onSelectionChange={(key) => {
+                const v = key === null ? ALL_SENTINEL : String(key);
                 onChange({
                   ...filters,
                   accountId: v === ALL_SENTINEL ? undefined : v,
-                })
-              }
+                });
+              }}
+              placeholder="全部账户"
             >
-              <SelectTrigger className="h-11 w-full">
-                <SelectValue placeholder="全部账户" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL_SENTINEL}>全部账户</SelectItem>
-                {unarchivedAccounts.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
+              <Select.Trigger className="h-11 w-full">
+                <Select.Value />
+                <Select.Indicator />
+              </Select.Trigger>
+              <Select.Popover>
+                <ListBox>
+                  <ListBox.Item id={ALL_SENTINEL} textValue="全部账户">
+                    全部账户
+                  </ListBox.Item>
+                  {unarchivedAccounts.map((a) => (
+                    <ListBox.Item key={a.id} id={a.id} textValue={a.name}>
+                      {a.name}
+                    </ListBox.Item>
+                  ))}
+                </ListBox>
+              </Select.Popover>
             </Select>
 
             {/* Category — 仅在选了 type 时显示(分类按 type 隔离)。 */}
             {filters.type && (
               <Select
-                value={filters.categoryId ?? ALL_SENTINEL}
-                onValueChange={(v) =>
+                selectedKey={filters.categoryId ?? ALL_SENTINEL}
+                onSelectionChange={(key) => {
+                  const v = key === null ? ALL_SENTINEL : String(key);
                   onChange({
                     ...filters,
                     categoryId: v === ALL_SENTINEL ? undefined : v,
-                  })
-                }
+                  });
+                }}
+                placeholder="全部分类"
               >
-                <SelectTrigger className="h-11 w-full">
-                  <SelectValue placeholder="全部分类" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={ALL_SENTINEL}>全部分类</SelectItem>
-                  {(categories ?? []).map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.icon} {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
+                <Select.Trigger className="h-11 w-full">
+                  <Select.Value />
+                  <Select.Indicator />
+                </Select.Trigger>
+                <Select.Popover>
+                  <ListBox>
+                    <ListBox.Item id={ALL_SENTINEL} textValue="全部分类">
+                      全部分类
+                    </ListBox.Item>
+                    {(categories ?? []).map((c) => (
+                      <ListBox.Item key={c.id} id={c.id} textValue={c.name}>
+                        {c.icon} {c.name}
+                      </ListBox.Item>
+                    ))}
+                  </ListBox>
+                </Select.Popover>
               </Select>
             )}
           </div>

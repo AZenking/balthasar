@@ -14,15 +14,13 @@ import {
 } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { getUtcMonthRange } from "@/lib/date-ranges";
-import { Card } from "@heroui/react";
+import { Card, Button, buttonVariants, Skeleton } from "@heroui/react";
 import {
   TransactionFilters,
   type FilterValues,
 } from "@/components/transactions/transaction-filters";
 import { TransactionSummary } from "@/components/transactions/transaction-summary";
 import { TransactionDayGroup } from "@/components/transactions/transaction-day-group";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Button, buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/feedback/empty-state";
 
 type TransactionItem = {
@@ -38,7 +36,7 @@ type TransactionItem = {
 
 // 触控目标 + 焦点环共用工具类:移动端 ≥44px、键盘 focus-visible ring。
 const ICON_BTN_CLS =
-  "flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground hover:bg-[var(--muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  "flex h-11 w-11 items-center justify-center rounded-md text-muted hover:bg-[var(--muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus";
 
 export default function TransactionsPage() {
   const router = useRouter();
@@ -226,7 +224,7 @@ export default function TransactionsPage() {
         <button
           type="button"
           onClick={() => setExpanded(!expanded)}
-          className="flex h-11 items-center gap-1 rounded-md px-2 text-sm text-muted-foreground hover:bg-[var(--muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex h-11 items-center gap-1 rounded-md px-2 text-sm text-muted hover:bg-[var(--muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
           aria-label="筛选"
         >
           <SlidersHorizontal className="h-4 w-4" />
@@ -259,7 +257,7 @@ export default function TransactionsPage() {
             title="加载失败"
             description="网络或服务异常,请稍后重试"
             action={
-              <Button variant="outline" size="sm" onClick={() => router.refresh()}>
+              <Button variant="outline" size="sm" onPress={() => router.refresh()}>
                 重试
               </Button>
             }
@@ -285,7 +283,7 @@ export default function TransactionsPage() {
               description="开始记账,记录每一笔收支"
               action={
                 // #4 记一笔用 Link(可中键/⌘点击新标签、可右键复制链接)
-                <Link href="/transaction/new" className={buttonVariants()}>
+                <Link href="/transaction/new" className={buttonVariants({ variant: "primary" })}>
                   记一笔
                 </Link>
               }
@@ -301,8 +299,8 @@ export default function TransactionsPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={handleLoadMore}
-                  disabled={isLoadingMore}
+                  onPress={handleLoadMore}
+                  isDisabled={isLoadingMore}
                 >
                   {isLoadingMore ? "加载中..." : "加载更多"}
                 </Button>
@@ -354,7 +352,7 @@ function MonthSwitcher({
         type="button"
         onClick={goPrev}
         aria-label="上个月"
-        className="flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground hover:bg-[var(--muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="flex h-11 w-11 items-center justify-center rounded-md text-muted hover:bg-[var(--muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
       >
         <ChevronLeft className="h-5 w-5" />
       </button>
@@ -366,10 +364,10 @@ function MonthSwitcher({
         onClick={goNext}
         disabled={isCurrent}
         aria-label="下个月"
-        className={`flex h-11 w-11 items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+        className={`flex h-11 w-11 items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${
           isCurrent
-            ? "cursor-not-allowed text-muted-foreground/40"
-            : "text-muted-foreground hover:bg-[var(--muted)]"
+            ? "cursor-not-allowed text-muted/40"
+            : "text-muted hover:bg-[var(--muted)]"
         }`}
       >
         <ChevronRight className="h-5 w-5" />

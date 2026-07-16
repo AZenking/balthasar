@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Drawer } from "@heroui/react";
+import { Drawer, buttonVariants } from "@heroui/react";
 import { Plus } from "lucide-react";
-import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { TransactionForm } from "./transaction-form";
 
@@ -48,14 +47,14 @@ export function TransactionDrawer() {
         <span
           className={cn(
             buttonVariants({
-              variant: "default",
-              size: "icon",
+              variant: "primary",
+              size: "sm",
             }),
             // 品牌蓝高亮:覆盖 default 的近黑 primary,FAB 作为视觉主角
-            "bg-[var(--color-accent-brand)] text-[var(--color-accent-brand-foreground)] hover:bg-[var(--color-accent-brand)]/90",
+            "bg-[var(--accent)] text-[var(--accent-foreground)] hover:bg-[var(--accent)]/90",
             "flex h-14 w-14 items-center justify-center rounded-full",
             "ring-4 ring-background", // 底栏背景色切边,分离 FAB 与底栏
-            "shadow-lg shadow-[var(--color-accent-brand)]/30", // 蓝色调柔光投影
+            "shadow-lg shadow-[var(--accent)]/30", // 蓝色调柔光投影
             "transition-transform hover:scale-105 active:scale-95",
           )}
         >
