@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,6 +11,13 @@ import {
   type TransactionFormValues,
 } from "@/lib/validators/transaction";
 import { trpc } from "@/lib/trpc/client";
+import { guardOnlineWrite } from "@/lib/pwa/write-guard";
+import { requestOutcomeFromError } from "@/lib/pwa/service-reachability";
+import { createDraftStorage, type DraftForm, type TransactionDraft } from "@/lib/pwa/draft-storage";
+import { createDraftController } from "@/lib/pwa/transaction-draft-controller";
+import { usePwaRuntime } from "@/components/pwa/pwa-provider";
+import { useAccountScope } from "@/components/pwa/account-scope-sync";
+import { DraftRecoveryDialog } from "@/components/pwa/draft-recovery-dialog";
 import { cn } from "@/lib/utils";
 import { CategorySelect } from "@/components/category/category-select";
 import {
@@ -31,6 +38,10 @@ import {
   type Key,
 } from "@heroui/react";
 import { CalendarDate, parseDate } from "@internationalized/date";
+
+function pad(n: number): string {
+  return n < 10 ? `0${n}` : String(n);
+}
 
 /**
  * 交易类型视觉映射 —— 复用 HeroUI 注入的语义色 token:
@@ -111,12 +122,34 @@ export function TransactionForm({
   /** 提交成功后触发(用于关 Drawer / Modal)。embedded 模式下推荐传。 */
   onSubmitted?: () => void;
 }) {
+  const { connectivity, install: pwaInstall } = usePwaRuntime();
+  const accountScope = useAccountScope();
   const router = useRouter();
   const searchParams = useSearchParams();
   const utils = trpc.useUtils();
   const [serverError, setServerError] = useState("");
 
   const isEditMode = !!editId;
+  const isCreateMode = !isEditMode;
+  const draftScope = isCreateMode ? accountScope : null;
+
+  // ── Draft (create mode only) ──
+  // Lazily build a single storage/controller pair per form instance. Edit
+  // mode deliberately leaves these null so it can never read or overwrite a
+  // saved draft.
+  const draftStorageRef = useRef<ReturnType<typeof createDraftStorage> | null>(null);
+  const draftControllerRef = useRef<ReturnType<typeof createDraftController> | null>(null);
+  if (draftScope && typeof localStorage !== "undefined" && !draftStorageRef.current) {
+    draftStorageRef.current = createDraftStorage(localStorage);
+  }
+  if (draftStorageRef.current && !draftControllerRef.current) {
+    const storage = draftStorageRef.current;
+    draftControllerRef.current = createDraftController({
+      save: (scope, form) => storage.schedule(scope, form),
+      clear: () => storage.clear(),
+    });
+  }
+  const [recovery, setRecovery] = useState<{ savedAt: string; draft: TransactionDraft } | null>(null);
 
   const { data: accounts } = trpc.account.list.useQuery();
   const [selectedType, setSelectedType] = useState<"income" | "expense" | "transfer">(
@@ -182,6 +215,69 @@ export function TransactionForm({
     return qs ? `/transactions?${qs}` : "/transactions";
   }, [searchParams]);
 
+  // ── Draft: first-mount recovery check (create mode only) ──
+  useEffect(() => {
+    if (!draftScope || !draftStorageRef.current) return;
+    const existing = draftStorageRef.current.read(draftScope);
+    if (existing.kind === "valid") {
+      const savedAt = new Date(existing.draft.updatedAt);
+      const display = `${savedAt.getFullYear()}-${pad(savedAt.getMonth() + 1)}-${pad(savedAt.getDate())} ${pad(savedAt.getHours())}:${pad(savedAt.getMinutes())}`;
+      setRecovery({ savedAt: display, draft: existing.draft });
+    }
+    // Run only once per form instance — we never want to re-prompt mid-session.
+  }, []);
+
+  // ── Draft: auto-save on field changes (300ms debounce inside storage) ──
+  useEffect(() => {
+    if (!draftScope || !draftControllerRef.current) return;
+    const subscription = watch((values) => {
+      const snapshot: DraftForm = {
+        type: selectedType,
+        accountId: (values.accountId as string) ?? "",
+        toAccountId,
+        categoryId: (values.categoryId as string) ?? "",
+        amount: (values.amount as string) ?? "",
+        remark: (values.remark as string) ?? "",
+        occurredAt: (values.occurredAt as string) ?? "",
+      };
+      draftControllerRef.current!.save(draftScope, snapshot);
+    });
+    return () => subscription.unsubscribe();
+  }, [watch, draftScope, selectedType, toAccountId]);
+
+  // ── Draft: flush on pagehide / visibilitychange ──
+  useEffect(() => {
+    if (!draftScope || !draftStorageRef.current) return;
+    const storage = draftStorageRef.current;
+    const flush = () => storage.flush();
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") flush();
+    };
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [draftScope]);
+
+  const handleRestoreDraft = () => {
+    if (!recovery) return;
+    const draft = recovery.draft;
+    setSelectedType(draft.form.type);
+    setValue("accountId", draft.form.accountId);
+    setValue("categoryId", draft.form.categoryId);
+    setValue("amount", draft.form.amount);
+    setValue("remark", draft.form.remark);
+    setValue("occurredAt", draft.form.occurredAt);
+    setToAccountId(draft.form.toAccountId);
+    setRecovery(null);
+  };
+  const handleDiscardDraft = () => {
+    draftStorageRef.current?.clear();
+    setRecovery(null);
+  };
+
   const handlePostSuccess = () => {
     // FR-B003 / clarify Q5: invalidate the 3 key families so every screen
     // (dashboard summary + report + transactions list/detail) refetches.
@@ -195,6 +291,18 @@ export function TransactionForm({
 
   const createMutation = trpc.transaction.create.useMutation({
     onSuccess: () => {
+      // Draft flow (create mode only): definite success → drop the draft so
+      // the user can't accidentally restore an already-booked entry.
+      if (draftScope && draftControllerRef.current) {
+        draftControllerRef.current.onSuccess();
+      }
+      // US5: first successful create unlocks the one-shot proactive install
+      // CTA. We never block the success path on this; it is a UI side-effect.
+      try {
+        pwaInstall.markCoreActionReached();
+      } catch {
+        // Provider may be unmounted in tests; ignore.
+      }
       handlePostSuccess();
       if (!embedded) router.push("/dashboard");
     },
@@ -257,6 +365,9 @@ export function TransactionForm({
 
   const onSubmit = async (data: TransactionFormValues) => {
     setServerError("");
+    if (!guardOnlineWrite(connectivity.stableOnline, () => {}, setServerError)) {
+      return;
+    }
     try {
       const baseAccountId = data.accountId || unarchivedAccounts[0]!.id;
       if (isTransfer) {
@@ -299,6 +410,21 @@ export function TransactionForm({
         await createMutation.mutateAsync(payload);
       }
     } catch (e: any) {
+      // Draft flow (create mode only): network/timeout means the request was
+      // sent but we never saw the server's verdict. Mark the draft uncertain
+      // so the user can verify the transaction list before re-submitting — we
+      // never auto-retry a non-idempotent create.
+      if (draftScope && draftStorageRef.current) {
+        const outcome = requestOutcomeFromError(e);
+        if (outcome.kind === "network" || outcome.kind === "timeout") {
+          draftStorageRef.current.markUncertain(draftScope);
+          draftControllerRef.current?.onUncertain();
+          setServerError(
+            "请求未确认,请先到交易列表核对。草稿已保留,不会自动重试。",
+          );
+          return;
+        }
+      }
       setServerError(
         e?.data?.message || e?.message || "操作失败,请重试"
       );
@@ -581,6 +707,15 @@ export function TransactionForm({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
+      {recovery && (
+        <DraftRecoveryDialog
+          isOpen
+          savedAt={recovery.savedAt}
+          onRestore={handleRestoreDraft}
+          onDiscard={handleDiscardDraft}
+          onClose={() => setRecovery(null)}
+        />
+      )}
       {embedded ? (
         // embedded 模式:无 Card 包裹(Drawer 自带 Header/Footer)
         <div className="space-y-4 pb-4">
