@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { trpc } from "@/lib/trpc/client";
 import { Card, Skeleton } from "@heroui/react";
 import { DashboardTopNav } from "@/components/dashboard/dashboard-top-nav";
@@ -8,9 +9,32 @@ import { SummaryHeroCard } from "@/components/dashboard/summary-hero-card";
 import { BudgetProgress } from "@/components/dashboard/budget-progress";
 import { AssetOverview } from "@/components/dashboard/asset-overview";
 import { CategoryTopList } from "@/components/dashboard/category-top-list";
-import { ExpenseTrendChart } from "@/components/dashboard/expense-trend-chart";
+import type { ExpenseTrend } from "@/components/dashboard/expense-trend-chart";
 import { RecentTransactions } from "@/components/dashboard/recent-transactions";
 import { isPrivacyOn } from "@/lib/privacy";
+
+/**
+ * 025 US2 T030:recharts 仅在 ExpenseTrendChart 内使用,且全站首屏热点是
+ * Dashboard。把 ExpenseTrendChart 改为 `next/dynamic` 异步加载:
+ *   - recharts 不进入 Dashboard first-load bundle(实测 chunk `1111-*.js`
+ *     ≈ 108 KB gz)
+ *   - 加载期用 Skeleton 占位(h-[200px] 与稳态图表高度一致 → CLS=0,
+ *     符合 FR-013)
+ *   - ssr:false —— recharts `ResponsiveContainer` 浏览器 ResizeObserver
+ *     本就要求 client,SSR 无意义
+ *
+ * Reports 页(`/reports`)不在热路径,继续直接 import。
+ */
+const ExpenseTrendChart = dynamic(
+  () =>
+    import("@/components/dashboard/expense-trend-chart").then(
+      (m) => m.ExpenseTrendChart,
+    ),
+  {
+    ssr: false,
+    loading: () => <Skeleton className="h-[200px] w-full rounded-lg" />,
+  },
+);
 
 /**
  * DashboardPage (027-mobile-home-revamp US2)。
@@ -116,7 +140,7 @@ function TrendSection({
   isPrivacy,
   comparisonPercent,
 }: {
-  trend: React.ComponentProps<typeof ExpenseTrendChart>["trend"];
+  trend: ExpenseTrend;
   isPrivacy: boolean;
   comparisonPercent: number | null;
 }) {
@@ -208,7 +232,7 @@ function DashboardBody({
   monthIncome: number;
   monthExpense: number;
   monthNet: number;
-  expenseTrend: React.ComponentProps<typeof ExpenseTrendChart>["trend"];
+  expenseTrend: ExpenseTrend;
   topExpenseCategories: React.ComponentProps<typeof CategoryTopList>["items"];
   recentTransactions: React.ComponentProps<typeof RecentTransactions>["transactions"];
   budget: React.ComponentProps<typeof BudgetProgress>["budget"];

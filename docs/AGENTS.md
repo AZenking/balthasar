@@ -12,6 +12,7 @@
    - 更新 `docs/DOMAIN.md` / `docs/DATABASE.md`
    - 更新测试 (Vitest + testcontainers)
 7. UI 调整纪律 (宪章原则七): 任何触及 `src/components/**/*.tsx`、`src/app/**/*.tsx` 的 JSX/className 改动,实现前 MUST 先 `/heroui-react` skill 查询 HeroUI v3 API/variant/theming。
+8. Server/Client 边界 (025-perf-code-optimization): 默认 Server Component;仅在需要 `useState`/`useEffect`/event handler/Browser API/`useRouter`/tRPC client hook 时加 `"use client"`。内部路由跳转用 `<Link>` 而非 `useRouter().push()`(原生 a11y + prefetch)。大型第三方库(如 recharts)用 `next/dynamic({ ssr:false, loading: Skeleton })` 懒加载。
 
 ## 技术栈
 - Next.js (App Router, 全栈)

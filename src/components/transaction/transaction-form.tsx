@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
 import { ChevronLeft } from "lucide-react";
 import {
   transactionFormSchema,
@@ -38,6 +39,9 @@ import {
   type Key,
 } from "@heroui/react";
 import { CalendarDate, parseDate } from "@internationalized/date";
+import { useVisualViewport } from "@/lib/hooks/use-visual-viewport";
+import { useScrollIntoViewOnFocus } from "@/lib/hooks/use-scroll-into-view-on-focus";
+import { computeFooterPaddingBottom } from "@/components/transaction/compute-footer-padding-bottom";
 
 function pad(n: number): string {
   return n < 10 ? `0${n}` : String(n);
@@ -128,6 +132,12 @@ export function TransactionForm({
   const searchParams = useSearchParams();
   const utils = trpc.useUtils();
   const [serverError, setServerError] = useState("");
+
+  // 029 FR-001/002:键盘弹起时聚焦字段滚入中心 + submit 按钮始终在键盘上方 16px。
+  // 仅 embedded 模式(Drawer 内嵌)用 hook;全屏 page 模式有自己的 sticky bottom(US2)。
+  const { keyboardHeight } = useVisualViewport();
+  const embeddedScrollRef = useScrollIntoViewOnFocus<HTMLDivElement>();
+  const pageScrollRef = useScrollIntoViewOnFocus<HTMLDivElement>();
 
   const isEditMode = !!editId;
   const isCreateMode = !isEditMode;
@@ -303,8 +313,16 @@ export function TransactionForm({
       } catch {
         // Provider may be unmounted in tests; ignore.
       }
+      // 025 FR-005:optimistic 反馈 — toast 在 onSubmit 里已立刻显示
+      // "已记账 ✓",这里只做 server 确认后的 invalidate + navigate。
       handlePostSuccess();
       if (!embedded) router.push("/dashboard");
+    },
+    onError: (e) => {
+      // 后台失败:回滚 toast + 提示。表单状态仍在,用户可改后重提。
+      // tRPC v11 TRPCError:.message 在 top-level,.data.code 是 SERVER_ERROR_CODE。
+      const reason = e?.message ?? e?.data?.code ?? "请重试";
+      toast.error(`保存失败:${reason}`, { id: "tx-create" });
     },
   });
 
@@ -312,6 +330,10 @@ export function TransactionForm({
     onSuccess: () => {
       handlePostSuccess();
       if (!embedded) router.push(transactionsHref);
+    },
+    onError: (e) => {
+      const reason = e?.message ?? e?.data?.code ?? "请重试";
+      toast.error(`保存失败:${reason}`, { id: "tx-update" });
     },
   });
 
@@ -368,16 +390,27 @@ export function TransactionForm({
     if (!guardOnlineWrite(connectivity.stableOnline, () => {}, setServerError)) {
       return;
     }
+    // 025 FR-005:optimistic 反馈 —— 通过 sonner toast 在用户点击 <100ms 内
+    // 显示"已提交"状态。toast id 用于后续 onError 替换为 error 消息(回滚)。
+    // 不做缓存层乐观更新(transaction.list / dashboard.summary cache 写入)
+    // 因为表单提交后立即 invalidate + 路由跳转,server 真值会在 < 500ms 内
+    // 反映到目标页面;真做 cache 写入收益小、风险大(YAGNI)。
+    const toastId = isEditMode ? "tx-update" : "tx-create";
+    toast.success(isEditMode ? "已保存 ✓ — 正在同步" : "已记账 ✓ — 正在同步", {
+      id: toastId,
+    });
     try {
       const baseAccountId = data.accountId || unarchivedAccounts[0]!.id;
       if (isTransfer) {
         // 027 US4:转账 —— 无 categoryId,需 toAccountId,且 !== accountId。
         if (!toAccountId) {
           setServerError("请选择转入账户");
+          toast.error("请选择转入账户", { id: toastId });
           return;
         }
         if (toAccountId === baseAccountId) {
           setServerError("转出账户与转入账户不能相同");
+          toast.error("转出账户与转入账户不能相同", { id: toastId });
           return;
         }
         const transferPayload = {
@@ -391,6 +424,7 @@ export function TransactionForm({
         if (isEditMode && editId) {
           // update procedure 暂未支持 transfer 切换(留后续),降级提示。
           setServerError("转账暂不支持编辑,请删除后重建");
+          toast.error("转账暂不支持编辑,请删除后重建", { id: toastId });
           return;
         }
         await createMutation.mutateAsync(transferPayload);
@@ -718,12 +752,24 @@ export function TransactionForm({
       )}
       {embedded ? (
         // embedded 模式:无 Card 包裹(Drawer 自带 Header/Footer)
-        <div className="space-y-4 pb-4">
+        // 029 US1:paddingBottom 跟随键盘高度(env(safe-area-inset-bottom) 兜底
+        // 处理 home indicator;transition 与 iOS 键盘 250ms 动画对齐避免抖动)。
+        // ref 接 useScrollIntoViewOnFocus:任意子字段 focusin 触发 scrollIntoView
+        // 到 Drawer.Body 视觉中心。
+        <div
+          ref={embeddedScrollRef}
+          className="space-y-4 transition-[padding-bottom] duration-200 ease-out"
+          style={{
+            paddingBottom: `max(env(safe-area-inset-bottom), ${computeFooterPaddingBottom(keyboardHeight)}px)`,
+          }}
+        >
           {formFields}
           {submitButton}
         </div>
       ) : (
         // 独立 page 模式:/transaction/new / /transaction/[id]/edit
+        // 029 US2:Card.Content 接 scrollRef 让聚焦字段滚入中心;
+        // Card.Footer paddingBottom 跟随键盘,让 submit 始终在键盘上方 16px。
         <Card className="mx-4 mt-4">
           <Card.Header className="flex items-center gap-2">
             <Tooltip>
@@ -741,8 +787,20 @@ export function TransactionForm({
             </Tooltip>
             <Card.Title>{isEditMode ? "编辑交易" : "记一笔"}</Card.Title>
           </Card.Header>
-          <Card.Content className="space-y-4">{formFields}</Card.Content>
-          <Card.Footer>{submitButton}</Card.Footer>
+          <Card.Content
+            ref={pageScrollRef}
+            className="space-y-4"
+          >
+            {formFields}
+          </Card.Content>
+          <Card.Footer
+            className="transition-[padding-bottom] duration-200 ease-out"
+            style={{
+              paddingBottom: `max(env(safe-area-inset-bottom), ${computeFooterPaddingBottom(keyboardHeight)}px)`,
+            }}
+          >
+            {submitButton}
+          </Card.Footer>
         </Card>
       )}
     </form>

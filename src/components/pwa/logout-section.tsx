@@ -43,7 +43,7 @@ export function LogoutSection() {
                 <AlertDialog.Heading>确认退出登录?</AlertDialog.Heading>
               </AlertDialog.Header>
               <AlertDialog.Body>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted">
                   退出后需重新输入账号密码登录。
                 </p>
               </AlertDialog.Body>

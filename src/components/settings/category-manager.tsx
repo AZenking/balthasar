@@ -367,7 +367,7 @@ export function CategoryManager() {
                 <AlertDialog.Heading>归档分类</AlertDialog.Heading>
               </AlertDialog.Header>
               <AlertDialog.Body>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted">
                   {archiveTarget && archiveTarget.childCount > 0
                     ? `确定归档?该分类及其 ${archiveTarget.childCount} 个子分类将从新建交易的下拉中隐藏,但历史交易仍保留。`
                     : "确定归档?该分类将从新建交易的下拉中隐藏,但历史交易仍保留。"}

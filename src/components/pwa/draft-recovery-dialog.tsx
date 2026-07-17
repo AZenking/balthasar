@@ -36,7 +36,7 @@ export function DraftRecoveryDialog({
               <AlertDialog.Heading>发现未提交草稿</AlertDialog.Heading>
             </AlertDialog.Header>
             <AlertDialog.Body>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted">
                 保存时间：{savedAt}。是否恢复继续编辑？
               </p>
             </AlertDialog.Body>
