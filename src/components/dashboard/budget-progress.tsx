@@ -13,6 +13,8 @@ import {
 } from "@heroui/react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc/client";
+import { guardOnlineWrite } from "@/lib/pwa/write-guard";
+import { usePwaRuntime } from "@/components/pwa/pwa-provider";
 
 /**
  * BudgetProgress (027-mobile-home-revamp US5 FR-016..FR-019)。
@@ -49,6 +51,7 @@ export function BudgetProgress({
   monthExpense: number;
   yearMonth: { year: number; month: number };
 }) {
+  const { connectivity } = usePwaRuntime();
   const utils = trpc.useUtils();
   const [isSetOpen, setIsSetOpen] = useState(false);
   const [inputYuan, setInputYuan] = useState("");
@@ -76,11 +79,11 @@ export function BudgetProgress({
       toast.error("请输入有效金额");
       return;
     }
-    setMutation.mutate({
-      year: yearMonth.year,
-      month: yearMonth.month,
-      amount: cents,
-    });
+    guardOnlineWrite(
+      connectivity.stableOnline,
+      () => setMutation.mutate({ year: yearMonth.year, month: yearMonth.month, amount: cents }),
+      toast.error
+    );
   };
 
   // null = 查询失败降级(SC-008)
@@ -200,11 +203,13 @@ export function BudgetProgress({
         isPending={setMutation.isPending}
         yearMonth={yearMonth}
         onDelete={() => {
-          deleteMutation.mutate({
-            year: yearMonth.year,
-            month: yearMonth.month,
-          });
-          setIsSetOpen(false);
+          if (guardOnlineWrite(
+            connectivity.stableOnline,
+            () => deleteMutation.mutate({ year: yearMonth.year, month: yearMonth.month }),
+            toast.error
+          )) {
+            setIsSetOpen(false);
+          }
         }}
       />
     </section>

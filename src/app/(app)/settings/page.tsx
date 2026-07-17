@@ -43,12 +43,14 @@ import { NicknameEditor } from "@/components/settings/nickname-editor";
 import { AccountForm } from "@/components/settings/account-form";
 import { AccountItem } from "@/components/settings/account-item";
 import { ApiKeyManager } from "@/components/settings/api-key-manager";
+import { InstallSection } from "@/components/pwa/install-section";
+import { usePwaRuntime } from "@/components/pwa/pwa-provider";
+import { LogoutSection } from "@/components/pwa/logout-section";
 import {
   Card,
   Switch,
   Button,
   Modal,
-  AlertDialog,
 } from "@heroui/react";
 import { cn } from "@/lib/utils";
 import packageJson from "@/../package.json";
@@ -57,6 +59,7 @@ const v2Toast = () => toast.info("该功能即将上线");
 
 export default function SettingsPage() {
   const router = useRouter();
+  const pwa = usePwaRuntime();
   const utils = trpc.useUtils();
   const { data: me } = trpc.auth.me.useQuery();
   const { data: accounts, isLoading } = trpc.account.list.useQuery({
@@ -65,8 +68,6 @@ export default function SettingsPage() {
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const createMutation = trpc.account.create.useMutation({
     onSuccess: () => {
@@ -222,6 +223,8 @@ export default function SettingsPage() {
         </SettingsRow>
       </SettingsGroup>
 
+      <InstallSection state={pwa.install.state} onInstall={() => void pwa.install.request()} />
+
       {/* ── 数据与同步 ── */}
       <SettingsGroup title="数据与同步">
         {/* TODO v2: 云同步 + 本地备份(下个版本) */}
@@ -273,13 +276,7 @@ export default function SettingsPage() {
       </div>
 
       {/* ── 退出 ── */}
-      <Button
-        variant="outline"
-        className="w-full justify-center gap-2 text-[var(--danger)]"
-        onPress={() => setShowLogoutConfirm(true)}
-      >
-        退出登录
-      </Button>
+      <LogoutSection />
 
       <div className="pb-4 pt-2 text-center text-xs text-muted">
         <p className="font-medium">BALTHASAR</p>
@@ -351,71 +348,6 @@ export default function SettingsPage() {
           </Modal.Container>
         </Modal.Backdrop>
       </Modal>
-
-      <AlertDialog isOpen={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
-        <AlertDialog.Backdrop>
-          <AlertDialog.Container>
-            <AlertDialog.Dialog>
-              <AlertDialog.Header>
-                <AlertDialog.Heading>确认退出登录?</AlertDialog.Heading>
-              </AlertDialog.Header>
-              <AlertDialog.Body>
-                <p className="text-sm text-muted">退出后需重新输入账号密码登录。</p>
-              </AlertDialog.Body>
-              <AlertDialog.Footer className="flex justify-end gap-2">
-                <Button variant="outline" onPress={() => setShowLogoutConfirm(false)}>
-                  取消
-                </Button>
-                <Button
-                  variant="danger"
-                  isDisabled={isLoggingOut}
-                  onPress={async () => {
-                    setIsLoggingOut(true);
-
-                    try {
-                      const { authClient } = await import("@/server/auth/client");
-                      const signOutResult = await authClient.signOut();
-
-                      if (signOutResult.error) {
-                        throw new Error(
-                          signOutResult.error.message || "退出登录失败，请重试"
-                        );
-                      }
-
-                      // Do not redirect until the server confirms the cookie no
-                      // longer resolves to a session. Otherwise /login's auth
-                      // layout correctly redirects the still-authenticated user
-                      // straight back to /dashboard.
-                      const sessionResult = await authClient.getSession();
-                      if (sessionResult.error) {
-                        throw new Error(
-                          sessionResult.error.message || "无法确认退出状态，请重试"
-                        );
-                      }
-                      if (sessionResult.data) {
-                        throw new Error("会话仍未清除，请重试");
-                      }
-
-                      // Full replacement forces the server auth layout to run
-                      // again and keeps Dashboard out of browser history.
-                      window.location.replace("/login");
-                    } catch (error) {
-                      const message =
-                        error instanceof Error
-                          ? error.message
-                          : "退出登录失败，请重试";
-                      toast.error(message);
-                      setIsLoggingOut(false);
-                    }
-                  }}
-                >
-                  {isLoggingOut ? "正在退出…" : "退出登录"}
-                </Button>
-              </AlertDialog.Footer>
-            </AlertDialog.Dialog>
-          </AlertDialog.Container>
-        </AlertDialog.Backdrop>
-      </AlertDialog>
     </div>
   );
 }
