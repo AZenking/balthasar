@@ -32,6 +32,9 @@ import {
   type Key,
 } from "@heroui/react";
 import { CalendarDate, parseDate } from "@internationalized/date";
+import { useVisualViewport } from "@/lib/hooks/use-visual-viewport";
+import { useScrollIntoViewOnFocus } from "@/lib/hooks/use-scroll-into-view-on-focus";
+import { computeFooterPaddingBottom } from "@/components/transaction/compute-footer-padding-bottom";
 
 /**
  * 交易类型视觉映射 —— 复用 HeroUI 注入的语义色 token:
@@ -116,6 +119,12 @@ export function TransactionForm({
   const searchParams = useSearchParams();
   const utils = trpc.useUtils();
   const [serverError, setServerError] = useState("");
+
+  // 029 FR-001/002:键盘弹起时聚焦字段滚入中心 + submit 按钮始终在键盘上方 16px。
+  // 仅 embedded 模式(Drawer 内嵌)用 hook;全屏 page 模式有自己的 sticky bottom(US2)。
+  const { keyboardHeight } = useVisualViewport();
+  const embeddedScrollRef = useScrollIntoViewOnFocus<HTMLDivElement>();
+  const pageScrollRef = useScrollIntoViewOnFocus<HTMLDivElement>();
 
   const isEditMode = !!editId;
 
@@ -608,12 +617,24 @@ export function TransactionForm({
     <form onSubmit={handleSubmit(onSubmit)}>
       {embedded ? (
         // embedded 模式:无 Card 包裹(Drawer 自带 Header/Footer)
-        <div className="space-y-4 pb-4">
+        // 029 US1:paddingBottom 跟随键盘高度(env(safe-area-inset-bottom) 兜底
+        // 处理 home indicator;transition 与 iOS 键盘 250ms 动画对齐避免抖动)。
+        // ref 接 useScrollIntoViewOnFocus:任意子字段 focusin 触发 scrollIntoView
+        // 到 Drawer.Body 视觉中心。
+        <div
+          ref={embeddedScrollRef}
+          className="space-y-4 transition-[padding-bottom] duration-200 ease-out"
+          style={{
+            paddingBottom: `max(env(safe-area-inset-bottom), ${computeFooterPaddingBottom(keyboardHeight)}px)`,
+          }}
+        >
           {formFields}
           {submitButton}
         </div>
       ) : (
         // 独立 page 模式:/transaction/new / /transaction/[id]/edit
+        // 029 US2:Card.Content 接 scrollRef 让聚焦字段滚入中心;
+        // Card.Footer paddingBottom 跟随键盘,让 submit 始终在键盘上方 16px。
         <Card className="mx-4 mt-4">
           <Card.Header className="flex items-center gap-2">
             <Tooltip>
@@ -631,8 +652,20 @@ export function TransactionForm({
             </Tooltip>
             <Card.Title>{isEditMode ? "编辑交易" : "记一笔"}</Card.Title>
           </Card.Header>
-          <Card.Content className="space-y-4">{formFields}</Card.Content>
-          <Card.Footer>{submitButton}</Card.Footer>
+          <Card.Content
+            ref={pageScrollRef}
+            className="space-y-4"
+          >
+            {formFields}
+          </Card.Content>
+          <Card.Footer
+            className="transition-[padding-bottom] duration-200 ease-out"
+            style={{
+              paddingBottom: `max(env(safe-area-inset-bottom), ${computeFooterPaddingBottom(keyboardHeight)}px)`,
+            }}
+          >
+            {submitButton}
+          </Card.Footer>
         </Card>
       )}
     </form>
