@@ -124,6 +124,7 @@ export function TransactionForm({
   // 仅 embedded 模式(Drawer 内嵌)用 hook;全屏 page 模式有自己的 sticky bottom(US2)。
   const { keyboardHeight } = useVisualViewport();
   const embeddedScrollRef = useScrollIntoViewOnFocus<HTMLDivElement>();
+  const pageScrollRef = useScrollIntoViewOnFocus<HTMLDivElement>();
 
   const isEditMode = !!editId;
 
@@ -632,6 +633,8 @@ export function TransactionForm({
         </div>
       ) : (
         // 独立 page 模式:/transaction/new / /transaction/[id]/edit
+        // 029 US2:Card.Content 接 scrollRef 让聚焦字段滚入中心;
+        // Card.Footer paddingBottom 跟随键盘,让 submit 始终在键盘上方 16px。
         <Card className="mx-4 mt-4">
           <Card.Header className="flex items-center gap-2">
             <Tooltip>
@@ -649,8 +652,20 @@ export function TransactionForm({
             </Tooltip>
             <Card.Title>{isEditMode ? "编辑交易" : "记一笔"}</Card.Title>
           </Card.Header>
-          <Card.Content className="space-y-4">{formFields}</Card.Content>
-          <Card.Footer>{submitButton}</Card.Footer>
+          <Card.Content
+            ref={pageScrollRef}
+            className="space-y-4"
+          >
+            {formFields}
+          </Card.Content>
+          <Card.Footer
+            className="transition-[padding-bottom] duration-200 ease-out"
+            style={{
+              paddingBottom: `max(env(safe-area-inset-bottom), ${computeFooterPaddingBottom(keyboardHeight)}px)`,
+            }}
+          >
+            {submitButton}
+          </Card.Footer>
         </Card>
       )}
     </form>
