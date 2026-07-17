@@ -274,7 +274,7 @@ export function ApiKeyManager() {
                 <AlertDialog.Heading>吊销 API Key</AlertDialog.Heading>
               </AlertDialog.Header>
               <AlertDialog.Body>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted">
                   {revokeTarget
                     ? `确定吊销「${revokeTarget.name}」?吊销后该 Key 立即失效,且无法恢复。`
                     : "确定吊销此 Key?吊销后该 Key 立即失效,且无法恢复。"}

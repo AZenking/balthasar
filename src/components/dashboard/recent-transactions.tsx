@@ -1,6 +1,4 @@
-"use client";
-
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { ReceiptText } from "lucide-react";
 import { ListBox, Skeleton } from "@heroui/react";
 import { EmptyState } from "@/components/feedback/empty-state";
@@ -11,10 +9,14 @@ import { CategoryIcon } from "@/components/category/category-icon";
  * RecentTransactions (027-mobile-home-revamp FR-006,线稿对齐)。
  *
  * 最近 5 条(后端 limit 5,不受月份影响 —— FR-003)。每条含分类/备注/
- * 账户/金额/时间。点击进入编辑(/transactions?edit=id)。
+ * 账户/金额/时间。整行用 `<Link>` 跳编辑页(`/transactions?edit=id`),
+ * 中键/⌘点击可新标签打开,右键可复制链接 —— 比 025 前 `useRouter`+`onAction`
+ * 更 a11y 且支持浏览器原生 shortcut(025 spec AP-03)。
  *
  * 线稿口径:最近账单是轻量流水行,无常驻删除/编辑按钮(视觉噪声);
- * 删除/编辑在明细页(/transactions)完成。本组件只做展示 + 点击跳转。
+ * 删除/编辑在明细页(/transactions)完成。本组件只做展示 + 链接跳转。
+ *
+ * Server-renderable —— 无 hooks、无客户端能力(025 FR-003/FR-007)。
  */
 interface Transaction {
   id: string;
@@ -40,8 +42,6 @@ export function RecentTransactions({
   isLoading: boolean;
   maxItems?: number;
 }) {
-  const router = useRouter();
-
   if (isLoading) {
     return (
       <div className="space-y-2">
@@ -76,7 +76,6 @@ export function RecentTransactions({
       aria-label="最近交易"
       selectionMode="none"
       items={displayItems}
-      onAction={(key) => router.push(`/transactions?edit=${key}`)}
       className="divide-y outline-none"
     >
       {(t) => (
@@ -86,7 +85,11 @@ export function RecentTransactions({
           textValue={t.remark || t.categoryName || "交易"}
           className="cursor-pointer outline-none data-[focus-visible]:bg-default/50"
         >
-          <div className="flex w-full items-center justify-between py-3">
+          <Link
+            href={`/transactions?edit=${t.id}`}
+            className="flex w-full items-center justify-between py-3"
+            aria-label={`编辑 ${t.remark || t.categoryName || "交易"}`}
+          >
             <div className="flex min-w-0 flex-1 items-center gap-2">
               <CategoryIcon name={t.categoryIcon ?? "circle-help"} size={20} />
               <div className="min-w-0">
@@ -116,7 +119,7 @@ export function RecentTransactions({
               {t.type === "income" ? "+" : t.type === "transfer" ? "" : "−"}
               {formatAmount(t.amount)}
             </p>
-          </div>
+          </Link>
         </ListBox.Item>
       )}
     </ListBox>

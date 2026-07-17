@@ -2,6 +2,7 @@
 
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import { Skeleton } from "@heroui/react";
 import { TransactionForm } from "@/components/transaction/transaction-form";
 
 /**
@@ -16,6 +17,10 @@ import { TransactionForm } from "@/components/transaction/transaction-form";
  *   1. 桌面端 sidebar 链接到此(无 Drawer 形态,需走全屏页)
  *   2. 可被深链分享
  *   3. 编辑场景(id query param)需要全屏上下文
+ *
+ * 025 PR-4:`<Suspense fallback={null}>` → `<Suspense fallback={<Skeleton>}`,
+ * 避免 useSearchParams 暂态时白屏闪烁(FR-004 / SC-003);Skeleton 占位与
+ * 稳态表单外壳高度一致,CLS=0(FR-013)。
  */
 function NewTransactionPageInner() {
   const searchParams = useSearchParams();
@@ -27,9 +32,22 @@ function NewTransactionPageInner() {
   );
 }
 
+function FormSkeleton() {
+  return (
+    <div className="mx-auto max-w-[720px] space-y-4 p-4" aria-busy="true">
+      <Skeleton className="h-9 w-full" />
+      <Skeleton className="h-11 w-full" />
+      <Skeleton className="h-11 w-full" />
+      <Skeleton className="h-11 w-full" />
+      <Skeleton className="h-11 w-full" />
+      <Skeleton className="h-11 w-1/2" />
+    </div>
+  );
+}
+
 export default function NewTransactionPage() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<FormSkeleton />}>
       <NewTransactionPageInner />
     </Suspense>
   );

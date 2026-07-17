@@ -1,11 +1,9 @@
-"use client";
-
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Card, Meter } from "@heroui/react";
 import { CategoryIcon } from "@/components/category/category-icon";
 
 /**
- * CategoryTopList (027-mobile-home-revamp FR-004).
+ * CategoryTopList (027-mobile-home-revamp FR-004)。
  *
  * 支出 Top 4 分类横向进度条(替代 026 下架的 Top2 双卡)。点击分类
  * 下钻 /transactions?month=&type=expense&categoryId=。
@@ -16,6 +14,8 @@ import { CategoryIcon } from "@/components/category/category-icon";
  *
  * HeroUI v3:Card 组合式。占比横条用 HeroUI `Meter`(`color="danger"`
  * 呈支出语义),不引入额外图表库(YAGNI)。金额挂 data-amount 走隐私遮蔽。
+ *
+ * 025 AP-06:`useRouter`+`onClick` → `<Link>`。Server-renderable。
  */
 function formatCents(cents: number): string {
   const yuan = cents / 100;
@@ -37,12 +37,7 @@ export function CategoryTopList({
   items: CategoryTopItem[];
   yearMonth: { year: number; month: number };
 }) {
-  const router = useRouter();
   const monthKey = `${yearMonth.year}-${String(yearMonth.month).padStart(2, "0")}`;
-
-  const handleCategoryClick = (categoryId: string) => {
-    router.push(`/transactions?month=${monthKey}&type=expense&categoryId=${categoryId}`);
-  };
 
   // 进度条宽度相对最大分类(非 monthExpense),让 Top4 视觉差异更明显。
   const maxAmount = items.length > 0 ? Math.max(...items.map((i) => i.amount)) : 0;
@@ -68,11 +63,11 @@ export function CategoryTopList({
             <ul className="space-y-3">
               {items.slice(0, 3).map((item) => {
                 const widthPct = maxAmount > 0 ? (item.amount / maxAmount) * 100 : 0;
+                const href = `/transactions?month=${monthKey}&type=expense&categoryId=${item.categoryId}`;
                 return (
                   <li key={item.categoryId}>
-                    <button
-                      type="button"
-                      onClick={() => handleCategoryClick(item.categoryId)}
+                    <Link
+                      href={href}
                       className="flex w-full items-center gap-3 text-left"
                       aria-label={`查看 ${item.categoryName} 分类明细`}
                     >
@@ -99,7 +94,7 @@ export function CategoryTopList({
                       >
                         {formatCents(item.amount)}
                       </span>
-                    </button>
+                    </Link>
                   </li>
                 );
               })}

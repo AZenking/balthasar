@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "analyze": "ANALYZE=true next build",
     "start": "next start",
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
@@ -53,6 +54,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
     "@eslint/js": "^9.17.0",
+    "@next/bundle-analyzer": "^16.2.10",
     "@tailwindcss/postcss": "^4.0.0",
     "@testcontainers/postgresql": "^10.16.0",
     "@testing-library/react": "^16.1.0",
