@@ -57,7 +57,7 @@ export function BottomNavigation() {
       className="fixed inset-x-0 bottom-0 z-50 flex items-end border-t bg-background"
       style={{
         minHeight: "calc(4rem + env(safe-area-inset-bottom))",
-        paddingBottom: "env(safe-area-inset-bottom)",
+        paddingBottom: "max(env(safe-area-inset-bottom), 0px)",
       }}
     >
       <div className="relative flex h-16 w-full items-end">

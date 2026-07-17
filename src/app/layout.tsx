@@ -30,6 +30,9 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
+  // viewportFit=cover 是 iOS Safari 识别 env(safe-area-inset-*) 的前提;
+  // 缺少它,iPhone 全面屏 home indicator 区域不会触发安全区留白。
+  viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },
     { media: "(prefers-color-scheme: dark)", color: "#2a2a2d" },
