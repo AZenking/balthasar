@@ -115,6 +115,7 @@ export function TransactionForm({
   editId,
   embedded = false,
   formAttachRef,
+  defaultType,
   onSubmitted,
 }: {
   editId?: string;
@@ -130,6 +131,13 @@ export function TransactionForm({
    * attachRef 挂到表单根 div,作为 focusin 事件委托根。仅 embedded 模式使用。
    */
   formAttachRef?: (node: HTMLDivElement | null) => void;
+  /**
+   * 032 US3: shortcuts 触发的初始交易类型(/transaction/new?type=expense 等)。
+   * 仅 create 模式生效(edit 模式由 editData.type 决定,忽略此 prop)。
+   * 受控 selectedKey 模式:useState(defaultType ?? "expense")。
+   * undefined → 默认 expense(回归保护)。
+   */
+  defaultType?: "income" | "expense" | "transfer";
   /** 提交成功后触发(用于关 Drawer / Modal)。embedded 模式下推荐传。 */
   onSubmitted?: () => void;
 }) {
@@ -172,8 +180,10 @@ export function TransactionForm({
   const [recovery, setRecovery] = useState<{ savedAt: string; draft: TransactionDraft } | null>(null);
 
   const { data: accounts } = trpc.account.list.useQuery();
+  // 032 US3:初始类型取自 defaultType prop(shortcuts 触发时来自 ?type= query),
+  // 缺失时默认 expense(回归保护)。edit 模式由下方 effect 用 editData.type 覆盖。
   const [selectedType, setSelectedType] = useState<"income" | "expense" | "transfer">(
-    "expense"
+    defaultType ?? "expense"
   );
   // 027 US4:转账转入账户(独立于 RHF,因 transfer 无 categoryId,字段集不同)。
   const [toAccountId, setToAccountId] = useState<string>("");
