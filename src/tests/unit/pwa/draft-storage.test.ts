@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createDraftStorage } from "@/lib/pwa/draft-storage";
+import { createDraftStorage, isEmptyDraft } from "@/lib/pwa/draft-storage";
 
 class MemoryStorage {
   store = new Map<string, string>();
@@ -133,5 +133,41 @@ describe("transaction draft storage", () => {
     expect(drafts.markUncertain("A").kind).toBe("absent");
     drafts.saveNow("A", form);
     expect(drafts.markUncertain("B").kind).toBe("scope-mismatch");
+  });
+});
+
+describe("isEmptyDraft — 空草稿判定(修复误弹恢复窗 bug)", () => {
+  // 表单 defaultValues 对应的"空"草稿:type/occurredAt 有默认,但 amount+remark 空。
+  const emptyLikeDefault = {
+    type: "expense" as const,
+    accountId: "",
+    toAccountId: "",
+    categoryId: "",
+    amount: "",
+    remark: "",
+    occurredAt: "2026-07-18",
+  };
+
+  it("treats default-values-only draft (empty amount + empty remark) as empty", () => {
+    expect(isEmptyDraft(emptyLikeDefault)).toBe(true);
+  });
+
+  it("treats whitespace-only amount and remark as empty", () => {
+    expect(isEmptyDraft({ ...emptyLikeDefault, amount: "   ", remark: " " })).toBe(true);
+  });
+
+  it("treats a draft with a real amount as non-empty (even if remark blank)", () => {
+    expect(isEmptyDraft({ ...emptyLikeDefault, amount: "12.50" })).toBe(false);
+  });
+
+  it("treats a draft with a real remark as non-empty (even if amount blank)", () => {
+    expect(isEmptyDraft({ ...emptyLikeDefault, remark: "午餐" })).toBe(false);
+  });
+
+  it("does not treat type/occurredAt/accountId defaults as user input", () => {
+    // 有 type、occurredAt、accountId,但 amount+remark 仍空 → 仍判为空
+    expect(
+      isEmptyDraft({ ...emptyLikeDefault, accountId: "acc-1", categoryId: "cat-1" }),
+    ).toBe(true);
   });
 });

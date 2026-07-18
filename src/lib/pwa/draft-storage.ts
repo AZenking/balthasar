@@ -30,6 +30,25 @@ export type DraftRead =
   | { kind: "valid"; draft: TransactionDraft }
   | { kind: "absent" | "expired" | "scope-mismatch" | "corrupt" };
 
+/**
+ * 判断一个草稿表单是否"空"(无实质用户输入)。
+ *
+ * 修复 bug:表单挂载时用 defaultValues(type:"expense", amount:"", remark:"",
+ * occurredAt: 今天)初始化,React Hook Form 的 watch() 在挂载瞬间就 emit 一次,
+ * auto-save 因此把"全是默认值"的草稿写入 localStorage。下一次打开 Drawer 时
+ * read() 返回 valid → 弹"恢复草稿"窗,但里面其实没有任何用户输入。
+ *
+ * "空"的定义:金额与备注都空白 —— 这两样是用户必填/可选的真实输入;
+ * type / accountId / categoryId / occurredAt 都有合理默认,不能作为"有输入"的判据。
+ *
+ * 用途:auto-save 跳过空草稿(不写);recovery 检查跳过空草稿(不弹窗)。
+ */
+export function isEmptyDraft(form: DraftForm): boolean {
+  const amountEmpty = !form.amount || form.amount.trim() === "";
+  const remarkEmpty = !form.remark || form.remark.trim() === "";
+  return amountEmpty && remarkEmpty;
+}
+
 function draftId() {
   return typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()

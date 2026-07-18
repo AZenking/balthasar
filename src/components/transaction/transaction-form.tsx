@@ -14,7 +14,7 @@ import {
 import { trpc } from "@/lib/trpc/client";
 import { guardOnlineWrite } from "@/lib/pwa/write-guard";
 import { requestOutcomeFromError } from "@/lib/pwa/service-reachability";
-import { createDraftStorage, type DraftForm, type TransactionDraft } from "@/lib/pwa/draft-storage";
+import { createDraftStorage, isEmptyDraft, type DraftForm, type TransactionDraft } from "@/lib/pwa/draft-storage";
 import { createDraftController } from "@/lib/pwa/transaction-draft-controller";
 import { usePwaRuntime } from "@/components/pwa/pwa-provider";
 import { useAccountScope } from "@/components/pwa/account-scope-sync";
@@ -59,7 +59,7 @@ function pad(n: number): string {
  *                   顺序影响);data-[selected=true] 仅在选中时生效。
  * submitCls       —— 提交按钮(实色底 + 前景字)
  */
-const TYPE_META: Record<
+export const TYPE_META: Record<
   "expense" | "income" | "transfer",
   {
     label: string;
@@ -114,6 +114,7 @@ function AccountTriggerLabel({
 export function TransactionForm({
   editId,
   embedded = false,
+  formAttachRef,
   onSubmitted,
 }: {
   editId?: string;
@@ -123,6 +124,12 @@ export function TransactionForm({
    * 默认 false:独立 page 模式(/transaction/new / /transaction/[id]/edit)。
    */
   embedded?: boolean;
+  /**
+   * 031 R3:embedded 模式下,scroll container(Drawer.Body)由父级
+   * TransactionDrawer 持有(它的 ref 指向 Drawer.Body)。本组件把父级传入的
+   * attachRef 挂到表单根 div,作为 focusin 事件委托根。仅 embedded 模式使用。
+   */
+  formAttachRef?: (node: HTMLDivElement | null) => void;
   /** 提交成功后触发(用于关 Drawer / Modal)。embedded 模式下推荐传。 */
   onSubmitted?: () => void;
 }) {
@@ -133,11 +140,14 @@ export function TransactionForm({
   const utils = trpc.useUtils();
   const [serverError, setServerError] = useState("");
 
-  // 029 FR-001/002:键盘弹起时聚焦字段滚入中心 + submit 按钮始终在键盘上方 16px。
-  // 仅 embedded 模式(Drawer 内嵌)用 hook;全屏 page 模式有自己的 sticky bottom(US2)。
+  // 031 键盘避让收敛:
+  // - embedded 模式(Drawer 内嵌):不再需要 keyboardHeight(高度由 Drawer 侧的
+  //   --visual-viewport-height CSS 变量钳制);scroll 由父级 TransactionDrawer 的
+  //   useScrollIntoViewOnFocus 负责,attachRef 经 formAttachRef 透传。
+  // - page 模式(全屏):沿用自有 scroll container(Card.Content)+ 既有 sticky
+  //   bottom(Card.Footer paddingBottom 跟随键盘,029 US2 行为不变)。
   const { keyboardHeight } = useVisualViewport();
-  const embeddedScrollRef = useScrollIntoViewOnFocus<HTMLDivElement>();
-  const pageScrollRef = useScrollIntoViewOnFocus<HTMLDivElement>();
+  const pageScrollApi = useScrollIntoViewOnFocus<HTMLDivElement>();
 
   const isEditMode = !!editId;
   const isCreateMode = !isEditMode;
@@ -230,6 +240,13 @@ export function TransactionForm({
     if (!draftScope || !draftStorageRef.current) return;
     const existing = draftStorageRef.current.read(draftScope);
     if (existing.kind === "valid") {
+      // 修复 bug:空草稿(全是 defaultValues,无实质输入)不弹恢复窗。
+      // 见 isEmptyDraft 说明:表单挂载时 watch() 会 emit 默认值并触发 auto-save,
+      // 不拦就会在下一次打开时弹一个"什么都没填"的恢复窗。
+      if (isEmptyDraft(existing.draft.form)) {
+        draftStorageRef.current.clear();
+        return;
+      }
       const savedAt = new Date(existing.draft.updatedAt);
       const display = `${savedAt.getFullYear()}-${pad(savedAt.getMonth() + 1)}-${pad(savedAt.getDate())} ${pad(savedAt.getHours())}:${pad(savedAt.getMinutes())}`;
       setRecovery({ savedAt: display, draft: existing.draft });
@@ -250,6 +267,13 @@ export function TransactionForm({
         remark: (values.remark as string) ?? "",
         occurredAt: (values.occurredAt as string) ?? "",
       };
+      // 修复 bug:空草稿(无实质输入)不写入,从源头避免下次打开误弹恢复窗。
+      // 注意:若用户先把内容填了再全部清空,这里也会把已存的草稿清掉,符合预期
+      // (用户把字段清空 = 不想留草稿)。
+      if (isEmptyDraft(snapshot)) {
+        draftStorageRef.current?.clear();
+        return;
+      }
       draftControllerRef.current!.save(draftScope, snapshot);
     });
     return () => subscription.unsubscribe();
@@ -478,7 +502,14 @@ export function TransactionForm({
           handleTypeSwitch(key as "income" | "expense" | "transfer")
         }
       >
-        <Tabs.List>
+        {/*
+          031 R5 / FR-009:收紧 Tabs 密度,让 Drawer 首屏多露一个表单字段。
+          HeroUI v3 Tabs 无 size prop(T003 /heroui-react skill 验证),密度经
+          Tabs.List 的 className 控制 —— `*:` 前缀作用于直接子元素
+          (HeroUI 的 .tabs__tab),官方 Styling 示例同款用法。
+          h-8(默认 ≈ h-10-11) + px-3 + text-sm 收紧高度与字号,不碰颜色语义。
+        */}
+        <Tabs.List className="*:h-8 *:px-3 *:text-sm">
           <Tabs.Tab
             id="expense"
             className={TYPE_META.expense.selectedTextCls}
@@ -751,25 +782,25 @@ export function TransactionForm({
         />
       )}
       {embedded ? (
-        // embedded 模式:无 Card 包裹(Drawer 自带 Header/Footer)
-        // 029 US1:paddingBottom 跟随键盘高度(env(safe-area-inset-bottom) 兜底
-        // 处理 home indicator;transition 与 iOS 键盘 250ms 动画对齐避免抖动)。
-        // ref 接 useScrollIntoViewOnFocus:任意子字段 focusin 触发 scrollIntoView
-        // 到 Drawer.Body 视觉中心。
-        <div
-          ref={embeddedScrollRef}
-          className="space-y-4 transition-[padding-bottom] duration-200 ease-out"
-          style={{
-            paddingBottom: `max(env(safe-area-inset-bottom), ${computeFooterPaddingBottom(keyboardHeight)}px)`,
-          }}
-        >
-          {formFields}
-          {submitButton}
+        // embedded 模式:无 Card 包裹(Drawer 自带 Header)。
+        // 031 R1/R2/R3/R4 键盘避让收敛:
+        // - **移除** 029 的 paddingBottom: keyboardHeight 补偿(R1 第二套机制);
+        //   Drawer 侧用 --visual-viewport-height CSS 变量钳制 Drawer.Body 高度
+        //   (见 transaction-drawer.tsx),Body 自然紧贴键盘上方。
+        // - **flex flex-col + submit mt-auto**:submit 被 flex 推到 Drawer.Body
+        //   可视区底部(Body 随键盘钳制收缩后,submit 自然停在键盘上方),
+        //   无需任何 padding 补偿。替代把 submit 移出 Body 的更重方案(YAGNI)。
+        // - formAttachRef(由父级 TransactionDrawer 传入)挂到表单根,focusin
+        //   委托;父级的 scroll container ref 指向 Drawer.Body。
+        <div ref={formAttachRef} className="flex min-h-full flex-col gap-4 pb-[max(env(safe-area-inset-bottom),16px)]">
+          <div className="space-y-4">{formFields}</div>
+          <div className="mt-auto pt-2">{submitButton}</div>
         </div>
       ) : (
         // 独立 page 模式:/transaction/new / /transaction/[id]/edit
-        // 029 US2:Card.Content 接 scrollRef 让聚焦字段滚入中心;
-        // Card.Footer paddingBottom 跟随键盘,让 submit 始终在键盘上方 16px。
+        // 029 US2:Card.Content 接 scroll container ref 让聚焦字段滚入中心;
+        // attachRef 挂表单根;Card.Footer paddingBottom 跟随键盘,让 submit
+        // 始终在键盘上方 16px(全屏页行为不变,本 feature 不动)。
         <Card className="mx-4 mt-4">
           <Card.Header className="flex items-center gap-2">
             <Tooltip>
@@ -788,7 +819,12 @@ export function TransactionForm({
             <Card.Title>{isEditMode ? "编辑交易" : "记一笔"}</Card.Title>
           </Card.Header>
           <Card.Content
-            ref={pageScrollRef}
+            ref={(el) => {
+              (
+                pageScrollApi.scrollContainerRef as { current: HTMLElement | null }
+              ).current = el;
+              pageScrollApi.attachRef(el);
+            }}
             className="space-y-4"
           >
             {formFields}
