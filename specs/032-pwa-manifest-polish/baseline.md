@@ -51,39 +51,41 @@
 5. **Chrome 安装弹窗**:看 screenshots
    - [NEEDS-MANUAL:截图 5 — 预期:仅图标+名字,无预览图]
 
-## 修复后(AFTER,MVP Phase 1-3 完成后回填)
+## 修复后(AFTER,v1.1.2 已发布 + 真机验证通过)
 
-> 本区块在 US1/US2/US5(T011/T013/T016)走查完成后回填,与 BEFORE 对照。
-> US3(shortcuts)与 US4(screenshots)延后到 PR-2/PR-3,after 区块分两段。
+> 2026-07-18:v1.1.2 已发布(Docker 镜像 `app:1.1.2` 上线),US1/US2/US3/US5
+> 真机验证通过(用户确认)。US4(screenshots)未实现,延后。
 
-### MVP(US1 + US2 + US5)
+### MVP(US1 + US2 + US5)— ✅ 验证通过
 
-| 项 | BEFORE | AFTER(目标) | 验收方式 |
+| 项 | BEFORE | AFTER | 验收结果 |
 |---|---|---|---|
-| `background_color` / `theme_color` | `#ffffff` | `#2a2a2d` | manifest 契约测试 + DevTools + 深色模式启动截图 |
-| `id` | `"/"` | `/?balthasar`(或保留 `/`) | manifest 契约测试 + DevTools |
-| 192 `maskable` | 无 | 独立条目 `purpose: "maskable"` | manifest 契约测试 + maskable.app 安全区检查 |
-| 深色模式启动 | 白闪 | 中性深色 `#2a2a2d` 无白闪 | [NEEDS-MANUAL:T011 后真机截图] |
-| manifest 测试 | 1 passed | [T032 回填:新增断言后全绿] | `pnpm test:unit manifest.test.ts` |
+| `background_color` / `theme_color` | `#ffffff` | `#2a2a2d` | ✅ manifest 契约测试断言 + 真机深色启动无白闪 |
+| `id` | `"/"` | `/?balthasar` | ✅ manifest 契约测试断言 + DevTools 可辨识 |
+| 192 `maskable` | 无 | 独立条目 `purpose: "maskable"` | ✅ manifest 契约测试断言 + 图标渲染正常 |
+| 深色模式启动 | 白闪 | 中性深色 `#2a2a2d` 无白闪 | ✅ 真机验证通过 |
+| manifest 测试 | 1 passed | **5 passed**(id + 主题色 + 192 maskable + shortcuts + 既有) | ✅ `pnpm test:unit manifest.test.ts` |
 
-### US3(shortcuts,PR-2 延后)
+### US3(shortcuts)— ✅ 验证通过(PR #18 / v1.1.2)
 
-| 项 | BEFORE | AFTER(目标) | 验收方式 |
+| 项 | BEFORE | AFTER | 验收结果 |
 |---|---|---|---|
-| `shortcuts` 数组 | 无 | ≥2 条(记支出/收入) | manifest 契约测试 + 真机长按图标 |
-| 预选类型配套 | n/a | `TransactionForm.defaultType` + page 读 type query | 单元测试 + 真机点击 shortcut |
+| `shortcuts` 数组 | 无 | 3 条(记支出/收入/转账) | ✅ manifest 契约测试断言 + 真机长按图标出现 |
+| 预选类型配套 | n/a | `TransactionForm.defaultType` + page 读 type query + `parseDefaultType` | ✅ 单元测试(4)+ 真机点击 shortcut 预选正确 |
 
-### US4(screenshots,PR-3 延后,NEEDS-MANUAL 制图)
+### US4(screenshots)— ⏸ 未实现(延后,NEEDS-MANUAL 制图)
 
-| 项 | BEFORE | AFTER(目标) | 验收方式 |
+| 项 | BEFORE | AFTER(目标) | 状态 |
 |---|---|---|---|
-| `screenshots` 数组 | 无 | ≥2 张(narrow + wide) | manifest 契约测试 + Chrome 安装弹窗 |
-| 截图资源 | 无 | 3 张 PNG/WebP(< 200KB/张) | [NEEDS-MANUAL:T025/T028 制图 + 弹窗验证] |
+| `screenshots` 数组 | 无 | ≥2 张(narrow + wide) | ⏸ 未做(T026) |
+| 截图资源 | 无 | 3 张 PNG/WebP(< 200KB/张) | ⏸ 需人工制图(T025) |
 
 ### 回归
 
-| 项 | BEFORE | AFTER(目标) |
+| 项 | BEFORE | AFTER |
 |---|---|---|
-| `pnpm test:unit`(全量) | [NEEDS-MANUAL] | [T032 回填:全绿,既有测试不破] |
-| `pnpm build` | [NEEDS-MANUAL] | [T033 回填:TS strict 通过] |
-| 既有 PWA(SW/离线/安装/更新) | 正常 | [T034 回填:0 回归] |
+| `pnpm test:unit`(全量) | 329(1.1.1) | ✅ **337 全绿**(+8:manifest 契约 + parseDefaultType) |
+| `pnpm build` | ✓ | ✓ Compiled successfully |
+| `pnpm lint` | 0 error | ✅ 0 error(54 既有 warning) |
+| `pnpm exec tsc --noEmit` | 0 | ✅ 0 错误 |
+| 既有 PWA(SW/离线/安装/更新) | 正常 | ✅ 真机回归正常(用户确认) |
