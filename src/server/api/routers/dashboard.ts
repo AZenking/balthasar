@@ -14,7 +14,7 @@ import {
   deleteBudget,
 } from "@/server/db/queries/budget";
 import { computeBudgetStatus } from "@/server/domain/dashboard/budget-status";
-import { getUtcMonthRange } from "@/lib/date-ranges";
+import { getUtcMonthRange, getCurrentUtcWeekRange } from "@/lib/date-ranges";
 import { serializeTransaction } from "@/server/db/queries/transaction";
 
 /**
@@ -52,15 +52,17 @@ export const dashboardRouter = router({
       const month = input?.month ?? currentMonth;
 
       const { start: monthStart, end: monthEnd } = getUtcMonthRange(year, month);
-      const isCurrentMonth = year === currentYear && month === currentMonth;
 
-      // 027:趋势改为本月每日(线稿口径),不再用本周 Mon-Sun 窗口。
-      // 当前月:每日桶 1 日..今天;历史月:每日桶 1 日..月末。
+      // 030 US2:趋势窗口固定为"本周"(当前 UTC 周一..周日),与 year/month 输入解耦
+      // (spec 030 Clarification Q2)。月份切换只影响月维度区块(hero/分类/预算);
+      // 趋势图始终显示本周 7 桶。今日之后的本周未来日由 padDailyBuckets 补零。
+      const { start: weekStart, end: weekEnd } = getCurrentUtcWeekRange(now);
+
       const [summary, recent, breakdown, trend] = await Promise.all([
         getMonthSummary({ familyId, monthStart, monthEnd }),
         getRecentTransactions({ familyId, limit: 5 }),
         getCategoryBreakdown({ familyId, monthStart, monthEnd }),
-        getDailyTrend({ familyId, weekStart: monthStart, weekEnd: monthEnd }).then((buckets) => ({
+        getDailyTrend({ familyId, weekStart, weekEnd }).then((buckets) => ({
           granularity: "daily" as const,
           buckets,
         })),
@@ -111,6 +113,26 @@ export const dashboardRouter = router({
         assets = null;
       }
 
+      // 030 US1:本日支出(当前 UTC 日 expense 净额,含退款冲减)。
+      // 复用 getDailyTrend 1 天窗口(padDailyBuckets 保证返回 1 桶),
+      // 取 [0].amount。失败 → null(降级,对齐 budget/assets SC-008 纪律)。
+      // 注意:0(无交易)是合法值,与 null(降级)必须区分。
+      const todayStart = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+      );
+      const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
+      let dayExpense: number | null;
+      try {
+        const dayBuckets = await getDailyTrend({
+          familyId,
+          weekStart: todayStart,
+          weekEnd: todayEnd,
+        });
+        dayExpense = dayBuckets[0]?.amount ?? 0;
+      } catch {
+        dayExpense = null;
+      }
+
       return {
         queriedYearMonth: { year, month },
         monthIncome: summary.income,
@@ -119,6 +141,7 @@ export const dashboardRouter = router({
         topExpenseCategories,
         recentTransactions: recent.map(serializeTransaction),
         expenseTrend: trend,
+        dayExpense, // 030 US1:当日 expense 净额 | null(降级)
         budget, // 027 US5:BudgetSummary | null
         assets, // 027 US6:AssetsSummary | null
       };

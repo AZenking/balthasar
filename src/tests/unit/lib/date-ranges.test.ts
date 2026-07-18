@@ -12,6 +12,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  getCurrentUtcWeekRange,
   getLast24Months,
   getUtcMonthRange,
   getUtcWeeksInMonth,
@@ -342,5 +343,93 @@ describe("cross-cutting edge cases", () => {
     expect(weeks[weeks.length - 1].end.getTime()).toBeGreaterThanOrEqual(
       monthEnd,
     );
+  });
+});
+
+// ─── getCurrentUtcWeekRange (030-home-trend-area-today R5) ───
+//
+// Returns the Mon 00:00 UTC .. next Mon 00:00 UTC (excl) window containing
+// `now`. Used by dashboard.summary to compute the fixed "current week"
+// trend window (independent of the selected year/month). Mirrors the Monday
+// anchor logic of getUtcWeeksInMonth (isoWeekday + dayMs subtraction).
+//
+// Pure-function — no DB, no mocks. Per Constitution Principle IV these
+// tests MUST FAIL before the helper is implemented.
+
+describe("getCurrentUtcWeekRange", () => {
+  it("Monday input → start is the same day 00:00 UTC; end is +7d", () => {
+    // 2026-07-13 is a Monday.
+    const now = new Date("2026-07-13T14:30:00.000Z");
+    const { start, end } = getCurrentUtcWeekRange(now);
+    expectUtc(start, "2026-07-13T00:00:00.000Z");
+    expectUtc(end, "2026-07-20T00:00:00.000Z");
+  });
+
+  it("Wednesday input → start is 2 days earlier (Monday)", () => {
+    // 2026-07-15 is a Wednesday.
+    const now = new Date("2026-07-15T09:00:00.000Z");
+    const { start, end } = getCurrentUtcWeekRange(now);
+    expectUtc(start, "2026-07-13T00:00:00.000Z");
+    expectUtc(end, "2026-07-20T00:00:00.000Z");
+  });
+
+  it("Sunday input → start is 6 days earlier (Monday)", () => {
+    // 2026-07-19 is a Sunday (last day of the Mon..Sun week).
+    const now = new Date("2026-07-19T23:59:00.000Z");
+    const { start, end } = getCurrentUtcWeekRange(now);
+    expectUtc(start, "2026-07-13T00:00:00.000Z");
+    expectUtc(end, "2026-07-20T00:00:00.000Z");
+  });
+
+  it("time-of-day is normalized: start is always 00:00:00 UTC of the Monday", () => {
+    // Late evening Wednesday — start must still be Mon 00:00 UTC, not Wed's time.
+    const now = new Date("2026-07-15T23:59:59.999Z");
+    const { start } = getCurrentUtcWeekRange(now);
+    expectUtc(start, "2026-07-13T00:00:00.000Z");
+  });
+
+  it("end is exclusive (next Monday 00:00 UTC) — span is exactly 7 days", () => {
+    const now = new Date("2026-07-15T00:00:00.000Z");
+    const { start, end } = getCurrentUtcWeekRange(now);
+    expect(end.getTime() - start.getTime()).toBe(7 * 24 * 60 * 60 * 1000);
+  });
+
+  it("cross-month boundary: now on month-1 Wednesday → start in previous month", () => {
+    // 2026-07-01 is a Wednesday. The containing week's Monday is 2026-06-29.
+    const now = new Date("2026-07-01T12:00:00.000Z");
+    const { start, end } = getCurrentUtcWeekRange(now);
+    expectUtc(start, "2026-06-29T00:00:00.000Z");
+    expectUtc(end, "2026-07-06T00:00:00.000Z");
+  });
+
+  it("cross-year boundary: now on 2027-01-01 (Friday) → start in Dec 2026", () => {
+    // 2027-01-01 is a Friday. Monday on-or-before is 2026-12-28.
+    const now = new Date("2027-01-01T08:00:00.000Z");
+    const { start, end } = getCurrentUtcWeekRange(now);
+    expectUtc(start, "2026-12-28T00:00:00.000Z");
+    expectUtc(end, "2027-01-04T00:00:00.000Z");
+  });
+
+  it("start is always a Monday (getUTCDay() === 1)", () => {
+    // Sample several weekdays across two months.
+    const samples = [
+      "2026-07-13T00:00:00.000Z", // Mon
+      "2026-07-16T00:00:00.000Z", // Thu
+      "2026-07-19T00:00:00.000Z", // Sun
+      "2026-08-25T00:00:00.000Z", // Tue
+      "2026-12-31T00:00:00.000Z", // Thu
+      "2027-01-01T00:00:00.000Z", // Fri
+    ];
+    for (const iso of samples) {
+      const { start } = getCurrentUtcWeekRange(new Date(iso));
+      expect(start.getUTCDay()).toBe(1); // Monday
+    }
+  });
+
+  it("default argument now = new Date() does not throw", () => {
+    // No-arg call must use the real current time and return a valid window.
+    const { start, end } = getCurrentUtcWeekRange();
+    expect(start.getUTCDay()).toBe(1);
+    expect(end.getTime() - start.getTime()).toBe(7 * 24 * 60 * 60 * 1000);
   });
 });

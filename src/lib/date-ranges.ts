@@ -26,6 +26,42 @@ function isoWeekday(utcDay: number): number {
 }
 
 /**
+ * Get the UTC [start, end) range of the Mon..Sun week containing `now`
+ * (030-home-trend-area-today R5).
+ *
+ * - `start` = Monday on or before `now`'s UTC day, 00:00:00 UTC.
+ * - `end`   = the following Monday, 00:00:00 UTC (exclusive) — span = 7 days.
+ *
+ * Mirrors the Monday-anchor logic of `getUtcWeeksInMonth` (ISO weekday map
+ * + dayMs subtraction), but anchors on `now` instead of `monthStart`. The
+ * time-of-day of `now` is normalized away: `start` is always Monday 00:00 UTC
+ * regardless of when in the week `now` falls.
+ *
+ * Used by `dashboard.summary` to compute the fixed "current week" trend
+ * window (7 daily buckets Mon..Sun), which is independent of the selected
+ * year/month input (spec 030 Clarification Q2). The exclusive `end` matches
+ * `getUtcMonthRange`'s contract so it slots directly into `getDailyTrend`'s
+ * `weekStart`/`weekEnd` parameters.
+ *
+ * `now` defaults to `new Date()`; tests pass an explicit value.
+ */
+export function getCurrentUtcWeekRange(
+  now: Date = new Date(),
+): { start: Date; end: Date } {
+  const dayMs = 24 * 60 * 60 * 1000;
+  const startDow = isoWeekday(now.getUTCDay()); // 0=Mon..6=Sun
+  // Normalize to 00:00:00 UTC of today, then subtract whole days back to Monday.
+  const todayMidnightUtc = Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate(),
+  );
+  const start = new Date(todayMidnightUtc - startDow * dayMs);
+  const end = new Date(start.getTime() + 7 * dayMs);
+  return { start, end };
+}
+
+/**
  * Format a Date as 'YYYY-MM-DD' (UTC). Used as bucket keys by
  * `padDailyBuckets` and in test assertions.
  */
