@@ -17,12 +17,11 @@ import { useCallback, useRef } from "react";
  * 键盘动画期间可见),并加 rAF 去抖(spec FR-007)。
  *
  * ## 用法
- * ```tsx
- * const { scrollContainerRef, attachRef } = useScrollIntoViewOnFocus<HTMLDivElement>();
- * <div ref={scrollContainerRef}>        {/* = Drawer.Body,overflow:auto *​/}
- *   <form ref={attachRef}>{...}</form>  {/* focusin 委托根 *​/}
- * </div>
- * ```
+ * scrollContainerRef 指向 Drawer.Body(可滚动容器);attachRef 挂表单根
+ * (focusin 事件委托根)。例:
+ *   const { scrollContainerRef, attachRef } = useScrollIntoViewOnFocus();
+ *   <div ref={scrollContainerRef}>       // Drawer.Body
+ *     <form ref={attachRef}>...</form>   // focusin 委托根
  *
  * 宪章原则七合规:不替换 HeroUI 组件,只在容器层加 ref 回调协调滚动。
  */
