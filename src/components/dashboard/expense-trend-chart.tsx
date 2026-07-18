@@ -1,28 +1,30 @@
 "use client";
 
 /**
- * ExpenseTrendChart (026-cream-amber-revamp, spec US4 / FR-C003 / FR-C004).
+ * ExpenseTrendChart (026-cream-amber-revamp → 030-home-trend-area-today)。
  *
- * 首页"按周维度的支出趋势图"。粒度由 dashboard.summary 决定:
- * - 当前月 → daily:本周一至周日,7 桶,每日缺失补零(FR-C003)。
- * - 历史月 → weekly:按该月自然周切分,首尾不完整周仍计入(FR-C004)。
+ * 首页"本周每日支出趋势图"。030 US3:从 LineChart+Line 改为
+ * AreaChart+Area + 垂直渐变面积(平滑曲线 + 渐变填充)。粒度由
+ * dashboard.summary 决定(030 起恒为 daily 本周 7 桶,与 month 解耦)。
  *
- * 数据契约:specs/026-cream-amber-revamp/contracts/dashboard-summary.md §expenseTrend
+ * 数据契约:specs/030-home-trend-area-today/contracts/dashboard-summary.md §expenseTrend
  *
- * 实现要点:
- * - recharts BarChart 单系列(支出),颜色映射 HeroUI `--danger` token(支出语义红)。
+ * 实现要点(030):
+ * - recharts AreaChart 单 Area:顶部描边=平滑折线(monotone),下方=渐变面积。
+ *   单元素同时画线 + 填充(research R1),渐变顶 `--danger` 0.4 → 底透明(R2/R7)。
+ * - 动画关闭(isAnimationActive=false),保 CLS=0(research R3 / FR-013)。
  * - 可访问性:容器 `role="img"` + `aria-label`(总览)。
- * - 隐私模式:Tooltip 的金额节点挂 `data-amount`,globals.css 的
- *   `.privacy-on [data-amount]` 规则自动隐藏并显示 `***`(research.md R5)。
- * - 空数据(全 0):依然渲染柱条(高度 0),只显示标签;不破坏图表结构。
+ * - 隐私模式:Tooltip 金额 + Y 轴刻度遮蔽;**形状(线 + 面积)保留**(FR-008)。
+ *   data-amount 节点由 globals.css `.privacy-on [data-amount]` 自动隐藏。
+ * - 空数据(全 0):折线贴 X 轴、面积退化,图表骨架不破坏。
  *
  * amount 单位:**分**(契约口径),展示层除以 100。
  */
 
 import {
+  Area,
+  AreaChart,
   CartesianGrid,
-  Line,
-  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -85,20 +87,42 @@ export function tickFormatter(isPrivacy: boolean, cents: number): string {
   return isPrivacy ? "••" : formatYuanTick(cents);
 }
 
+/**
+ * chartConfig (030-home-trend-area-today US3)——趋势图结构常量。
+ *
+ * 集中曲线/渐变/动画的视觉决策,供:
+ *   - 渲染层(DailyView/WeeklyView)引用,避免重复字面量
+ *   - 组件测试(T016)断言结构,无需在 jsdom 渲染 recharts SVG
+ *
+ * 决策依据见 research.md:
+ *   - R1:用 AreaChart+Area(单元素同时画线 + 渐变面积)
+ *   - R2:curveType 'monotone'(平滑且不跌破 0,非负数据不 overshoot)
+ *   - R3:animationDisabled(关动画,CLS=0,FR-013)
+ *   - R7(隐私):形状保留,只遮蔽金额;故 strokeColor / 渐变不参与隐私遮蔽
+ */
+export const chartConfig = {
+  chartType: "area" as const,
+  curveType: "monotone" as const,
+  strokeColor: "var(--danger)",
+  strokeWidth: 2,
+  animationDisabled: true,
+  gradientIdDaily: "expenseTrendAreaDaily",
+  gradientIdWeekly: "expenseTrendAreaWeekly",
+  /** 垂直渐变 stops:顶部支出红 0.4 不透明 → 底部全透明(贴 X 轴,FR-007)。 */
+  gradientStops: [
+    { offset: 0, color: "var(--danger)", opacity: 0.4 },
+    { offset: 100, color: "var(--danger)", opacity: 0 },
+  ],
+  // 兼容字段:旧测试/外部引用统一别名(指向 daily 的默认 id)。
+  get gradientId(): string {
+    return this.gradientIdDaily;
+  },
+} as const;
+
 /** 把 'YYYY-MM-DD' 转成短日期(月/日),用于 daily 桶的轴标签。 */
 function shortDate(iso: string): string {
   const [, m, d] = iso.split("-");
   return `${Number(m)}/${Number(d)}`;
-}
-
-/** 把 'YYYY-MM-DD' 转成中文周几缩写(周一..周日),用于 daily 视图 X 轴标签。 */
-const CN_WEEKDAY = ["一", "二", "三", "四", "五", "六", "日"];
-function weekdayLabel(iso: string): string {
-  const [y, m, d] = iso.split("-").map(Number);
-  const date = new Date(Date.UTC(y, m - 1, d));
-  const dow = date.getUTCDay(); // 0=Sun..6=Sat
-  const isoIdx = dow === 0 ? 6 : dow - 1; // 0=Mon..6=Sun
-  return CN_WEEKDAY[isoIdx] ?? "";
 }
 
 interface DailyRow {
@@ -202,15 +226,33 @@ function DailyView({
     amount: b.amount,
   }));
   const total = buckets.reduce((acc, b) => acc + b.amount, 0);
-  const overallAria = `本月每日支出趋势,合计 ${formatAmount(total)}`;
+  const overallAria = `本周每日支出趋势,合计 ${formatAmount(total)}`;
 
   return (
     <div role="img" aria-label={overallAria}>
       <ResponsiveContainer width="100%" height={200}>
-        <LineChart
+        <AreaChart
           data={rows}
           margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
         >
+          <defs>
+            <linearGradient
+              id={chartConfig.gradientIdDaily}
+              x1="0"
+              y1="0"
+              x2="0"
+              y2="1"
+            >
+              {chartConfig.gradientStops.map((s) => (
+                <stop
+                  key={s.offset}
+                  offset={`${s.offset}%`}
+                  stopColor={s.color}
+                  stopOpacity={s.opacity}
+                />
+              ))}
+            </linearGradient>
+          </defs>
           <CartesianGrid
             strokeDasharray="3 3"
             vertical={false}
@@ -232,17 +274,18 @@ function DailyView({
             allowDecimals={false}
           />
           <Tooltip content={<DailyTooltip />} />
-          <Line
-            type="monotone"
+          <Area
+            type={chartConfig.curveType}
             dataKey="amount"
             name="支出"
-            stroke="var(--danger)"
-            strokeWidth={2}
+            stroke={chartConfig.strokeColor}
+            strokeWidth={chartConfig.strokeWidth}
+            fill={`url(#${chartConfig.gradientIdDaily})`}
             dot={{ r: 3, fill: "var(--danger)" }}
             activeDot={{ r: 5 }}
-            isAnimationActive={false}
+            isAnimationActive={!chartConfig.animationDisabled}
           />
-        </LineChart>
+        </AreaChart>
       </ResponsiveContainer>
     </div>
   );
@@ -269,10 +312,28 @@ function WeeklyView({
   return (
     <div role="img" aria-label={overallAria}>
       <ResponsiveContainer width="100%" height={200}>
-        <LineChart
+        <AreaChart
           data={rows}
           margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
         >
+          <defs>
+            <linearGradient
+              id={chartConfig.gradientIdWeekly}
+              x1="0"
+              y1="0"
+              x2="0"
+              y2="1"
+            >
+              {chartConfig.gradientStops.map((s) => (
+                <stop
+                  key={s.offset}
+                  offset={`${s.offset}%`}
+                  stopColor={s.color}
+                  stopOpacity={s.opacity}
+                />
+              ))}
+            </linearGradient>
+          </defs>
           <CartesianGrid
             strokeDasharray="3 3"
             vertical={false}
@@ -294,17 +355,18 @@ function WeeklyView({
             allowDecimals={false}
           />
           <Tooltip content={<WeeklyTooltip />} />
-          <Line
-            type="monotone"
+          <Area
+            type={chartConfig.curveType}
             dataKey="amount"
             name="支出"
-            stroke="var(--danger)"
-            strokeWidth={2}
+            stroke={chartConfig.strokeColor}
+            strokeWidth={chartConfig.strokeWidth}
+            fill={`url(#${chartConfig.gradientIdWeekly})`}
             dot={{ r: 3, fill: "var(--danger)" }}
             activeDot={{ r: 5 }}
-            isAnimationActive={false}
+            isAnimationActive={!chartConfig.animationDisabled}
           />
-        </LineChart>
+        </AreaChart>
       </ResponsiveContainer>
     </div>
   );

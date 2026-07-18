@@ -226,8 +226,8 @@ describe("[T010] last month excluded (FR-007)", () => {
 // Covers: year/month input, expenseTrend (daily/weekly), Top 2 stable
 // ordering, percentage zero-boundary, recent cross-month, daily zero-pad.
 
-describe("[T011] current month default returns daily trend (026 FR-F001)", () => {
-  it("no params → current UTC month + daily granularity", async () => {
+describe("[T011] current month default returns daily trend (026 FR-F001; 030 改本周)", () => {
+  it("no params → current UTC month granularity=daily;趋势=本周 7 桶(030)", async () => {
     const email = `t011-${Date.now()}@example.com`;
     const s = await seedSetup(email);
     const c = caller(s.userId);
@@ -243,11 +243,8 @@ describe("[T011] current month default returns daily trend (026 FR-F001)", () =>
     });
     expect(result.expenseTrend.granularity).toBe("daily");
     if (result.expenseTrend.granularity !== "daily") return; // narrow for TS
-    // 027: daily buckets cover the whole current month (1..last day), not a 7-day week.
-    const daysInMonth = new Date(
-      Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0),
-    ).getUTCDate();
-    expect(result.expenseTrend.buckets.length).toBe(daysInMonth);
+    // 030:趋势窗口固定为本周 Mon..Sun UTC,7 桶(不再是整月)。
+    expect(result.expenseTrend.buckets).toHaveLength(7);
     for (const b of result.expenseTrend.buckets) {
       expect(b.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
       expect(typeof b.amount).toBe("number");
@@ -255,8 +252,8 @@ describe("[T011] current month default returns daily trend (026 FR-F001)", () =>
   });
 });
 
-describe("[T012] explicit month returns weekly trend (026 FR-F001)", () => {
-  it("{ year: 2026, month: 6 } → 2026-06 + weekly granularity", async () => {
+describe("[T012] explicit historical month: monthExpense reflects month but trend=本周(030)", () => {
+  it("{ year: 2026, month: 6 } → queriedMonth=2026-06;monthExpense 含历史月;trend 仍是本周", async () => {
     const email = `t012-${Date.now()}@example.com`;
     const s = await seedSetup(email);
 
@@ -270,16 +267,13 @@ describe("[T012] explicit month returns weekly trend (026 FR-F001)", () => {
 
     expect(result.queriedYearMonth).toEqual({ year: 2026, month: 6 });
     expect(result.monthExpense).toBe(10000);
-    expect(result.expenseTrend.granularity).toBe("daily"); // 027: 全部改 daily
+    expect(result.expenseTrend.granularity).toBe("daily");
     if (result.expenseTrend.granularity !== "daily") return; // narrow for TS
-    // buckets have date + amount
-    for (const b of result.expenseTrend.buckets) {
-      expect(b.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-      expect(typeof b.amount).toBe("number");
-    }
-    // at least one bucket has the 10000 expense
+    // 030:趋势与所选 month 解耦 —— 始终是当前本周(2026-06 的数据不在本周),
+    // 故趋势 buckets 全为 0(2026-06-15 不在当前周),length=7。
+    expect(result.expenseTrend.buckets).toHaveLength(7);
     const total = result.expenseTrend.buckets.reduce((s, b) => s + b.amount, 0);
-    expect(total).toBe(10000);
+    expect(total).toBe(0); // 历史月数据不在本周,趋势合计 0
   });
 });
 
@@ -413,35 +407,27 @@ describe("[T018] percentage zero-boundary when monthExpense=0 (026)", () => {
   });
 });
 
-describe("[T019] daily trend zero-pads missing days (027: monthly buckets)", () => {
-  it("current month: mid-month expense → prior days zero-padded, seeded day = 3000", async () => {
+describe("[T019] daily trend zero-pads missing days (030: 本周 7 桶)", () => {
+  it("本周内某日 expense → 该日桶=3000,其余本周桶补零;首桶=本周一", async () => {
     const email = `t019-${Date.now()}@example.com`;
     const s = await seedSetup(email);
 
-    // 027: trend covers the whole current month (1..last day), not a Mon-Sun
-    // week. Place an expense on the 15th at 12:00 UTC — days 1..14 stay empty
-    // so they must be zero-padded. (Guard: skip if today is the 15th in UTC
-    // and the seeded tx would land "now" — irrelevant to the assertion.)
+    // 030: trend 窗口固定为本周 Mon..Sun UTC(7 桶),不再覆盖整月。
+    // 在真实当前 UTC 日插入 expense(必落在本周内),断言该日桶有值、
+    // 其余本周桶为有限数字(补零),首桶为周一。
     const now = new Date();
-    const expenseDay = Math.min(15, now.getUTCDate());
-    const expenseDate = new Date(
-      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), expenseDay, 12, 0, 0),
-    );
-    const expenseKey = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-${String(expenseDay).padStart(2, "0")}`;
-
+    const todayIso = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-${String(now.getUTCDate()).padStart(2, "0")}`;
     await insertTxAt({
       familyId: s.famId, type: "expense", accountId: s.accId, categoryId: s.expenseCatId,
-      amount: -3000, occurredAt: expenseDate,
+      amount: -3000, occurredAt: new Date(`${todayIso}T12:00:00.000Z`),
     });
 
     const result = await caller(s.userId).dashboard.summary();
     expect(result.expenseTrend.granularity).toBe("daily");
     if (result.expenseTrend.granularity !== "daily") return;
 
-    const daysInMonth = new Date(
-      Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0),
-    ).getUTCDate();
-    expect(result.expenseTrend.buckets.length).toBe(daysInMonth);
+    // 030: 恒 7 桶(Mon..Sun)
+    expect(result.expenseTrend.buckets).toHaveLength(7);
 
     // Every bucket MUST be present with a finite numeric amount (zero-pad).
     for (const b of result.expenseTrend.buckets) {
@@ -451,47 +437,105 @@ describe("[T019] daily trend zero-pads missing days (027: monthly buckets)", () 
     const total = result.expenseTrend.buckets.reduce((s, b) => s + b.amount, 0);
     expect(total).toBe(3000);
 
-    // The seeded day's bucket holds the amount; day 1 is zero-padded.
-    const seededBucket = result.expenseTrend.buckets.find((b) => b.date === expenseKey);
-    expect(seededBucket).toBeDefined();
-    expect(seededBucket!.amount).toBe(3000);
-    expect(result.expenseTrend.buckets[0]!.amount).toBe(0); // day 1 zero-padded
+    // 今日桶持有该金额;首桶为本周一。
+    const todayBucket = result.expenseTrend.buckets.find((b) => b.date === todayIso);
+    expect(todayBucket).toBeDefined();
+    expect(todayBucket!.amount).toBe(3000);
+    const monday = new Date(result.expenseTrend.buckets[0]!.date + "T00:00:00.000Z");
+    expect(monday.getUTCDay()).toBe(1);
   });
 });
 
-describe("[T020] weekly trend first/last partial weeks (026 FR-C004)", () => {
-  it("2026-06 starts on Sunday → first week is 1-day partial bucket", async () => {
-    const email = `t020-${Date.now()}@example.com`;
+// [T020] 已删除(030):原 026 测"历史月的 weekly 首尾不完整周"语义。
+// 030 Clarification Q2 把趋势窗口固定为"当前本周"(与 month 输入解耦),
+// 历史月不再有独立的 weekly 聚合路径,该测试场景不再成立。等效的"本周
+// 7 桶 + 未来日补零"覆盖由下方 [030-T012] 提供。
+
+// ─── 030-home-trend-area-today: 本周窗口 + 未来日补零(US2) ───
+//
+// dashboard.summary.expenseTrend 改为"本周 Mon..Sun UTC"7 桶,与 year/month 输入
+// 解耦。router 内用 new Date() 取当前 UTC 周/日(不可注入),故测试基于"真实当前日"
+// 构造数据,断言不变量:
+//   1. expenseTrend.buckets 长度恒 = 7
+//   2. 第一桶 = 当前 UTC 周一;末桶 = 当前 UTC 周日
+//   3. 当日桶含今日 expense;当日之后的本周未来日桶 = 0(补零,FR-005)
+
+describe("[030-T012] expenseTrend 本周 7 桶 + 未来日补零", () => {
+  it("expenseTrend.buckets 长度 = 7,首桶=本周一,末桶=本周日;今日之后未来日补零", async () => {
+    const email = `t012-${Date.now()}@example.com`;
     const s = await seedSetup(email);
+    const c = caller(s.userId);
 
-    // 2026-06-01 is a Monday in UTC? Check: Date.UTC(2026,5,1).getUTCDay()
-    // → 1 (Monday). So first week IS a complete Mon-Sun week. To exercise the
-    // partial-week path we instead pick a month whose 1st is NOT a Monday.
-    // 2026-02-01 is a Sunday (getUTCDay()=0) → first week contains only Sun
-    // (1 day) — a partial first bucket. 2026-02-28 is a Saturday → last week
-    // partial too.
-    const monthStart = new Date(Date.UTC(2026, 1, 1));
-    expect(monthStart.getUTCDay()).toBe(0); // sanity: Sunday
-
-    // Seed one expense in the first (partial) week and one in the last.
+    // 真实当前 UTC 日,插入一笔 expense。
+    const now = new Date();
+    const todayIso = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-${String(now.getUTCDate()).padStart(2, "0")}`;
     await insertTxAt({
-      familyId: s.famId, type: "expense", accountId: s.accId, categoryId: s.expenseCatId,
-      amount: -1111, occurredAt: new Date(Date.UTC(2026, 1, 1, 6, 0, 0)), // 2026-02-01 (Sun)
-    });
-    await insertTxAt({
-      familyId: s.famId, type: "expense", accountId: s.accId, categoryId: s.expenseCatId,
-      amount: -2222, occurredAt: new Date(Date.UTC(2026, 1, 28, 6, 0, 0)), // 2026-02-28 (Sat)
+      familyId: s.famId,
+      type: "expense",
+      accountId: s.accId,
+      categoryId: s.expenseCatId,
+      amount: 4567,
+      occurredAt: new Date(`${todayIso}T12:00:00.000Z`),
     });
 
-    const result = await caller(s.userId).dashboard.summary({ year: 2026, month: 2 });
+    const result = await c.dashboard.summary();
     expect(result.expenseTrend.granularity).toBe("daily");
     if (result.expenseTrend.granularity !== "daily") return;
-    // buckets must include first (partial Sun-only) and last (partial) weeks
-    expect(result.expenseTrend.buckets.length).toBeGreaterThanOrEqual(5);
-    const total = result.expenseTrend.buckets.reduce((s, b) => s + b.amount, 0);
-    expect(total).toBe(3333);
-    // first bucket label starts at the partial week (Jan 26 Mon or Jan 31 Sun)
-    const firstBucket = result.expenseTrend.buckets[0]!;
-    expect(firstBucket.amount).toBe(1111);
+
+    const buckets = result.expenseTrend.buckets;
+    // [1] 恒 7 桶(Mon..Sun)
+    expect(buckets).toHaveLength(7);
+
+    // [2] 首桶 = 本周一,末桶 = 本周日(ISO weekday 校验)
+    const monday = new Date(buckets[0]!.date + "T00:00:00.000Z");
+    const sunday = new Date(buckets[6]!.date + "T00:00:00.000Z");
+    expect(monday.getUTCDay()).toBe(1); // Monday
+    expect(sunday.getUTCDay()).toBe(0); // Sunday
+    // 末桶 = 首桶 + 6 天
+    expect(sunday.getTime() - monday.getTime()).toBe(6 * 24 * 60 * 60 * 1000);
+
+    // [3] 当日桶含今日 expense
+    const todayBucket = buckets.find((b) => b.date === todayIso);
+    expect(todayBucket).toBeDefined();
+    expect(todayBucket!.amount).toBe(4567);
+
+    // [4] 当日之后的本周未来日桶全为 0(补零,FR-005)
+    const futureBuckets = buckets.filter((b) => b.date > todayIso);
+    for (const fb of futureBuckets) {
+      expect(fb.amount).toBe(0);
+    }
+  });
+
+  it("expenseTrend 与所选 month 输入无关:插入本月数据后,切到上月 trend 仍是本周", async () => {
+    const email = `t012b-${Date.now()}@example.com`;
+    const s = await seedSetup(email);
+    const c = caller(s.userId);
+
+    // 今日插入 expense
+    const now = new Date();
+    const todayIso = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-${String(now.getUTCDate()).padStart(2, "0")}`;
+    await insertTxAt({
+      familyId: s.famId,
+      type: "expense",
+      accountId: s.accId,
+      categoryId: s.expenseCatId,
+      amount: 1234,
+      occurredAt: new Date(`${todayIso}T12:00:00.000Z`),
+    });
+
+    const currentMonthResult = await c.dashboard.summary();
+    // 切到一个确定的历史月(2020-01),monthExpense 应为 0(该月无数据),
+    // 但 expenseTrend 应仍是本周(含今日的 1234)。
+    const histMonthResult = await c.dashboard.summary({ year: 2020, month: 1 });
+
+    expect(histMonthResult.monthExpense).toBe(0);
+    expect(histMonthResult.expenseTrend.buckets).toEqual(
+      currentMonthResult.expenseTrend.buckets,
+    );
+    // 趋势仍含今日数据
+    const todayBucket = histMonthResult.expenseTrend.buckets.find(
+      (b) => b.date === todayIso,
+    );
+    expect(todayBucket?.amount).toBe(1234);
   });
 });

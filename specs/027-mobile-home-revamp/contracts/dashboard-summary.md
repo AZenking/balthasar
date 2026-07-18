@@ -5,6 +5,8 @@
 **Spec ref**: [spec.md FR-001..FR-008](../spec.md) | **Data model**: [data-model.md §2.1-2.5](../data-model.md) | **Research**: [research.md R2/R4/R5/R6/R9](../research.md)
 
 > ⚠️ 宪章二禁止手写 OpenAPI 契约。tRPC 类型自动派生,本文件仅描述**行为契约**。相对 026 的变更用 **[027 变更]** 标注。
+>
+> 📌 **[030 更新]**:`expenseTrend` 语义自 030-home-trend-area-today 起改为**本周 Mon..Sun UTC 7 桶**(固定,不随 month 输入),`daily.current/previous/comparisonPercent` 与 `weekly` 历史月分支均不再使用;新增 `dayExpense: number | null`(当日 expense 净额 | 降级)。当前真相源见 [`specs/030-home-trend-area-today/contracts/dashboard-summary.md`](../../030-home-trend-area-today/contracts/dashboard-summary.md)。本文件保留为 027 历史快照。
 
 ## Procedure Signature
 
