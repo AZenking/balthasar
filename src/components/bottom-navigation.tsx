@@ -94,8 +94,8 @@ function NavEntry({ entry, active }: { entry: Entry; active: boolean }) {
       )}
     >
       {/* 选中态:顶部短指示条 + 图标背景药丸。
-          旧实现仅 font-semibold text-accent,浅色主题下 primary≈黑,
-          与 muted-foreground(中灰)差异极小,切换几乎看不出高亮。
+          旧实现仅 font-semibold text-accent,浅色主题下 accent≈黑,
+          与 text-muted(中灰)差异极小,切换几乎看不出高亮。
           补充可见指示后,两套主题下都能明确识别当前页。 */}
       {active && (
         <span
