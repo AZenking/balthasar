@@ -9,8 +9,8 @@
  *
  * 视觉规范:
  *   - min-h-[40vh]:占满中部区域,避免空白破碎感
- *   - 图标用 muted-foreground/50,避免抢夺主标题视觉重量
- *   - 标题用 foreground(默认正文色),描述用 muted-foreground
+ *   - 图标用 text-muted/50,避免抢夺主标题视觉重量
+ *   - 标题用 text-foreground(默认正文色),描述用 text-muted
  *   - 全部走 HeroUI CSS 变量,自动适配 dark / light
  */
 import { cn } from "@/lib/utils";
