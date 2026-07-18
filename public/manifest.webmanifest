@@ -37,6 +37,26 @@
       "type": "image/png",
       "purpose": "maskable"
     }
+  ],
+  "shortcuts": [
+    {
+      "name": "记一笔支出",
+      "short_name": "支出",
+      "description": "直接进入新建支出",
+      "url": "/transaction/new?type=expense"
+    },
+    {
+      "name": "记一笔收入",
+      "short_name": "收入",
+      "description": "直接进入新建收入",
+      "url": "/transaction/new?type=income"
+    },
+    {
+      "name": "记一笔转账",
+      "short_name": "转账",
+      "description": "直接进入新建转账",
+      "url": "/transaction/new?type=transfer"
+    }
   ]
 }
 

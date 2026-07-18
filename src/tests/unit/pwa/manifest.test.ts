@@ -103,4 +103,30 @@ describe("PWA manifest", () => {
     // 文件存在性
     await access(path.join(root, "public/pwa/icon-192-maskable.png"));
   });
+
+  // 032 R3: shortcuts —— 长按图标快速记账。url 支持 query,指向
+  // /transaction/new?type=expense|income|transfer(Drawer 不在路由层无法冷启动打开,
+  // 走既有全屏页)。name 必填,推荐 ≥ 12 字符(用"记一笔支出"而非"记支出"保险)。
+  // url MUST 在 scope "/" 内、同源。iOS 不支持(已知限制)。
+  it("declares shortcuts for quick new-expense / new-income (032 US3 / R3)", async () => {
+    const manifest = JSON.parse(
+      await readFile(path.join(root, "public/manifest.webmanifest"), "utf8")
+    ) as {
+      shortcuts?: Array<{ name?: string; url?: string }>;
+    };
+
+    expect(manifest.shortcuts).toBeDefined();
+    expect(manifest.shortcuts!.length).toBeGreaterThanOrEqual(2);
+
+    // 每条含 name + url,url 匹配 /transaction/new?type=(expense|income|transfer)
+    for (const sc of manifest.shortcuts!) {
+      expect(typeof sc.name).toBe("string");
+      expect(sc.name!.length).toBeGreaterThan(0);
+      expect(sc.url).toMatch(/^\/transaction\/new\?type=(expense|income|transfer)$/);
+    }
+
+    // 至少覆盖 expense + income 两种核心类型
+    const types = manifest.shortcuts!.map((sc) => sc.url!.split("=")[1]);
+    expect(types).toEqual(expect.arrayContaining(["expense", "income"]));
+  });
 });
