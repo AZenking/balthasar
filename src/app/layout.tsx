@@ -9,6 +9,9 @@ export const metadata: Metadata = {
   description: "10 秒记账,每天坚持。",
   applicationName: "BALTHASAR",
   manifest: "/manifest.webmanifest",
+  icons: {
+    apple: [{ url: "/pwa/icon-192.png", sizes: "192x192", type: "image/png" }],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

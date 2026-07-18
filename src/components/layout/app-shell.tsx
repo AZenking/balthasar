@@ -3,6 +3,8 @@
 import { Sidebar } from "./sidebar";
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { cn } from "@/lib/utils";
+import { ConnectivityAlert } from "@/components/pwa/connectivity-alert";
+import { usePwaRuntime } from "@/components/pwa/pwa-provider";
 
 /**
  * AppShell(026-switch 第一期 1:响应式 App Shell)。
@@ -43,6 +45,7 @@ export function AppShell({
   children: React.ReactNode;
   className?: string;
 }) {
+  const { connectivity } = usePwaRuntime();
   return (
     <div className="min-h-screen bg-background">
       {/* 桌面端侧栏:fixed 在左侧,移动端隐藏 */}
@@ -59,6 +62,7 @@ export function AppShell({
             className,
           )}
         >
+          <ConnectivityAlert connectivity={connectivity} />
           {children}
         </div>
       </main>
