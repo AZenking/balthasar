@@ -24,6 +24,8 @@ import {
 import { transactionType } from "@/server/db/schema";
 import { eq, and } from "drizzle-orm";
 import { transaction, account } from "@/server/db/schema";
+import { logger } from "@/lib/logger";
+import { getRequestContext } from "@/lib/request-context";
 
 /**
  * Transaction router (004-transaction) — 5 procedures:
@@ -112,7 +114,30 @@ export const transactionRouter = router({
             id: existing[0].id,
             familyId,
           });
-          if (existingFull) return serializeTransaction(existingFull);
+          if (existingFull) {
+            // 034-observability-logging (T037 / US3): emit idempotency.hit so
+            // operators can see retry/dedup activity in the log stream
+            // (depends on 033's clientRequestId — only fires when caller
+            // supplied one and it matched an existing row). `clientRequestId`
+            // is itself a client-generated uuid, non-sensitive (allowed in
+            // logs per spec FR-004 exception).
+            try {
+              logger.info(
+                {
+                  event: "idempotency.hit",
+                  path: "transaction.create",
+                  source: "domain",
+                  clientRequestId: input.clientRequestId,
+                  requestId: getRequestContext()?.requestId ?? null,
+                  userId: ctx.session.user.id,
+                },
+                "idempotent retry resolved to existing transaction",
+              );
+            } catch {
+              // fail-open: log errors must not break the dedup path (FR-010)
+            }
+            return serializeTransaction(existingFull);
+          }
           // 极端:SELECT 命中 id 但 getTransactionById 跨族查无 → 继续走新建
         }
       }
@@ -288,6 +313,23 @@ export const transactionRouter = router({
 
       const row = await getTransactionById({ id: input.id, familyId });
       if (!row) {
+        // FR-008 / US3: a NOT_FOUND here means either the row doesn't exist OR
+        // it exists but belongs to another family. From an audit standpoint
+        // both are "requester tried to read something they don't own" — emit
+        // a warn so a pattern of cross-family probes is visible to operators
+        // (the row's actual existence is NOT disclosed to the client, which
+        // still gets a generic NOT_FOUND).
+        logger.warn(
+          {
+            event: "authz.cross_family_attempt",
+            path: "transaction.get",
+            source: "domain",
+            requesterUserId: ctx.session.user.id,
+            resourceId: input.id,
+            requestId: getRequestContext()?.requestId ?? null,
+          },
+          "cross-family access attempt",
+        );
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "交易不存在",

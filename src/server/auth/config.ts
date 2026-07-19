@@ -6,6 +6,7 @@ import { env } from "@/lib/env";
 import { onUserCreated } from "@/server/auth/hooks/family-init";
 import { writeAuditEvent } from "@/server/auth/hooks/audit";
 import { registrationGate } from "@/server/auth/hooks/registration-gate";
+import { logger } from "@/lib/logger";
 
 /**
  * Curated schema for Better-Auth's drizzle adapter.
@@ -145,6 +146,49 @@ export const auth = betterAuth({
           }
         },
       },
+    },
+  },
+  /**
+   * 034-observability-logging (FR-014):接管 Better-Auth 的内部 logger。
+   *
+   * 按 spec Q6 Option C 分级转发:`error` / `warn` 级事件(session 验证失败、
+   * 插件错误、内部异常)转发到统一 logger(JSON 行 + requestId 关联,source:
+   * "better-auth"),进入与 tRPC 边界日志同一检索流;`info` / `debug` 级(session
+   * 续期等高频 trace)不转发,避免刷屏。
+   *
+   * `level: "warn"` 让 Better-Auth 仅在 warn/error 时调用 log 回调,我们再
+   * 二次分发到 pino 对应方法。回调内 try/catch 吞错(fail-open,FR-010)。
+   *
+   * research.md R4 已验证 Better-Auth 1.2.7 原生支持 logger.log/level 配置项
+   * (https://better-auth.com/docs/reference/options)。
+   */
+  logger: {
+    level: "warn",
+    log: (level, msg) => {
+      try {
+        // Lazy-require to avoid config → logger → request-context → ... cycle.
+        // Better-Auth log callback signature is (level, msg) — we route to
+        // the matching pino method. Unknown levels fall back to "info".
+        const fn =
+          level === "error"
+            ? logger.error
+            : level === "warn"
+              ? logger.warn
+              : level === "debug"
+                ? logger.debug
+                : logger.info;
+        // getRequestContext lazy import (same cycle-avoidance reason).
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { getRequestContext } = require("@/lib/request-context") as {
+          getRequestContext: () => { requestId: string } | null;
+        };
+        fn.call(logger, {
+          source: "better-auth",
+          requestId: getRequestContext()?.requestId ?? null,
+        }, msg);
+      } catch {
+        // fail-open: never let a log-write error break auth (FR-010)
+      }
     },
   },
   advanced: {

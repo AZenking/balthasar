@@ -5,6 +5,8 @@ import superjson from "superjson";
 import { auth } from "@/server/auth/config";
 import { headers } from "next/headers";
 import type { Session, User } from "@/server/db/schema";
+import { logger, isSlow } from "@/lib/logger";
+import { getRequestContext, setUserId } from "@/lib/request-context";
 import type { AppRouter } from "./root";
 
 /**
@@ -41,6 +43,12 @@ export async function createContext(opts?: Partial<FetchCreateContextFnOptions> 
     return { session: null };
   }
 
+  // 034-observability: propagate the (already-entered) requestId into the
+  // ALS store so downstream code (timingMiddleware, Better-Auth logger hook,
+  // Drizzle error wrapper) can correlate. The requestId itself is generated
+  // and entered by the HTTP handler in src/app/api/trpc/[trpc]/route.ts.
+  setUserId(result.user.id);
+
   return {
     session: {
       user: {
@@ -73,15 +81,95 @@ const t = initTRPC.context<CreateContext>().create({
 });
 
 /**
- * Public procedure — anyone (authed or not) can call.
+ * Timing + structured-log middleware (T013 / FR-005, FR-006).
+ *
+ * Mounted on every procedure (via publicProcedure / protectedProcedure below)
+ * so each call emits exactly one log record at completion:
+ *   - success + fast  → info  "request complete"
+ *   - success + slow  → warn  "slow request"   (FR-006, isSlow table)
+ *   - failure         → error "request failed" (code from tRPCError)
+ *
+ * requestId/userId are pulled from AsyncLocalStorage (set by route.ts and
+ * createContext). Outside HTTP scope (tests via createCaller, RSC server
+ * calls), the store may be null — we degrade to requestId:null rather than
+ * throw, so procedure tests still work without an ALS wrapper.
  */
-export const publicProcedure = t.procedure;
+const timingMiddleware = t.middleware(async ({ path, type, ctx, next }) => {
+  const start = performance.now();
+  const store = getRequestContext();
+  const requestId = store?.requestId ?? null;
+  const userId = store?.userId ?? ctx.session?.user.id ?? null;
+
+  // tRPC middleware contract: errors thrown by downstream middleware or the
+  // resolver are *caught* by callRecursive and surfaced as `{ ok: false,
+  // error }` — `await next()` resolves, it does not reject. We must inspect
+  // result.ok to distinguish success from failure (re-throwing would skip
+  // tRPC's own error formatting / propagate incorrectly).
+  const result = await next();
+  const durationMs = Math.round(performance.now() - start);
+
+  if (!result.ok) {
+    // FR-007: when the underlying cause is a PostgreSQL error (Drizzle
+    // wraps pg errors and re-throws as TRPCError INTERNAL_SERVER_ERROR),
+    // surface the SQLSTATE code so operators can diagnose constraint
+    // violations (23505 unique, 23503 FK, 08006 connection) without
+    // reading raw SQL params (never logged — redact handles user input,
+    // and we only pull `code` here, not `detail`/`message` which may
+    // contain values).
+    const cause = result.error.cause as { code?: string } | undefined;
+    const sqlState = cause?.code;
+    logger.error(
+      {
+        requestId,
+        userId,
+        path: path ?? null,
+        type,
+        durationMs,
+        code: result.error.code,
+        source: "trpc",
+        // sqlState present ⇒ underlying failure was a DB error routed up
+        // through Drizzle. Marking dbSource lets operators filter
+        // "Drizzle-driven" failures from tRPC-level ones.
+        ...(sqlState ? { sqlState, dbSource: "drizzle" } : {}),
+      },
+      "request failed",
+    );
+    // Pass the not-ok result through unchanged so tRPC's error formatter
+    // (errorFormatter in initTRPC.create) still runs and clients see the
+    // proper error shape.
+    return result;
+  }
+
+  const slow = isSlow(path, durationMs);
+  const level = slow ? "warn" : "info";
+  logger[level](
+    {
+      requestId,
+      userId,
+      path: path ?? null,
+      type,
+      durationMs,
+      source: "trpc",
+    },
+    slow ? "slow request" : "request complete",
+  );
+  return result;
+});
+
+/**
+ * Public procedure — anyone (authed or not) can call.
+ *
+ * Includes timingMiddleware for structured logging (FR-005/FR-006).
+ */
+export const publicProcedure = t.procedure.use(timingMiddleware);
 
 /**
  * Protected procedure — requires a valid session. Throws UNAUTHORIZED
  * if `ctx.session` is null (FR-012). T023 in tasks.md.
+ *
+ * Includes timingMiddleware for structured logging (FR-005/FR-006).
  */
-export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
+export const protectedProcedure = t.procedure.use(timingMiddleware).use(({ ctx, next }) => {
   if (!ctx.session) {
     throw new TRPCError({
       code: "UNAUTHORIZED",
