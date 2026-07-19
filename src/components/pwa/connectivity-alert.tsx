@@ -10,7 +10,9 @@ export function ConnectivityAlert({ connectivity }: { connectivity: Connectivity
         <Alert.Indicator />
         <Alert.Content>
           <Alert.Title>当前离线</Alert.Title>
-          <Alert.Description>账务操作未保存且不会排队。</Alert.Description>
+          <Alert.Description>
+            正在显示缓存数据，联网后自动刷新。
+          </Alert.Description>
         </Alert.Content>
       </Alert>
     );

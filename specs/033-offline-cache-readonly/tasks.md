@@ -44,9 +44,9 @@ description: "Task list for 033-offline-cache-readonly — 离线可读 + 写入
 
 ### Tests for Foundational(test-first)
 
-- [ ] T004 [P] 写 `src/tests/unit/offline/db-schema.test.ts`(node,fake-indexeddb 或纯函数抽 `buildSchema(version)`):断言 4 个 store 名(transactions/dashboard_summaries/pending_queue/meta)+ keyPath + index;断言 schemaVersion 不匹配时返回"丢弃重建"信号(纯函数 `shouldRebuild(metaVersion, currentVersion)`)
-- [ ] T005 写 `src/lib/offline/db.ts`(**FR-014 版本号**):动态 import `idb`(SSR 安全:`typeof indexedDB !== 'undefined'` 守卫);`openOfflineDB()` 打开 `balthasar-offline` v1,建 4 store + keyPath + index;`shouldRebuild()` + `deleteDatabase()` 流程(版本不匹配先删再开)
-- [ ] T006 跑 `pnpm test:unit src/tests/unit/offline/db-schema.test.ts` 确认 T004 转绿(纯函数层);T005 的 IDB 打开靠真机/jsdom 走查
+- [X] T004 [P] 写 `src/tests/unit/offline/db-schema.test.ts`(node,fake-indexeddb 或纯函数抽 `buildSchema(version)`):断言 4 个 store 名(transactions/dashboard_summaries/pending_queue/meta)+ keyPath + index;断言 schemaVersion 不匹配时返回"丢弃重建"信号(纯函数 `shouldRebuild(metaVersion, currentVersion)`)
+- [X] T005 写 `src/lib/offline/db.ts`(**FR-014 版本号**):动态 import `idb`(SSR 安全:`typeof indexedDB !== 'undefined'` 守卫);`openOfflineDB()` 打开 `balthasar-offline` v1,建 4 store + keyPath + index;`shouldRebuild()` + `deleteDatabase()` 流程(版本不匹配先删再开)
+- [X] T006 跑 `pnpm test:unit src/tests/unit/offline/db-schema.test.ts` 确认 T004 转绿(纯函数层);T005 的 IDB 打开靠真机/jsdom 走查
 
 **Checkpoint**: IDB 基础设施就位,Phase 3+ 可用。
 
@@ -88,20 +88,20 @@ description: "Task list for 033-offline-cache-readonly — 离线可读 + 写入
 
 ### Tests for US1/US3(test-first)
 
-- [ ] T017 [P] [US1] 写 `src/tests/unit/offline/cache-write.test.ts`(node,纯函数):`extractTransactionsForCache(trpcResponse)` 从 tRPC `transaction.list` 响应抽取交易数组 + 标 `cachedAt`;`filterByRetention(transactions, retentionDays, now)` 过滤 30 天外(纯函数)。断言边界(恰好 30 天/跨年/空数组)
-- [ ] T018 [P] [US1] 写 `src/tests/unit/offline/cache-read.test.ts`(node):`pickCachedSummary(familyId, year, month)` 与 `pickCachedTransactions(familyId, sinceDate)` 返回 IDB 数据或 null;断言 scope 隔离(不同 familyId 不串)
-- [ ] T019 [P] [US3] 写 `src/tests/unit/offline/offline-signal.test.ts`(node/jsdom):`useOfflineMode` 信号模块的三源逻辑(`navigator.onLine` + online/offline 事件 + TRPCClientError 嗅探)→ 断言各组合下 signal 值
-- [ ] T020 跑 `pnpm test:unit src/tests/unit/offline/cache-write.test.ts src/tests/unit/offline/cache-read.test.ts src/tests/unit/offline/offline-signal.test.ts` 确认 T017-T019 **红**(模块未实现)
+- [X] T017 [P] [US1] 写 `src/tests/unit/offline/cache-write.test.ts`(node,纯函数):`extractTransactionsForCache(trpcResponse)` 从 tRPC `transaction.list` 响应抽取交易数组 + 标 `cachedAt`;`filterByRetention(transactions, retentionDays, now)` 过滤 30 天外(纯函数)。断言边界(恰好 30 天/跨年/空数组)
+- [X] T018 [P] [US1] 写 `src/tests/unit/offline/cache-read.test.ts`(node):`pickCachedSummary(familyId, year, month)` 与 `pickCachedTransactions(familyId, sinceDate)` 返回 IDB 数据或 null;断言 scope 隔离(不同 familyId 不串)
+- [X] T019 [P] [US3] 写 `src/tests/unit/offline/offline-signal.test.ts`(node/jsdom):`useOfflineMode` 信号模块的三源逻辑(`navigator.onLine` + online/offline 事件 + TRPCClientError 嗅探)→ 断言各组合下 signal 值
+- [X] T020 跑 `pnpm test:unit src/tests/unit/offline/cache-write.test.ts src/tests/unit/offline/cache-read.test.ts src/tests/unit/offline/offline-signal.test.ts` 确认 T017-T019 **红**(模块未实现)
 
 ### Implementation for US1/US3
 
-- [ ] T021 [US1] 实现 `src/lib/offline/cache-write.ts`(**FR-001 缓存范围**):`writeCachedTransactions(familyId, list)` / `writeCachedSummary(familyId, year, month, summary)`(纯函数抽取 + IDB put);含 `extractTransactionsForCache` + `filterByRetention`
-- [ ] T022 [US1] 实现 `src/lib/offline/cache-read.ts`(**FR-002 断网回退、FR-003 network-first**):`readCachedTransactions(familyId, sinceDate)` / `readCachedSummary(familyId, year, month)`(IDB get,无缓存返回 null)
-- [ ] T023 [US3] 实现 `src/lib/offline/offline-signal.ts`(**FR-002 离线提示**):module-scope signal + `useOfflineMode()`(useSyncExternalStore)+ 三源喂入(`navigator.onLine`/online/offline/TRPCClientError 嗅探)
-- [ ] T024 [US1] 改 `src/lib/trpc/client.ts` 或 query 使用点(`src/app/(app)/dashboard/page.tsx` + `src/app/(app)/transactions/page.tsx`):给 `dashboard.summary` + `transaction.list` useQuery 加 `placeholderData: () => readCached...()`;`useEffect` on `q.data` → `writeCached...()`。`QueryClient` defaults 加 `retry: 断网时停`(research R2)
-- [ ] T025 [US3] 实现 `src/components/pwa/offline-banner.tsx`:读 `useOfflineMode()`,显示"离线模式"轻量提示。**宪章原则七**:先查 `/heroui-react`(T002),用 HeroUI Toast/banner slot
-- [ ] T026 [US1] 在 Dashboard / 流水页布局挂载 `<OfflineBanner />`
-- [ ] T027 跑 `pnpm test:unit src/tests/unit/offline/` 确认 T017-T019 转绿;`pnpm exec tsc --noEmit` + `pnpm build` 0 错
+- [X] T021 [US1] 实现 `src/lib/offline/cache-write.ts`(**FR-001 缓存范围**):`writeCachedTransactions(familyId, list)` / `writeCachedSummary(familyId, year, month, summary)`(纯函数抽取 + IDB put);含 `extractTransactionsForCache` + `filterByRetention`
+- [X] T022 [US1] 实现 `src/lib/offline/cache-read.ts`(**FR-002 断网回退、FR-003 network-first**):`readCachedTransactions(familyId, sinceDate)` / `readCachedSummary(familyId, year, month)`(IDB get,无缓存返回 null)
+- [X] T023 [US3] 实现 `src/lib/offline/offline-signal.ts`(**FR-002 离线提示**):module-scope signal + `useOfflineMode()`(useSyncExternalStore)+ 三源喂入(`navigator.onLine`/online/offline/TRPCClientError 嗅探)
+- [X] T024 [US1] 改 `src/lib/trpc/client.ts` 或 query 使用点(`src/app/(app)/dashboard/page.tsx` + `src/app/(app)/transactions/page.tsx`):给 `dashboard.summary` + `transaction.list` useQuery 加 `placeholderData: () => readCached...()`;`useEffect` on `q.data` → `writeCached...()`。`QueryClient` defaults 加 `retry: 断网时停`(research R2)
+- [X] T025 [US3] 实现 `src/components/pwa/offline-banner.tsx`:读 `useOfflineMode()`,显示"离线模式"轻量提示。**宪章原则七**:先查 `/heroui-react`(T002),用 HeroUI Toast/banner slot
+- [X] T026 [US1] 在 Dashboard / 流水页布局挂载 `<OfflineBanner />`
+- [X] T027 跑 `pnpm test:unit src/tests/unit/offline/` 确认 T017-T019 转绿;`pnpm exec tsc --noEmit` + `pnpm build` 0 错
 - [ ] T028 [US1] DevTools 走查(NEEDS-MANUAL):联网打开 Dashboard+流水(建缓存)→ Network Offline → 刷新,确认显示缓存 + banner;取消 Offline 刷新确认服务器最新;拦 `/api/trpc` 500 确认回退
 - [ ] T029 [US1] 提 PR-2:`feat(pwa): 033 离线可读 + network-first 兜底(US1/US3)`
 
