@@ -64,6 +64,13 @@
       "when": 1784082226072,
       "tag": "0008_old_kulan_gath",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1784424989044,
+      "tag": "0009_sour_hitman",
+      "breakpoints": true
     }
   ]
 }
