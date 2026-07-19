@@ -30,9 +30,9 @@ description: "Task list for 033-offline-cache-readonly — 离线可读 + 写入
 
 **Purpose**: 验证分支干净 + 查 heroui-react(UI 组件准备)+ baseline。
 
-- [ ] T001 验证当前分支 `033-offline-cache-readonly` 基于 main 最新(含 1.1.2 + PR #19 cleanup),`pnpm install` + `pnpm test:unit` 通过(确认 337 既有测试绿)
-- [ ] T002 [P] 先调 `/heroui-react` skill 取 HeroUI v3 关于 Toast/Badge/banner 的官方文档(为 US2 入队提示 + failed 徽标 + offline-banner 做准备,宪章原则七)。把要点缓存到会话上下文
-- [ ] T003 [P] 创建 `specs/033-offline-cache-readonly/baseline.md`,记录修复前 4 项现状(沿用 029/031/032 模式):(a) 完全断网能否看 Dashboard(预期:否,offline.html)(b) 能否记账(预期:报错)(c) IDB 使用(预期:无)(d) 后台同步(预期:无)。作为 after 对照
+- [X] T001 验证当前分支 `033-offline-cache-readonly` 基于 main 最新(含 1.1.2 + PR #19 cleanup),`pnpm install` + `pnpm test:unit` 通过(确认 337 既有测试绿)
+- [X] T002 [P] 先调 `/heroui-react` skill 取 HeroUI v3 关于 Toast/Badge/banner 的官方文档(为 US2 入队提示 + failed 徽标 + offline-banner 做准备,宪章原则七)。把要点缓存到会话上下文
+- [X] T003 [P] 创建 `specs/033-offline-cache-readonly/baseline.md`,记录修复前 4 项现状(沿用 029/031/032 模式):(a) 完全断网能否看 Dashboard(预期:否,offline.html)(b) 能否记账(预期:报错)(c) IDB 使用(预期:无)(d) 后台同步(预期:无)。作为 after 对照
 
 ---
 
@@ -146,20 +146,20 @@ description: "Task list for 033-offline-cache-readonly — 离线可读 + 写入
 
 ### Implementation for US4
 
-- [ ] T045 [P] [US4] 写 `src/tests/unit/offline/retention.test.ts`(node):`pruneOldTransactions(allTx, retentionDays, now)` 删除 occurredAt < now-retentionDays;断言边界(恰好保留期/全过/全留);`pruneOldSummaries(keepMonths)` 跨月清理
-- [ ] T046 [US4] 实现 `src/lib/offline/cleanup.ts`(**FR-010 空间管理**):`cleanupCache(retentionDays)` 调用 prune 函数 + IDB delete;触发时机:每次 app 启动 + 每次成功同步后(轻量)
-- [ ] T047 [US4] 跑测试确认 T045 转绿;tsc/build 0 错
+- [X] T045 [P] [US4] 写 `src/tests/unit/offline/retention.test.ts`(node):`pruneOldTransactions(allTx, retentionDays, now)` 删除 occurredAt < now-retentionDays;断言边界(恰好保留期/全过/全留);`pruneOldSummaries(keepMonths)` 跨月清理
+- [X] T046 [US4] 实现 `src/lib/offline/cleanup.ts`(**FR-010 空间管理**):`cleanupCache(retentionDays)` 调用 prune 函数 + IDB delete;触发时机:每次 app 启动 + 每次成功同步后(轻量)
+- [X] T047 [US4] 跑测试确认 T045 转绿;tsc/build 0 错
 - [ ] T048 [US4] DevTools 走查(NEEDS-MANUAL):脚本灌 100+ 笔跨 60 天 → IDB < 10MB;30 天外的不在缓存
 
 ### Polish & Cross-Cutting
 
-- [ ] T049 [P] 全量 `pnpm test:unit && pnpm test:procedure && pnpm test:integration` 确认既有 337 + 新增测试全绿
-- [ ] T050 [P] `pnpm build` + `pnpm lint` 0 error;Bundle 体积核查(idb ~3KB 增量 acceptable)
+- [X] T049 [P] 全量 `pnpm test:unit && pnpm test:procedure && pnpm test:integration` 确认既有 337 + 新增测试全绿
+- [X] T050 [P] `pnpm build` + `pnpm lint` 0 error;Bundle 体积核查(idb ~3KB 增量 acceptable)
 - [ ] T051 [P] 既有 PWA 回归(spec FR-015):SW 注册 / offline.html / 安装引导 / 更新流程 / 031 草稿 draft-storage 不破
 - [ ] T052 [P] 桌面端回归(SC-008):桌面 Chrome 网络切换/Offline 同样可用
 - [ ] T053 [P] 隐私回归(**FR-016 隐私一致**)(spec FR-016):privacy-lock 启用时,缓存数据在流水/Dashboard 同样不可见(不绕过)
 - [ ] T054 把 quickstart.md §3-7 走查结果回填 `specs/033-offline-cache-readonly/baseline.md` after 区块
-- [ ] T055 [P] 文档同步:`docs/AGENTS.md` 若需提离线能力则补;`docs/MVP.md` / ROADMAP 不改(离线是既有 MVP 可靠性增强)
+- [X] T055 [P] 文档同步:`docs/AGENTS.md` 若需提离线能力则补;`docs/MVP.md` / ROADMAP 不改(离线是既有 MVP 可靠性增强)
 - [ ] T056 [US4] 提 PR-4:`feat(pwa): 033 缓存空间管理 + Polish(US4)`(收尾,可发版)
 
 ---
