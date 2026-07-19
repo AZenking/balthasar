@@ -10,10 +10,11 @@ const root = path.resolve(__dirname, "../../../..");
  * 032-pwa-manifest-polish 改造(见 specs/032/research.md R1/R2/R5):
  * - R1: 主题色改中性深色 #2a2a2d(dark_theme_color 字段不存在,只能单一 background_color)
  * - R2: id 用 URL 形式(推荐 /?balthasar,裸字符串不合规)
+ * - R4: screenshots 同时覆盖 narrow + wide 安装预览
  * - R5: 192 加独立 maskable 条目
  *
  * 既有契约(start_url/scope/display/图标存在性)回归保护不变。
- * shortcuts(C3)/screenshots(C4)断言在 Phase 4/5(US3/US4)再加。
+ * shortcuts(C3)/screenshots(C4)分别覆盖 US3/US4。
  */
 describe("PWA manifest", () => {
   it("declares stable standalone navigation and static application icons", async () => {
@@ -128,5 +129,40 @@ describe("PWA manifest", () => {
     // 至少覆盖 expense + income 两种核心类型
     const types = manifest.shortcuts!.map((sc) => sc.url!.split("=")[1]);
     expect(types).toEqual(expect.arrayContaining(["expense", "income"]));
+  });
+
+  // 032 R4: 安装预览同时服务移动端与桌面端。每条资源必须声明完整元数据，
+  // 且文件实际存在，避免 manifest 可解析但安装弹窗请求 404。
+  it("declares accessible narrow and wide screenshots (032 US4 / R4)", async () => {
+    const manifest = JSON.parse(
+      await readFile(path.join(root, "public/manifest.webmanifest"), "utf8")
+    ) as {
+      screenshots?: Array<{
+        src?: string;
+        sizes?: string;
+        type?: string;
+        form_factor?: "narrow" | "wide";
+        label?: string;
+      }>;
+    };
+
+    expect(manifest.screenshots).toBeDefined();
+    expect(manifest.screenshots!.length).toBeGreaterThanOrEqual(2);
+    expect(manifest.screenshots).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ form_factor: "narrow" }),
+        expect.objectContaining({ form_factor: "wide" }),
+      ]),
+    );
+
+    await Promise.all(
+      manifest.screenshots!.map(async (screenshot) => {
+        expect(screenshot.src).toMatch(/^\/pwa\/screenshots\/.+\.(png|webp)$/);
+        expect(screenshot.sizes).toMatch(/^\d+x\d+$/);
+        expect(screenshot.type).toMatch(/^image\/(png|webp)$/);
+        expect(screenshot.label).toBeTruthy();
+        await access(path.join(root, "public", screenshot.src!));
+      }),
+    );
   });
 });

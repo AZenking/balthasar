@@ -3,9 +3,8 @@ import { ImageResponse } from "next/og";
 /**
  * Favicon / `<link rel="icon">` generator (Next.js file convention).
  *
- * Renders the BALTHASAR mark from code via `next/og` (Satori) so the repo
- * carries zero binary icon assets: amber `#C79032` square + white lucide
- * `Wallet` stroke icon. This route is fixed at 32×32 by the Next icon
+ * Renders the BALTHASAR mark from code via `next/og` (Satori): a HeroUI-blue
+ * square with the ivory B / household-ledger monogram. This route is fixed at 32×32 by the Next icon
  * convention (the `size` export) and drives the browser-tab favicon.
  *
  * For the multi-size icons the PWA manifest needs (192 / 512 / maskable),
@@ -19,20 +18,20 @@ export const size = { width: 32, height: 32 };
 export const contentType = "image/png";
 
 /**
- * Shared icon JSX factory. Kept here so `icon.tsx`, `apple-icon.tsx`, and
- * `pwa-icons/[size]/route.ts` render an identical mark.
+ * Shared icon JSX factory. The same geometry lives in the SVG masters under
+ * `public/pwa/`; keeping it inline here lets Next render a crisp favicon.
  *
  * `glyphScale` is the fraction of the canvas the Wallet glyph occupies;
  * maskable variants use a smaller scale to stay inside the safe zone.
  *
- * Lucide `Wallet` paths inlined (verbatim, lucide-react v1.23.0, ISC)
- * rather than importing the React component — Satori renders raw SVG and
- * we avoid pulling client deps into the edge route.
+ * The mark combines a geometric B, two ledger-page edges, and one transaction
+ * dot. Broad counters and a two-colour palette keep it readable at 32 px.
  */
-export const WALLET_PATHS = [
-  "M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1",
-  "M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4",
-];
+export const BALTHASAR_B_PATH =
+  "M174 96h112c77 0 124 36 124 99 0 35-17 62-51 78 40 15 63 47 63 89 0 68-49 102-130 102H174V96Zm68 64v84h40c42 0 65-14 65-42s-23-42-65-42h-40Zm0 144v96h49c44 0 68-16 68-48s-24-48-68-48h-49Z";
+
+export const BALTHASAR_PAGES_PATH =
+  "M86 144 156 96l18 30-54 36v258H86V144Zm40 32 48-32v38l-14 10v248h-34V176Z";
 
 export function renderIcon({
   size,
@@ -52,22 +51,19 @@ export function renderIcon({
           justifyContent: "center",
           // No border-radius: PWA/maskable icons must be full-bleed squares;
           // the OS applies its own mask (circle/squircle).
-          background: "#C79032",
+          // HeroUI default accent: oklch(62.04% 0.195 253.83).
+          background: "#0485F7",
         }}
       >
         <svg
           width={`${glyphScale * 100}%`}
           height={`${glyphScale * 100}%`}
-          viewBox="0 0 24 24"
+          viewBox="0 0 512 512"
           fill="none"
-          stroke="white"
-          strokeWidth={2}
-          strokeLinecap="round"
-          strokeLinejoin="round"
         >
-          {WALLET_PATHS.map((d) => (
-            <path key={d} d={d} />
-          ))}
+          <path d={BALTHASAR_PAGES_PATH} fill="#FFF8EB" />
+          <path d={BALTHASAR_B_PATH} fill="#FFF8EB" fillRule="evenodd" />
+          <circle cx="324" cy="352" r="15" fill="#FFF8EB" />
         </svg>
       </div>
     ),
@@ -76,5 +72,5 @@ export function renderIcon({
 }
 
 export default function Icon() {
-  return renderIcon({ size: 32, glyphScale: 0.6 });
+  return renderIcon({ size: 32, glyphScale: 0.8 });
 }

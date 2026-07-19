@@ -1,7 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" fill="#C79032"/>
-  <g fill="none" stroke="#fff" stroke-width="42" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M405 149V96a21 21 0 0 0-21-21H117a43 43 0 0 0 0 85h309a21 21 0 0 1 21 21v85h-64a43 43 0 0 0 0 86h64a21 21 0 0 0 21-21v-43a21 21 0 0 0-21-21"/>
-    <path d="M64 117v299a43 43 0 0 0 43 43h320a21 21 0 0 0 21-21v-86"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="BALTHASAR logo">
+  <rect width="512" height="512" fill="#0485F7"/>
+  <!-- Two page edges turn the B monogram into a compact household ledger. -->
+  <path fill="#FFF8EB" d="M86 144 156 96l18 30-54 36v258H86V144Zm40 32 48-32v38l-14 10v248h-34V176Z"/>
+  <!-- Geometric B: the two counters remain broad and legible at favicon size. -->
+  <path
+    fill="#FFF8EB"
+    fill-rule="evenodd"
+    d="M174 96h112c77 0 124 36 124 99 0 35-17 62-51 78 40 15 63 47 63 89 0 68-49 102-130 102H174V96Zm68 64v84h40c42 0 65-14 65-42s-23-42-65-42h-40Zm0 144v96h49c44 0 68-16 68-48s-24-48-68-48h-49Z"
+  />
+  <!-- A single recorded transaction, expressed as the wallet's fastening dot. -->
+  <circle cx="324" cy="352" r="15" fill="#FFF8EB"/>
 </svg>

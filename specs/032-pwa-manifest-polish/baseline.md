@@ -54,7 +54,8 @@
 ## 修复后(AFTER,v1.1.2 已发布 + 真机验证通过)
 
 > 2026-07-18:v1.1.2 已发布(Docker 镜像 `app:1.1.2` 上线),US1/US2/US3/US5
-> 真机验证通过(用户确认)。US4(screenshots)未实现,延后。
+> 真机验证通过(用户确认)。同日补齐 US4 的 3 张 production 截图、manifest 声明与
+> 契约测试；Chrome 安装弹窗展示仍待 T028 真机确认。
 
 ### MVP(US1 + US2 + US5)— ✅ 验证通过
 
@@ -64,7 +65,7 @@
 | `id` | `"/"` | `/?balthasar` | ✅ manifest 契约测试断言 + DevTools 可辨识 |
 | 192 `maskable` | 无 | 独立条目 `purpose: "maskable"` | ✅ manifest 契约测试断言 + 图标渲染正常 |
 | 深色模式启动 | 白闪 | 中性深色 `#2a2a2d` 无白闪 | ✅ 真机验证通过 |
-| manifest 测试 | 1 passed | **5 passed**(id + 主题色 + 192 maskable + shortcuts + 既有) | ✅ `pnpm test:unit manifest.test.ts` |
+| manifest 测试 | 1 passed | **6 passed**(id + 主题色 + 192 maskable + shortcuts + screenshots + 既有) | ✅ `pnpm test:unit manifest.test.ts` |
 
 ### US3(shortcuts)— ✅ 验证通过(PR #18 / v1.1.2)
 
@@ -73,12 +74,13 @@
 | `shortcuts` 数组 | 无 | 3 条(记支出/收入/转账) | ✅ manifest 契约测试断言 + 真机长按图标出现 |
 | 预选类型配套 | n/a | `TransactionForm.defaultType` + page 读 type query + `parseDefaultType` | ✅ 单元测试(4)+ 真机点击 shortcut 预选正确 |
 
-### US4(screenshots)— ⏸ 未实现(延后,NEEDS-MANUAL 制图)
+### US4(screenshots)— 🟡 资源与契约完成，安装弹窗待真机确认
 
-| 项 | BEFORE | AFTER(目标) | 状态 |
+| 项 | BEFORE | AFTER | 状态 |
 |---|---|---|---|
-| `screenshots` 数组 | 无 | ≥2 张(narrow + wide) | ⏸ 未做(T026) |
-| 截图资源 | 无 | 3 张 PNG/WebP(< 200KB/张) | ⏸ 需人工制图(T025) |
+| `screenshots` 数组 | 无 | 3 条(2 narrow + 1 wide，含完整元数据) | ✅ manifest 契约测试通过(T026/T027) |
+| 截图资源 | 无 | 2×1080×1920 PNG + 1×1920×1080 WebP | ✅ 169872 / 85817 / 26160 bytes，均 < 200KB(T025) |
+| Chrome 安装弹窗 | 仅图标+名字 | 展示 ≥2 张产品截图 | ⏳ 待 T028 真机确认 |
 
 ### 回归
 
