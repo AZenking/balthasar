@@ -10,6 +10,10 @@ import { BudgetProgress } from "@/components/dashboard/budget-progress";
 import { AssetOverview } from "@/components/dashboard/asset-overview";
 import { CategoryTopList } from "@/components/dashboard/category-top-list";
 import type { ExpenseTrend } from "@/components/dashboard/expense-trend-chart";
+import {
+  useOfflineSummaryPlaceholder,
+  useWriteBackSummary,
+} from "@/lib/offline/use-offline-cache";
 import { RecentTransactions } from "@/components/dashboard/recent-transactions";
 import { isPrivacyOn } from "@/lib/privacy";
 
@@ -66,10 +70,23 @@ function currentUtcYearMonth(): { year: number; month: number } {
 export default function DashboardPage() {
   const [yearMonth, setYearMonth] = useState(currentUtcYearMonth);
 
-  const summaryQuery = trpc.dashboard.summary.useQuery({
-    year: yearMonth.year,
-    month: yearMonth.month,
-  });
+  const summaryPlaceholder = useOfflineSummaryPlaceholder(
+    yearMonth.year,
+    yearMonth.month,
+  );
+  const summaryQuery = trpc.dashboard.summary.useQuery(
+    {
+      year: yearMonth.year,
+      month: yearMonth.month,
+    },
+    {
+      // 033 US1/US3 network-first 兜底:服务器失败时用 IDB 缓存作 placeholder。
+      // 运行时 shape 与 writeCachedSummary 写入一致;cast 安抚 tRPC 泛型。
+      placeholderData: summaryPlaceholder as never,
+    },
+  );
+  // 033 US1:服务器成功后异步写回 IDB(下次离线时可兜底)
+  useWriteBackSummary(yearMonth.year, yearMonth.month, summaryQuery.data);
 
   // 030 US2:移除上月 summary 查询与环比徽标(本周窗口下"较上月"语义不成立,
   // FR-009 / Clarification Q4)。原 prevSummaryQuery / comparisonPercent 已删除
