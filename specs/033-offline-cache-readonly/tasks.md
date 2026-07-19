@@ -160,7 +160,7 @@ description: "Task list for 033-offline-cache-readonly — 离线可读 + 写入
 - [ ] T053 [P] 隐私回归(**FR-016 隐私一致**)(spec FR-016):privacy-lock 启用时,缓存数据在流水/Dashboard 同样不可见(不绕过)
 - [ ] T054 把 quickstart.md §3-7 走查结果回填 `specs/033-offline-cache-readonly/baseline.md` after 区块
 - [X] T055 [P] 文档同步:`docs/AGENTS.md` 若需提离线能力则补;`docs/MVP.md` / ROADMAP 不改(离线是既有 MVP 可靠性增强)
-- [ ] T056 [US4] 提 PR-4:`feat(pwa): 033 缓存空间管理 + Polish(US4)`(收尾,可发版)
+- [X] T056 [US4] 提 PR-4:`feat(pwa): 033 缓存空间管理 + Polish(US4)`(收尾,可发版)
 
 ---
 
