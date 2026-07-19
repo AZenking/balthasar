@@ -1,0 +1,2 @@
+ALTER TABLE "transactions" ADD COLUMN "client_request_id" text;--> statement-breakpoint
+CREATE UNIQUE INDEX "transactions_family_client_request_idx" ON "transactions" USING btree ("family_id","client_request_id");

@@ -42,6 +42,10 @@ const TRANSFER_CATEGORY_ID = "6206a8ba-b706-51ee-ace0-39299f1e39d5";
 
 // 027 US4 (C2 决策):退款 = type='expense' + isRefund=true,procedure 跳过
 // applySign、直接存 +abs(amount)。applySign 函数本身不改。
+//
+// 033 US0 / R3:clientRequestId 可选,客户端幂等键。Background Sync retry /
+// 前台 flush 竞态导致重复提交时,procedure 返回既有 transaction 而非新建。
+// 三个 type variant 都加(用 z.intersection 不够干净,改用 base + per-type)。
 const createInput = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("income"),
@@ -50,6 +54,7 @@ const createInput = z.discriminatedUnion("type", [
     amount: z.number().int().positive("金额必须 > 0"),
     remark: z.string().max(REMARK_MAX_LENGTH).optional(),
     occurredAt: z.string().datetime().optional(),
+    clientRequestId: z.string().uuid().optional(),
   }),
   z.object({
     type: z.literal("expense"),
@@ -59,6 +64,7 @@ const createInput = z.discriminatedUnion("type", [
     isRefund: z.boolean().default(false), // C2: 退款标志
     remark: z.string().max(REMARK_MAX_LENGTH).optional(),
     occurredAt: z.string().datetime().optional(),
+    clientRequestId: z.string().uuid().optional(),
   }),
   z.object({
     type: z.literal("transfer"),
@@ -68,6 +74,7 @@ const createInput = z.discriminatedUnion("type", [
     remark: z.string().max(REMARK_MAX_LENGTH).optional(),
     occurredAt: z.string().datetime().optional(),
     // transfer 无需 categoryId —— procedure 强制用 TRANSFER_CATEGORY_ID(M3)
+    clientRequestId: z.string().uuid().optional(),
   }),
 ]);
 
@@ -83,6 +90,32 @@ export const transactionRouter = router({
       const { familyId, memberId } = await loadFamilyAndMemberIdsByUserId(
         ctx.session.user.id
       );
+
+      // 033 US0 / R3:幂等去重。clientRequestId 命中既有 transaction → 直接返回
+      // (不报错,retry 幂等)。Background Sync retry / 前台 flush 竞态导致重复提交
+      // 时,这是财务完整性的硬保证(重复记账 = 余额错)。
+      // 注:并发漏过此 SELECT 时,由 transactions_family_client_request_idx 唯一
+      // 索引兜底(见 schema);INSERT 失败的分支在 withTransaction 内 catch 回退。
+      if (input.clientRequestId) {
+        const existing = await db
+          .select({ id: transaction.id })
+          .from(transaction)
+          .where(
+            and(
+              eq(transaction.familyId, familyId),
+              eq(transaction.clientRequestId, input.clientRequestId),
+            ),
+          )
+          .limit(1);
+        if (existing[0]) {
+          const existingFull = await getTransactionById({
+            id: existing[0].id,
+            familyId,
+          });
+          if (existingFull) return serializeTransaction(existingFull);
+          // 极端:SELECT 命中 id 但 getTransactionById 跨族查无 → 继续走新建
+        }
+      }
 
       const occurredAt = input.occurredAt ? new Date(input.occurredAt) : new Date();
       const occurredCheck = validateOccurredAt(occurredAt);
@@ -168,16 +201,49 @@ export const transactionRouter = router({
           }
         }
 
-        const row = await insertTransaction(tx, {
-          familyId,
-          type: input.type,
-          accountId: input.accountId,
-          toAccountId,
-          categoryId,
-          amount: signedAmount,
-          remark,
-          occurredAt,
-        });
+        // 033 R3:并发兜底。两个并发 create 漏过外层 SELECT 时,第二个 INSERT 触发
+        // 唯一索引 → catch 后回退返回既有(不抛错给客户端,retry 幂等)。
+        let row: typeof transaction.$inferSelect;
+        try {
+          row = await insertTransaction(tx, {
+            familyId,
+            type: input.type,
+            accountId: input.accountId,
+            toAccountId,
+            categoryId,
+            amount: signedAmount,
+            remark,
+            occurredAt,
+            clientRequestId: input.clientRequestId ?? null,
+          });
+        } catch (err) {
+          if (
+            input.clientRequestId &&
+            err instanceof Error &&
+            /transactions_family_client_request_idx/i.test(err.message)
+          ) {
+            // 唯一索引冲突 → 并发对手已建,回退返回既有
+            const raced = await tx
+              .select({ id: transaction.id })
+              .from(transaction)
+              .where(
+                and(
+                  eq(transaction.familyId, familyId),
+                  eq(transaction.clientRequestId, input.clientRequestId),
+                ),
+              )
+              .limit(1);
+            if (raced[0]) {
+              const racedFull = await getTransactionById({
+                id: raced[0].id,
+                familyId,
+              });
+              // 与外层流程一致 serialize 后返回(retry 幂等响应)
+              if (racedFull) return serializeTransaction(racedFull);
+            }
+          }
+          throw err;
+        }
 
         await writeTransactionEvent(tx, {
           eventType: "transaction_created",
