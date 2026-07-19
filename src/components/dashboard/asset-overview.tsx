@@ -26,9 +26,10 @@ type AssetsSummary = {
   accountCount: number;
 };
 
-export function AssetOverview({ assets }: { assets: AssetsSummary | null }) {
-  // null = 查询失败降级
-  if (assets === null) {
+export function AssetOverview({ assets }: { assets: AssetsSummary | null | undefined }) {
+  // null = server 查询失败降级;undefined = IDB placeholder 缺字段(pre-027
+  // 旧缓存或写入残缺)。两者均按降级渲染,服务器新鲜响应到达后自动覆盖。
+  if (assets == null) {
     return (
       <section aria-label="资产概览" className="pt-4">
         <Card>

@@ -46,7 +46,8 @@ export type ExpenseTrend =
   | { granularity: "weekly"; buckets: WeeklyBucket[] };
 
 interface Props {
-  trend: ExpenseTrend;
+  // undefined 防御:033 离线缓存的旧版 summary 可能缺此字段。
+  trend?: ExpenseTrend;
   /** 卡片标题;不传则不渲染标题行。 */
   title?: string;
   /**
@@ -195,6 +196,11 @@ function WeeklyTooltip({
 // ─── 主组件 ────────────────────────────────────────────────────────────
 
 export function ExpenseTrendChart({ trend, title, isPrivacy }: Props) {
+  // nullish 防御:033 IDB placeholder 可能不带 trend 字段(pre-027 旧缓存)。
+  // 缺失时静默不渲染(section 不出现),服务器新鲜响应到达后自动补齐。
+  if (!trend) {
+    return null;
+  }
   return (
     <section className="w-full" aria-label="本月支出趋势">
       {title ? (

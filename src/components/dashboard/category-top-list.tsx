@@ -34,13 +34,17 @@ export function CategoryTopList({
   items,
   yearMonth,
 }: {
-  items: CategoryTopItem[];
+  // undefined 防御:033 离线缓存的旧版 summary 可能缺此字段
+  // (placeholderData 注入)。降级为空数组等同"本月暂无支出"。
+  items?: CategoryTopItem[];
   yearMonth: { year: number; month: number };
 }) {
   const monthKey = `${yearMonth.year}-${String(yearMonth.month).padStart(2, "0")}`;
+  // nullish coalesce → [] (pre-027 stale cache may omit this field)
+  const safeItems = items ?? [];
 
   // 进度条宽度相对最大分类(非 monthExpense),让 Top4 视觉差异更明显。
-  const maxAmount = items.length > 0 ? Math.max(...items.map((i) => i.amount)) : 0;
+  const maxAmount = safeItems.length > 0 ? Math.max(...safeItems.map((i) => i.amount)) : 0;
 
   return (
     <section aria-label="支出分类" className="pt-4">
@@ -48,7 +52,7 @@ export function CategoryTopList({
         <Card.Content className="p-4">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-medium text-foreground">支出分类</h2>
-            {items.length > 0 && (
+            {safeItems.length > 0 && (
               <a
                 href="/transactions?type=expense"
                 className="text-xs text-muted hover:text-foreground"
@@ -57,11 +61,11 @@ export function CategoryTopList({
               </a>
             )}
           </div>
-          {items.length === 0 ? (
+          {safeItems.length === 0 ? (
             <p className="text-xs text-muted">本月暂无支出</p>
           ) : (
             <ul className="space-y-3">
-              {items.slice(0, 3).map((item) => {
+              {safeItems.slice(0, 3).map((item) => {
                 const widthPct = maxAmount > 0 ? (item.amount / maxAmount) * 100 : 0;
                 const href = `/transactions?month=${monthKey}&type=expense&categoryId=${item.categoryId}`;
                 return (

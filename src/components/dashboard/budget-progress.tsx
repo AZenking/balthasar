@@ -47,7 +47,9 @@ export function BudgetProgress({
   monthExpense,
   yearMonth,
 }: {
-  budget: BudgetSummary | null;
+  // null = server explicitly returned degraded; undefined = IDB placeholder
+  // missing the field (stale cache from pre-027). Both render the fallback.
+  budget: BudgetSummary | null | undefined;
   monthExpense: number;
   yearMonth: { year: number; month: number };
 }) {
@@ -86,8 +88,11 @@ export function BudgetProgress({
     );
   };
 
-  // null = 查询失败降级(SC-008)
-  if (budget === null) {
+  // null = 查询失败降级(SC-008);undefined = placeholder 缓存为旧版 shape
+  // (027 之前的 IDB row 未含 budget 字段)或写入残缺。两者均按降级渲染,
+  // 不让 BudgetProgress 崩 —— 这是从 033 离线缓存恢复路径带回的字段缺失,
+  // 服务器新鲜响应到达后会自动 invalidate 覆盖。
+  if (budget == null || budget.status == null) {
     return (
       <section aria-label="预算进度" className="pt-4">
         <Card>

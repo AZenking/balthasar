@@ -38,7 +38,8 @@ export function RecentTransactions({
   isLoading,
   maxItems,
 }: {
-  transactions: Transaction[];
+  // undefined 防御:033 离线缓存的旧版 summary 可能缺此字段。
+  transactions?: Transaction[];
   isLoading: boolean;
   maxItems?: number;
 }) {
@@ -52,7 +53,9 @@ export function RecentTransactions({
     );
   }
 
-  if (transactions.length === 0) {
+  // nullish coalesce → [] (pre-027 stale cache may omit this field)
+  const safeTransactions = transactions ?? [];
+  if (safeTransactions.length === 0) {
     return (
       <EmptyState
         icon={ReceiptText}
@@ -69,7 +72,7 @@ export function RecentTransactions({
     return d.toLocaleDateString("zh-CN", { month: "short", day: "numeric" });
   };
 
-  const displayItems = maxItems ? transactions.slice(0, maxItems) : transactions;
+  const displayItems = maxItems ? safeTransactions.slice(0, maxItems) : safeTransactions;
 
   return (
     <ListBox
