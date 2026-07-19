@@ -134,7 +134,7 @@ description: "Task list for 033-offline-cache-readonly — 离线可读 + 写入
 - [X] T041 跑测试 + tsc + build 确认全绿
 - [ ] T042 [US2] DevTools 走查(NEEDS-MANUAL):Offline 记 3 笔 → IDB pending_queue 3 条 → 取消 Offline + Manual sync trigger → 全部提交、队列空、流水出 3 笔;拦 500 看重试;改 cookie 无效看 401 立即 failed;幂等(拦第一次响应 + 重试)看 DB 不重复
 - [ ] T043 [US2] iOS 走查(NEEDS-MANUAL):iPhone Safari PWA → 飞行模式记 1 笔 → 关飞行模式不操作(不立即同步,已知)→ 打开 app → 前台 flush → 提交成功
-- [ ] T044 [US2] 提 PR-3:`feat(pwa): 033 断网记账队列 + Background Sync(US2)`
+- [X] T044 [US2] 提 PR-3:`feat(pwa): 033 断网记账队列 + Background Sync(US2)`
 
 **Checkpoint**: 离线可读 + 可写 + 同步就位。feature 主体完成。
 
