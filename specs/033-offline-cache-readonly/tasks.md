@@ -103,7 +103,7 @@ description: "Task list for 033-offline-cache-readonly — 离线可读 + 写入
 - [X] T026 [US1] 在 Dashboard / 流水页布局挂载 `<OfflineBanner />`
 - [X] T027 跑 `pnpm test:unit src/tests/unit/offline/` 确认 T017-T019 转绿;`pnpm exec tsc --noEmit` + `pnpm build` 0 错
 - [ ] T028 [US1] DevTools 走查(NEEDS-MANUAL):联网打开 Dashboard+流水(建缓存)→ Network Offline → 刷新,确认显示缓存 + banner;取消 Offline 刷新确认服务器最新;拦 `/api/trpc` 500 确认回退
-- [ ] T029 [US1] 提 PR-2:`feat(pwa): 033 离线可读 + network-first 兜底(US1/US3)`
+- [X] T029 [US1] 提 PR-2:`feat(pwa): 033 离线可读 + network-first 兜底(US1/US3)`
 
 **Checkpoint**: 离线可读 + network-first 就位。
 
