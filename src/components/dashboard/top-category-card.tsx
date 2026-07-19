@@ -36,8 +36,9 @@ export interface TopCategory {
 }
 
 export interface TopCategoryCardProps {
-  /** Top expense categories, length ≤ 2 (caller responsibility). */
-  items: TopCategory[];
+  /** Top expense categories, length ≤ 2 (caller responsibility).
+   *  Optional for resilience against stale IDB placeholder (033). */
+  items?: TopCategory[];
   /** The year/month the figures belong to — used to build the drill-down URL. */
   yearMonth: { year: number; month: number };
   /**
@@ -71,7 +72,9 @@ export function TopCategoryCard({
 }: TopCategoryCardProps) {
   const router = useRouter();
 
-  if (items.length === 0) {
+  // nullish coalesce → [] (033 离线缓存的旧版 summary 可能缺此字段)
+  const safeItems = items ?? [];
+  if (safeItems.length === 0) {
     return (
       <div className="px-4 py-4">
         <Card>
@@ -94,9 +97,9 @@ export function TopCategoryCard({
   return (
     <div
       className="grid gap-2 px-4 pt-4"
-      style={{ gridTemplateColumns: `repeat(${items.length}, minmax(140px, 1fr))` }}
+      style={{ gridTemplateColumns: `repeat(${safeItems.length}, minmax(140px, 1fr))` }}
     >
-      {items.map((c) => (
+      {safeItems.map((c) => (
         <Card
           key={c.categoryId}
           role="button"

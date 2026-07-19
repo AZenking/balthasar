@@ -11,8 +11,10 @@ interface CategoryItem {
   percentage: number;
 }
 
-export function CategoryBreakdown({ items }: { items: CategoryItem[] }) {
-  if (items.length === 0) {
+export function CategoryBreakdown({ items }: { items?: CategoryItem[] }) {
+  // nullish coalesce → [] (033 离线缓存的旧版 summary 可能缺此字段)
+  const safeItems = items ?? [];
+  if (safeItems.length === 0) {
     return (
       <EmptyState
         icon={PieChart}
@@ -27,7 +29,7 @@ export function CategoryBreakdown({ items }: { items: CategoryItem[] }) {
 
   return (
     <div className="space-y-2 px-4">
-      {items.map((c) => (
+      {safeItems.map((c) => (
         <div key={c.categoryId}>
           <div className="flex items-center justify-between text-sm">
             <span className="flex items-center gap-1">
