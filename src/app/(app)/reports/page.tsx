@@ -64,6 +64,46 @@ function computeMonthlyTrend(
   }));
 }
 
+/**
+ * 月模式:按日聚合趋势(1 号至月末,当月截至今日)。
+ *
+ * - 历史月(已过完):返回 1..28/30/31 全月桶
+ * - 当月:返回 1..今日 桶(未来日不渲染,避免误导)
+ * - 仅聚合 type=expense 的交易(amount 取绝对值)
+ *
+ * 与 `computeMonthlyTrend`(年模式 12 桶)对应,粒度不同但 shape 一致,
+ * 直接喂给 ExpenseTrendChart 的 daily 视图(M/D X 轴 + 柱状)。
+ */
+function computeMonthlyDailyTrend(
+  txs: Array<{ type: string; amount: number; occurredAt: string | Date }>,
+  year: number,
+  month: number,
+): Array<{ date: string; amount: number }> {
+  // 该月总天数(UTC,与后端 getUtcMonthRange 对齐)
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  // 当月时只渲染到今日,历史月渲染满月
+  const now = new Date();
+  const isCurrentMonth =
+    year === now.getUTCFullYear() && month === now.getUTCMonth() + 1;
+  const lastDay = isCurrentMonth ? now.getUTCDate() : daysInMonth;
+
+  const byDay = new Array(daysInMonth).fill(0) as number[];
+  for (const t of txs) {
+    if (t.type !== "expense") continue;
+    const d = typeof t.occurredAt === "string" ? new Date(t.occurredAt) : t.occurredAt;
+    if (d.getUTCFullYear() === year && d.getUTCMonth() + 1 === month) {
+      byDay[d.getUTCDate() - 1] += Math.abs(t.amount);
+    }
+  }
+  // 截断到 lastDay(当月截至今日;历史月 lastDay === daysInMonth)
+  return byDay
+    .slice(0, lastDay)
+    .map((amount, dayIdx) => ({
+      date: `${year}-${String(month).padStart(2, "0")}-${String(dayIdx + 1).padStart(2, "0")}`,
+      amount,
+    }));
+}
+
 export default function ReportsPage() {
   const router = useRouter();
   const [period, setPeriod] = useState<StatsPeriod>("month");
@@ -168,7 +208,9 @@ export default function ReportsPage() {
     return days > 0 ? Math.round(targetExpense / days) : 0;
   }, [period, targetExpense, isCurrentMonth, endYearMonth]);
 
-  // 趋势:月模式用 summary daily;年模式按月聚合(12 桶)
+  // 趋势:月模式按日聚合(1..今日/月末);年模式按月聚合(12 桶)。
+  // 月模式不再用 summaryData.expenseTrend(那是 dashboard 的本周窗口,
+  // 语义不对应"报表月维度");改为从本页 periodItems 按日聚合。
   const trendData = useMemo(() => {
     if (period === "year") {
       return {
@@ -176,8 +218,15 @@ export default function ReportsPage() {
         buckets: computeMonthlyTrend(periodItems, endYearMonth.year),
       };
     }
-    return summaryData?.expenseTrend ?? { granularity: "daily" as const, buckets: [] };
-  }, [period, periodItems, endYearMonth.year, summaryData]);
+    return {
+      granularity: "daily" as const,
+      buckets: computeMonthlyDailyTrend(
+        periodItems,
+        endYearMonth.year,
+        endYearMonth.month,
+      ),
+    };
+  }, [period, periodItems, endYearMonth.year, endYearMonth.month]);
 
   // 分类:月模式用 summary;年模式从 periodItems 聚合(保留真实 categoryId)
   const categoryData = useMemo(() => {
