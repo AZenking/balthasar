@@ -8,6 +8,7 @@ import { ConnectivityAlert } from "@/components/pwa/connectivity-alert";
 import { PendingSyncBadge } from "@/components/pwa/pending-sync-badge";
 import { usePwaRuntime } from "@/components/pwa/pwa-provider";
 import { setupForegroundFlush } from "@/lib/offline/sync-register";
+import { cleanupCache } from "@/lib/offline/cleanup";
 
 /**
  * AppShell(026-switch 第一期 1:响应式 App Shell)。
@@ -52,6 +53,11 @@ export function AppShell({
   // 033 US2 / FR-009:前台降级同步(iOS Safari 不支持 Background Sync,靠
   // online/visibilitychange 触发 SW flush)。注册一次,组件卸载时清理。
   useEffect(() => setupForegroundFlush(), []);
+  // 033 US4 / FR-010:app 启动时清理过期缓存(30 天保留期 + 月摘要)。
+  // 非关键路径,失败/非浏览器环境均 no-op。
+  useEffect(() => {
+    cleanupCache().catch(() => undefined);
+  }, []);
   return (
     <div className="min-h-screen bg-background">
       {/* 桌面端侧栏:fixed 在左侧,移动端隐藏 */}
