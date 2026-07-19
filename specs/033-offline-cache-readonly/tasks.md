@@ -74,7 +74,7 @@ description: "Task list for 033-offline-cache-readonly — 离线可读 + 写入
 - [X] T013 [US0] 改 `src/server/api/routers/transaction.ts` 的 `createInput`(**FR-008 幂等**):加 `clientRequestId: z.string().uuid().optional()`;`create` procedure insert **前** `SELECT id WHERE family_id=? AND client_request_id=?` → 命中返回 `getTransactionById(既有 id)`(**不报错**,retry 幂等);未命中正常 insert 带字段。并发 catch 唯一约束错 → 回 SELECT 返回既有
 - [X] T014 [US0] 跑 `pnpm test:integration src/tests/integration/transaction/create-idempotency.test.ts` 确认 T007-T009 **转绿**(宪章红 → 绿)
 - [X] T015 [P] [US0] 全量 `pnpm test:unit && pnpm test:procedure && pnpm test:integration` 确认既有 transaction 测试无回归(尤其 create/list/get)
-- [ ] T016 [US0] 提 PR-1:`feat(server): 033 R3 clientRequestId 幂等去重`(无 UI,纯服务器 + migration)
+- [X] T016 [US0] 提 PR-1:`feat(server): 033 R3 clientRequestId 幂等去重`(无 UI,纯服务器 + migration)
 
 **Checkpoint**: 幂等就位——R4 SW sync 可安全实现。
 
