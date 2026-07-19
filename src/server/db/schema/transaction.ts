@@ -6,6 +6,7 @@ import {
   timestamp,
   pgEnum,
   index,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { family } from "./family";
 import { account } from "./account";
@@ -65,6 +66,10 @@ export const transaction = pgTable(
       .notNull()
       .defaultNow()
       .$onUpdate(() => new Date()),
+    // 033 US0 / R3:客户端幂等键。nullable(向后兼容老路径/老客户端);
+    // 带值时 (family_id, client_request_id) 唯一 —— Background Sync retry /
+    // 前台 flush 竞态导致重复提交时,procedure 返回既有 transaction 而非新建。
+    clientRequestId: text("client_request_id"),
   },
   (t) => ({
     familyOccurredIdx: index("transactions_family_occurred_idx").on(
@@ -80,6 +85,10 @@ export const transaction = pgTable(
       t.familyId,
       t.categoryId
     ),
+    // 033 R3:部分唯一索引 —— 仅 clientRequestId 非 NULL 的行参与去重。
+    familyClientRequestIdx: uniqueIndex(
+      "transactions_family_client_request_idx"
+    ).on(t.familyId, t.clientRequestId),
   })
 );
 

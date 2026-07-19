@@ -62,18 +62,18 @@ description: "Task list for 033-offline-cache-readonly — 离线可读 + 写入
 
 ### Tests for US0(R3,test-first)
 
-- [ ] T007 [P] [US0] 写 `src/tests/integration/transaction/create-idempotency.test.ts`(testcontainers 真实 PG):同 familyId + 同 clientRequestId 两次 `createCaller(ctx).create({...})` → 断言第二次返回的 id === 第一次;断言 DB `SELECT count(*) FROM transactions WHERE family_id=?` 仅 +1(非 +2)
-- [ ] T008 [P] [US0] 写并发兜底测试(同文件):两个并发 create(漏 SELECT,Promise.all)→ 断言最终 DB 仅 1 行(唯一索引触发,catch 后回退返回既有,不抛错给客户端)
-- [ ] T009 [P] [US0] 写向后兼容测试:`create` 不带 clientRequestId → 走原逻辑成功(既有 API Key `/api/v1/` 路径不破);断言 clientRequestId 为 NULL 的行可正常建
-- [ ] T010 跑 `pnpm test:integration src/tests/integration/transaction/create-idempotency.test.ts` 确认 T007-T009 **红**(clientRequestId 未实现)
+- [X] T007 [P] [US0] 写 `src/tests/integration/transaction/create-idempotency.test.ts`(testcontainers 真实 PG):同 familyId + 同 clientRequestId 两次 `createCaller(ctx).create({...})` → 断言第二次返回的 id === 第一次;断言 DB `SELECT count(*) FROM transactions WHERE family_id=?` 仅 +1(非 +2)
+- [X] T008 [P] [US0] 写并发兜底测试(同文件):两个并发 create(漏 SELECT,Promise.all)→ 断言最终 DB 仅 1 行(唯一索引触发,catch 后回退返回既有,不抛错给客户端)
+- [X] T009 [P] [US0] 写向后兼容测试:`create` 不带 clientRequestId → 走原逻辑成功(既有 API Key `/api/v1/` 路径不破);断言 clientRequestId 为 NULL 的行可正常建
+- [X] T010 跑 `pnpm test:integration src/tests/integration/transaction/create-idempotency.test.ts` 确认 T007-T009 **红**(clientRequestId 未实现)
 
 ### Implementation for US0(R3)
 
-- [ ] T011 [US0] 改 `src/server/db/schema/transaction.ts`:新增 `clientRequestId: text("client_request_id")`(nullable)
-- [ ] T012 [US0] 生成 Drizzle migration:`pnpm drizzle-kit generate` → 新 migration 文件(加列 + 部分唯一索引 `CREATE UNIQUE INDEX transactions_family_client_request_idx ON transactions(family_id, client_request_id) WHERE client_request_id IS NOT NULL`)。验证 `pnpm drizzle-kit migrate` 在干净 DB + 既有 DB 都通过(既有行回填 NULL)
-- [ ] T013 [US0] 改 `src/server/api/routers/transaction.ts` 的 `createInput`(**FR-008 幂等**):加 `clientRequestId: z.string().uuid().optional()`;`create` procedure insert **前** `SELECT id WHERE family_id=? AND client_request_id=?` → 命中返回 `getTransactionById(既有 id)`(**不报错**,retry 幂等);未命中正常 insert 带字段。并发 catch 唯一约束错 → 回 SELECT 返回既有
-- [ ] T014 [US0] 跑 `pnpm test:integration src/tests/integration/transaction/create-idempotency.test.ts` 确认 T007-T009 **转绿**(宪章红 → 绿)
-- [ ] T015 [P] [US0] 全量 `pnpm test:unit && pnpm test:procedure && pnpm test:integration` 确认既有 transaction 测试无回归(尤其 create/list/get)
+- [X] T011 [US0] 改 `src/server/db/schema/transaction.ts`:新增 `clientRequestId: text("client_request_id")`(nullable)
+- [X] T012 [US0] 生成 Drizzle migration:`pnpm drizzle-kit generate` → 新 migration 文件(加列 + 部分唯一索引 `CREATE UNIQUE INDEX transactions_family_client_request_idx ON transactions(family_id, client_request_id) WHERE client_request_id IS NOT NULL`)。验证 `pnpm drizzle-kit migrate` 在干净 DB + 既有 DB 都通过(既有行回填 NULL)
+- [X] T013 [US0] 改 `src/server/api/routers/transaction.ts` 的 `createInput`(**FR-008 幂等**):加 `clientRequestId: z.string().uuid().optional()`;`create` procedure insert **前** `SELECT id WHERE family_id=? AND client_request_id=?` → 命中返回 `getTransactionById(既有 id)`(**不报错**,retry 幂等);未命中正常 insert 带字段。并发 catch 唯一约束错 → 回 SELECT 返回既有
+- [X] T014 [US0] 跑 `pnpm test:integration src/tests/integration/transaction/create-idempotency.test.ts` 确认 T007-T009 **转绿**(宪章红 → 绿)
+- [X] T015 [P] [US0] 全量 `pnpm test:unit && pnpm test:procedure && pnpm test:integration` 确认既有 transaction 测试无回归(尤其 create/list/get)
 - [ ] T016 [US0] 提 PR-1:`feat(server): 033 R3 clientRequestId 幂等去重`(无 UI,纯服务器 + migration)
 
 **Checkpoint**: 幂等就位——R4 SW sync 可安全实现。
