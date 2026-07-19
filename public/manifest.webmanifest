@@ -57,6 +57,10 @@
       "description": "直接进入新建转账",
       "url": "/transaction/new?type=transfer"
     }
+  ],
+  "screenshots": [
+    { "src": "/pwa/screenshots/dashboard-mobile.png", "sizes": "1080x1920", "type": "image/png", "form_factor": "narrow", "label": "Dashboard 概览（移动端）" },
+    { "src": "/pwa/screenshots/new-transaction-mobile.png", "sizes": "1080x1920", "type": "image/png", "form_factor": "narrow", "label": "记一笔表单（移动端）" },
+    { "src": "/pwa/screenshots/dashboard-desktop.webp", "sizes": "1920x1080", "type": "image/webp", "form_factor": "wide", "label": "Dashboard 概览（桌面端）" }
   ]
 }
-
