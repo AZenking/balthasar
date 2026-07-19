@@ -6,6 +6,8 @@ import {
   clearLoginFailures,
 } from "@/server/auth/hooks/lockout";
 import { writeAuditEvent } from "@/server/auth/hooks/audit";
+import { logger } from "@/lib/logger";
+import { getRequestContext } from "@/lib/request-context";
 
 /**
  * Better-Auth HTTP handler mounted at /api/auth/*.
@@ -144,6 +146,25 @@ export const POST = async (req: Request): Promise<Response> => {
           // swallow
         }
         if (failResult.triggeredLockout) {
+          // FR-008 / US3: emit a warn so operators see lockout storms in the
+          // log stream without querying the audit table. `email` is redacted
+          // by pino's redact paths (FR-004), but userId (null — auth failed)
+          // and retryAfterSeconds are emitted for correlation.
+          try {
+            logger.warn(
+              {
+                event: "auth.lockout_triggered",
+                path: "auth.signIn",
+                source: "domain",
+                requestId: getRequestContext()?.requestId ?? null,
+                userId: null,
+                retryAfterSeconds: failResult.retryAfterSeconds ?? 300,
+              },
+              "login lockout triggered",
+            );
+          } catch {
+            // log-write failure must not affect auth flow (FR-010 fail-open)
+          }
           try {
             await writeAuditEvent({
               eventType: "lockout_triggered",
