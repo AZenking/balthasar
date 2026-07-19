@@ -117,21 +117,21 @@ description: "Task list for 033-offline-cache-readonly — 离线可读 + 写入
 
 ### Tests for US2(test-first)
 
-- [ ] T030 [P] [US2] 写 `src/tests/unit/offline/queue-state.test.ts`(node,纯函数):状态机 `nextState(item, fetchResult)` —— 2xx/409→出队;5xx/transient→retry++(pending);4xx永久→drop;401→failed 立即;retryCount>=5→failed。断言各转换 + retryCount 累加 + lastError 记录
-- [ ] T031 [P] [US2] 写 `src/tests/unit/offline/queue-store.test.ts`(node):`enqueue(clientRequestId, payload, familyId)` / `getAllPending()` / `markSyncing(id)` / `deleteItem(id)` / `markFailed(id, err)` 的 IDB CRUD(纯函数抽 `serializePendingItem` / `deserialize`)
-- [ ] T032 [P] [US2] 写 `src/tests/integration/api-v1-transactions-sync.test.ts`(testcontainers):新端点 `/api/v1/transactions/sync` session-authed POST 带 `X-Client-Request-Id` → 创建成功;重复 header → 返回既有(去重);401 未登录 → 401;验证 body 校验
-- [ ] T033 跑测试确认 T030-T032 **红**
+- [X] T030 [P] [US2] 写 `src/tests/unit/offline/queue-state.test.ts`(node,纯函数):状态机 `nextState(item, fetchResult)` —— 2xx/409→出队;5xx/transient→retry++(pending);4xx永久→drop;401→failed 立即;retryCount>=5→failed。断言各转换 + retryCount 累加 + lastError 记录
+- [X] T031 [P] [US2] 写 `src/tests/unit/offline/queue-store.test.ts`(node):`enqueue(clientRequestId, payload, familyId)` / `getAllPending()` / `markSyncing(id)` / `deleteItem(id)` / `markFailed(id, err)` 的 IDB CRUD(纯函数抽 `serializePendingItem` / `deserialize`)
+- [X] T032 [P] [US2] 写 `src/tests/integration/api-v1-transactions-sync.test.ts`(testcontainers):新端点 `/api/v1/transactions/sync` session-authed POST 带 `X-Client-Request-Id` → 创建成功;重复 header → 返回既有(去重);401 未登录 → 401;验证 body 校验
+- [X] T033 跑测试确认 T030-T032 **红**
 
 ### Implementation for US2(R4)
 
-- [ ] T034 [US2] 实现 `src/lib/offline/queue-store.ts`(**FR-004 入队、FR-006 顺序、FR-007 失败上限**) + `queue-state.ts`(纯函数,见 T030/T031)
-- [ ] T035 [US2] 新增 `src/app/api/v1/transactions/sync/route.ts`:session-authed(Better-Auth)POST,读 `X-Client-Request-Id` header + body → 复用既有 create 业务逻辑(含 R3 去重)。返回 201 新建 / 409 dedup 命中(或 200 返回既有,research R4)
-- [ ] T036 [US2] 改 `src/components/transaction/transaction-form.tsx`(**FR-004 断网入队**):onSubmit 若 `navigator.onLine === false`(或 catch network error),不抛错 → 生成 `clientRequestId = uuidv7()` → `enqueue(...)` → toast"已记录,联网后自动同步";不关 Drawer(或轻关)。**保留**在线正常提交路径
-- [ ] T037 [US2] 改 `scripts/generate-service-worker.mjs`(**FR-005 后台同步**):加 `sync` event handler(tag `balthasar-flush-queue`)→ `flushQueue()`(research R4 骨架:IDB 读 pending → fetch `/api/v1/transactions/sync` credentials:include + X-Client-Request-Id → 按 queue-state 更新 IDB)。**不**直接改 `public/sw.js`(每次 build 重新生成)
-- [ ] T038 [US2] 新增 `public/sw-idb.js`:共享 IDB schema(openDB + 4 store + keyPath/index),SW 经 `importScripts('/sw-idb.js')` 引入,与 page 一致
-- [ ] T039 [US2] 客户端注册同步(**FR-009 iOS 降级**):入队后 `navigator.serviceWorker.ready` → `'sync' in reg ? reg.sync.register('balthasar-flush-queue') : flushInForeground()`;前台降级监听 `online` + `visibilitychange`
-- [ ] T040 [US2] 实现 `src/components/pwa/pending-sync-badge.tsx`:读 pending_queue 中 status=failed 的数量,显示"待同步"徽标 + "有 N 笔未同步,点击查看";提供手动重试/丢弃入口。**宪章原则七**:先查 `/heroui-react`
-- [ ] T041 跑测试 + tsc + build 确认全绿
+- [X] T034 [US2] 实现 `src/lib/offline/queue-store.ts`(**FR-004 入队、FR-006 顺序、FR-007 失败上限**) + `queue-state.ts`(纯函数,见 T030/T031)
+- [X] T035 [US2] 新增 `src/app/api/v1/transactions/sync/route.ts`:session-authed(Better-Auth)POST,读 `X-Client-Request-Id` header + body → 复用既有 create 业务逻辑(含 R3 去重)。返回 201 新建 / 409 dedup 命中(或 200 返回既有,research R4)
+- [X] T036 [US2] 改 `src/components/transaction/transaction-form.tsx`(**FR-004 断网入队**):onSubmit 若 `navigator.onLine === false`(或 catch network error),不抛错 → 生成 `clientRequestId = uuidv7()` → `enqueue(...)` → toast"已记录,联网后自动同步";不关 Drawer(或轻关)。**保留**在线正常提交路径
+- [X] T037 [US2] 改 `scripts/generate-service-worker.mjs`(**FR-005 后台同步**):加 `sync` event handler(tag `balthasar-flush-queue`)→ `flushQueue()`(research R4 骨架:IDB 读 pending → fetch `/api/v1/transactions/sync` credentials:include + X-Client-Request-Id → 按 queue-state 更新 IDB)。**不**直接改 `public/sw.js`(每次 build 重新生成)
+- [X] T038 [US2] 新增 `public/sw-idb.js`:共享 IDB schema(openDB + 4 store + keyPath/index),SW 经 `importScripts('/sw-idb.js')` 引入,与 page 一致
+- [X] T039 [US2] 客户端注册同步(**FR-009 iOS 降级**):入队后 `navigator.serviceWorker.ready` → `'sync' in reg ? reg.sync.register('balthasar-flush-queue') : flushInForeground()`;前台降级监听 `online` + `visibilitychange`
+- [X] T040 [US2] 实现 `src/components/pwa/pending-sync-badge.tsx`:读 pending_queue 中 status=failed 的数量,显示"待同步"徽标 + "有 N 笔未同步,点击查看";提供手动重试/丢弃入口。**宪章原则七**:先查 `/heroui-react`
+- [X] T041 跑测试 + tsc + build 确认全绿
 - [ ] T042 [US2] DevTools 走查(NEEDS-MANUAL):Offline 记 3 笔 → IDB pending_queue 3 条 → 取消 Offline + Manual sync trigger → 全部提交、队列空、流水出 3 笔;拦 500 看重试;改 cookie 无效看 401 立即 failed;幂等(拦第一次响应 + 重试)看 DB 不重复
 - [ ] T043 [US2] iOS 走查(NEEDS-MANUAL):iPhone Safari PWA → 飞行模式记 1 笔 → 关飞行模式不操作(不立即同步,已知)→ 打开 app → 前台 flush → 提交成功
 - [ ] T044 [US2] 提 PR-3:`feat(pwa): 033 断网记账队列 + Background Sync(US2)`

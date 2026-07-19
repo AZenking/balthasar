@@ -1,10 +1,13 @@
 "use client";
 
+import { useEffect } from "react";
 import { Sidebar } from "./sidebar";
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { cn } from "@/lib/utils";
 import { ConnectivityAlert } from "@/components/pwa/connectivity-alert";
+import { PendingSyncBadge } from "@/components/pwa/pending-sync-badge";
 import { usePwaRuntime } from "@/components/pwa/pwa-provider";
+import { setupForegroundFlush } from "@/lib/offline/sync-register";
 
 /**
  * AppShell(026-switch 第一期 1:响应式 App Shell)。
@@ -46,6 +49,9 @@ export function AppShell({
   className?: string;
 }) {
   const { connectivity } = usePwaRuntime();
+  // 033 US2 / FR-009:前台降级同步(iOS Safari 不支持 Background Sync,靠
+  // online/visibilitychange 触发 SW flush)。注册一次,组件卸载时清理。
+  useEffect(() => setupForegroundFlush(), []);
   return (
     <div className="min-h-screen bg-background">
       {/* 桌面端侧栏:fixed 在左侧,移动端隐藏 */}
@@ -63,6 +69,7 @@ export function AppShell({
           )}
         >
           <ConnectivityAlert connectivity={connectivity} />
+          <PendingSyncBadge />
           {children}
         </div>
       </main>

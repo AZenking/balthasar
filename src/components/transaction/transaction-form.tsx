@@ -42,6 +42,8 @@ import { CalendarDate, parseDate } from "@internationalized/date";
 import { useVisualViewport } from "@/lib/hooks/use-visual-viewport";
 import { useScrollIntoViewOnFocus } from "@/lib/hooks/use-scroll-into-view-on-focus";
 import { computeFooterPaddingBottom } from "@/components/transaction/compute-footer-padding-bottom";
+import { enqueue as enqueuePending, newClientRequestId, type FormPayload } from "@/lib/offline/queue-store";
+import { registerPendingSync } from "@/lib/offline/sync-register";
 
 function pad(n: number): string {
   return n < 10 ? `0${n}` : String(n);
@@ -333,6 +335,53 @@ export function TransactionForm({
     }
   };
 
+  /**
+   * 033 US2:断网 create 入待同步队列(FR-004)。
+   *
+   * 生成 clientRequestId(uuidv7,retry 时复用作幂等键)→ enqueue 到 IDB
+   * pending_queue → 注册 Background Sync(SW sync 事件触发 flush;iOS 降级
+   * 为前台 flush,见 queue-store 旁的注册 helper)→ 轻量提示 → 关 Drawer。
+   *
+   * 不阻断宪章五"10 秒记账"节奏:入队 < 1s(SC-003)。
+   */
+  const handleOfflineEnqueue = async (data: TransactionFormValues) => {
+    if (!draftScope) {
+      // draftScope = accountScope(用户 id)。理论上 create 模式一定有,
+      // 防御:无 scope 时不入队,提示。
+      setServerError("无法确定账户身份,请联网后记账");
+      toast.error("无法确定账户身份,请联网后记账");
+      return;
+    }
+    const baseAccountId = data.accountId || unarchivedAccounts[0]?.id;
+    if (!baseAccountId) {
+      setServerError("请选择账户");
+      toast.error("请选择账户");
+      return;
+    }
+    const clientRequestId = newClientRequestId();
+    const formPayload: FormPayload = {
+      type: data.type,
+      accountId: baseAccountId,
+      toAccountId: isTransfer ? toAccountId : undefined,
+      categoryId: isTransfer ? undefined : data.categoryId,
+      amount: String(yuanToCents(data.amount)),
+      remark: data.remark || "",
+      occurredAt: new Date(data.occurredAt).toISOString(),
+    };
+    try {
+      await enqueuePending(draftScope, formPayload, clientRequestId);
+      // 注册 Background Sync(SW 触发 flush;iOS/不支持时降级前台 flush)
+      await registerPendingSync();
+      toast.success("已记录,联网后自动同步");
+      // 离线入队视为"已记账"(队列表象与正常记账一致),关 Drawer / 跳 dashboard
+      handlePostSuccess();
+      if (!embedded) router.push("/dashboard");
+    } catch {
+      setServerError("离线记账保存失败,请重试");
+      toast.error("离线记账保存失败,请重试");
+    }
+  };
+
   const createMutation = trpc.transaction.create.useMutation({
     onSuccess: () => {
       // Draft flow (create mode only): definite success → drop the draft so
@@ -421,6 +470,19 @@ export function TransactionForm({
 
   const onSubmit = async (data: TransactionFormValues) => {
     setServerError("");
+    // 033 US2:断网时 —— create 模式入待同步队列(后台静默同步);
+    // edit 模式不做离线编辑(FR-013,只 create 离线),保持既有"需联网"拦截。
+    if (!connectivity.stableOnline) {
+      if (isEditMode) {
+        // FR-013:断网编辑/删除禁用
+        setServerError("编辑交易需联网,请联网后操作");
+        toast.error("编辑交易需联网,请联网后操作");
+        return;
+      }
+      // create 模式:入队 + 提示(宪章五:不阻断 10 秒记账节奏)
+      await handleOfflineEnqueue(data);
+      return;
+    }
     if (!guardOnlineWrite(connectivity.stableOnline, () => {}, setServerError)) {
       return;
     }
